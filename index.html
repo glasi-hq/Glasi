@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Southampton Weekend Floor Crew</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
-            font-family: 'Inter', system_ui, sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
         }
         .form-input {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -69,7 +69,6 @@
                     <p class="leading-relaxed mt-4">Shifts are a minimum of two hours and paid at least minimum wage, with venues often offering higher pay for urgent support.</p>
                     <p class="leading-relaxed mt-4">All shifts are paid directly by the venue at the end of the shift and will always be located within a maximum 20 minute walk from your postcode.</p>
                 </div>
-
                 <div>
                     <h2 class="text-3xl font-semibold mb-6">How the trial works</h2>
                     <p class="leading-relaxed">The pilot will be on Zoom - you will be logged into a Zoom call from 8pm to 11pm while at home or nearby. Your microphone and camera do not need to be on.</p>
@@ -77,13 +76,11 @@
                     <p class="leading-relaxed mt-4">You are always free to accept or ignore shift requests — you are in control of whether you take a shift.</p>
                     <p class="leading-relaxed mt-4">You must be dressed in standard black bar shift clothing and ready to leave your home immediately if you accept a shift.</p>
                 </div>
-
                 <div>
                     <h2 class="text-3xl font-semibold mb-6">How shifts are assigned</h2>
                     <p class="leading-relaxed">When a venue requests support, a message will be posted in the Zoom chat.</p>
                     <p class="leading-relaxed mt-4">The first person to reply “YES – READY” gets the shift.</p>
                 </div>
-
                 <div>
                     <h2 class="text-3xl font-semibold mb-6">Prize draw</h2>
                     <p class="leading-relaxed">All registrations will be entered into a £50 cash draw.</p>
@@ -137,7 +134,10 @@
 
                     <!-- Clothing check -->
                     <div>
-                        <label class="block text-sm font-medium text-zinc-600 mb-3">Clothing check<br>Do you own appropriate black clothing for bar shifts? (Top, Jeans, Suitable Shoes) <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">
+                            <span class="font-bold">Clothing check</span><br>
+                            Do you own appropriate black clothing for bar shifts? (Top, Jeans, Suitable Shoes) <span class="text-red-500">*</span>
+                        </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
                                 <input type="radio" name="has_black_clothing" value="Yes" class="accent-black" required>
@@ -152,7 +152,10 @@
 
                     <!-- Physical Ability -->
                     <div>
-                        <label class="block text-sm font-medium text-zinc-600 mb-3">Physical Ability<br>Are you physically able to be on your feet for 2-3 hours? <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">
+                            <span class="font-bold">Physical Ability</span><br>
+                            Are you physically able to be on your feet for 2-3 hours? <span class="text-red-500">*</span>
+                        </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
                                 <input type="radio" name="physically_able" value="Yes" class="accent-black" required>
@@ -167,7 +170,10 @@
 
                     <!-- English Speaking -->
                     <div>
-                        <label class="block text-sm font-medium text-zinc-600 mb-3">English Speaking<br>Is English your first language/are you confident speaking and understanding English in a fast paced environment? <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">
+                            <span class="font-bold">English Speaking</span><br>
+                            Is English your first language/are you confident speaking and understanding English in a fast paced environment? <span class="text-red-500">*</span>
+                        </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
                                 <input type="radio" name="speaks_english" value="Yes" class="accent-black" required>
@@ -182,7 +188,10 @@
 
                     <!-- Understanding -->
                     <div>
-                        <label class="block text-sm font-medium text-zinc-600 mb-3">Understanding<br>I understand this is a Zoom based trial with the possibility of being selected for 2-3 hours of paid, light bar work, per trial evening. <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">
+                            <span class="font-bold">Understanding</span><br>
+                            I understand this is a Zoom based trial with the possibility of being selected for 2-3 hours of paid, light bar work, per trial evening. <span class="text-red-500">*</span>
+                        </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
                                 <input type="radio" name="understands_trial" value="I understand" class="accent-black" required>
@@ -197,13 +206,21 @@
 
                     <!-- Reliability -->
                     <div>
-                        <label class="block text-sm font-medium text-zinc-600 mb-2">Reliability<br>Briefly describe any previous work experience and why you’d be reliable for short-notice shifts. <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-zinc-600 mb-2">
+                            <span class="font-bold">Reliability</span><br>
+                            Briefly describe any previous work experience and why you’d be reliable for short-notice shifts. <span class="text-red-500">*</span>
+                        </label>
                         <textarea id="reliability_notes" rows="4" required class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base resize-y min-h-[120px]"></textarea>
                     </div>
 
                     <!-- Work Standards -->
                     <div>
-                        <label class="block text-sm font-medium text-zinc-600 mb-3">Work Standards<br>If you accept a shift, you are representing Crew Dispatch and we only want polite, nice people representing us.<br>If you are one of those people, please show you understand below.<br>The next and last section is a postcode sorter to ensure you are never more than 20 minutes away from paid work. <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">
+                            <span class="font-bold">Work Standards</span><br>
+                            If you accept a shift, you are representing Crew Dispatch and we only want polite, nice people representing us.<br>
+                            If you are one of those people, please show you understand below.<br>
+                            The next and last section is a postcode sorter to ensure you are never more than 20 minutes away from paid work. <span class="text-red-500">*</span>
+                        </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
                                 <input type="radio" name="agrees_work_standard" value="I understand and agree" class="accent-black" required>
@@ -310,7 +327,7 @@
                     <!-- Submit Button -->
                     <div class="pt-4">
                         <button id="submit-btn" type="submit"
-                            class="w-full bg-black hover:bg-zinc-900 active:bg-black transition-all text-white font-semibold py-6 rounded-3xl text-lg shadow-inner">
+                            class="w-full bg-black hover:bg-zinc-900 active:bg-black transition-all text-white font-semibold py-6 rounded-3xl text-base shadow-inner">
                             Submit Application
                         </button>
                     </div>
@@ -493,7 +510,6 @@
 
         // Initialize everything
         function initialize() {
-            // Tailwind ready
             setupAreaListeners();
             form.addEventListener('submit', handleSubmit);
         }
