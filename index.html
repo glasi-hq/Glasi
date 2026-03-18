@@ -1,849 +1,504 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Southampton Weekend Floor Crew</title>
-  <meta name="description" content="Southampton Weekend Floor Crew registration form" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #f5f7fb;
-      --bg-2: #eef2f8;
-      --card: rgba(255, 255, 255, 0.92);
-      --text: #0f172a;
-      --muted: #475569;
-      --line: #dbe3ef;
-      --line-strong: #c7d2e3;
-      --focus: #111827;
-      --accent: #111827;
-      --accent-2: #1f2937;
-      --success-bg: #ecfdf5;
-      --success-text: #065f46;
-      --error-bg: #fef2f2;
-      --error-text: #991b1b;
-      --shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
-      --shadow-2: 0 8px 24px rgba(15, 23, 42, 0.06);
-      --radius: 22px;
-      --radius-sm: 16px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      margin: 0;
-      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, #ffffff 0%, var(--bg) 42%, var(--bg-2) 100%);
-      min-height: 100vh;
-    }
-
-    .page {
-      width: 100%;
-      max-width: 760px;
-      margin: 0 auto;
-      padding: 14px 14px 40px;
-    }
-
-    .card {
-      background: var(--card);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(219, 227, 239, 0.9);
-      box-shadow: var(--shadow);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 14px;
-    }
-
-    .hero {
-      padding: 22px 18px 18px;
-      position: relative;
-    }
-
-    .hero::before {
-      content: "";
-      position: absolute;
-      inset: 0 0 auto 0;
-      height: 6px;
-      background: linear-gradient(90deg, #111827, #334155, #64748b);
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #64748b;
-      margin-bottom: 12px;
-      margin-top: 4px;
-    }
-
-    .eyebrow-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #111827;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 32px;
-      line-height: 1.02;
-      letter-spacing: -0.045em;
-    }
-
-    .hero-sub {
-      margin: 10px 0 0;
-      font-size: 15px;
-      line-height: 1.6;
-      color: var(--muted);
-    }
-
-    .content {
-      padding: 18px;
-    }
-
-    .section-title {
-      margin: 0 0 10px;
-      font-size: 18px;
-      line-height: 1.2;
-      letter-spacing: -0.03em;
-    }
-
-    .overview-block {
-      background: #f8fafc;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px;
-      margin-bottom: 14px;
-      box-shadow: var(--shadow-2);
-    }
-
-    .overview-block p {
-      margin: 0 0 12px;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.68;
-    }
-
-    .overview-block p:last-child {
-      margin-bottom: 0;
-    }
-
-    .overview-block ul {
-      margin: 0;
-      padding-left: 18px;
-      color: var(--muted);
-    }
-
-    .overview-block li {
-      margin-bottom: 10px;
-      line-height: 1.65;
-      font-size: 15px;
-    }
-
-    .overview-block li:last-child {
-      margin-bottom: 0;
-    }
-
-    .form-wrap {
-      padding: 18px;
-    }
-
-    .form-intro {
-      margin-bottom: 16px;
-    }
-
-    .form-intro h2 {
-      margin: 0 0 6px;
-      font-size: 24px;
-      line-height: 1.08;
-      letter-spacing: -0.04em;
-    }
-
-    .form-intro p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    .field {
-      margin-bottom: 18px;
-    }
-
-    .field:last-child {
-      margin-bottom: 0;
-    }
-
-    label.main-label {
-      display: block;
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.5;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-
-    .helper {
-      display: block;
-      margin-top: -2px;
-      margin-bottom: 10px;
-      font-size: 13px;
-      line-height: 1.5;
-      color: var(--muted);
-    }
-
-    .required {
-      color: #b91c1c;
-      font-weight: 800;
-    }
-
-    input[type="text"],
-    input[type="email"],
-    select,
-    textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      background: #ffffff;
-      color: var(--text);
-      border-radius: 16px;
-      padding: 15px 15px;
-      font-size: 16px;
-      font-family: inherit;
-      line-height: 1.4;
-      outline: none;
-      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease, background 0.18s ease;
-      box-shadow: 0 2px 0 rgba(255,255,255,0.8) inset;
-    }
-
-    input[type="text"]:hover,
-    input[type="email"]:hover,
-    select:hover,
-    textarea:hover {
-      border-color: var(--line-strong);
-    }
-
-    input[type="text"]:focus,
-    input[type="email"]:focus,
-    select:focus,
-    textarea:focus {
-      border-color: #111827;
-      box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
-      transform: translateY(-1px);
-      background: #fff;
-    }
-
-    textarea {
-      min-height: 132px;
-      resize: vertical;
-    }
-
-    .choice-group {
-      display: grid;
-      gap: 10px;
-    }
-
-    .choice-option {
-      position: relative;
-    }
-
-    .choice-option input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .choice-option span {
-      display: flex;
-      align-items: center;
-      min-height: 56px;
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--text);
-      font-size: 15px;
-      font-weight: 600;
-      line-height: 1.45;
-      transition: all 0.18s ease;
-      box-shadow: var(--shadow-2);
-    }
-
-    .choice-option span::before {
-      content: "";
-      width: 18px;
-      height: 18px;
-      border-radius: 999px;
-      border: 2px solid #94a3b8;
-      margin-right: 12px;
-      flex: 0 0 18px;
-      transition: all 0.18s ease;
-      background: #fff;
-    }
-
-    .choice-option input:checked + span {
-      border-color: #111827;
-      background: #111827;
-      color: #fff;
-      transform: translateY(-1px);
-      box-shadow: 0 12px 24px rgba(17, 24, 39, 0.14);
-    }
-
-    .choice-option input:checked + span::before {
-      border-color: #fff;
-      background: #fff;
-      box-shadow: inset 0 0 0 4px #111827;
-    }
-
-    .section-card {
-      background: #f8fafc;
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 16px;
-      margin-bottom: 18px;
-      box-shadow: var(--shadow-2);
-    }
-
-    .section-card h3 {
-      margin: 0 0 6px;
-      font-size: 16px;
-      letter-spacing: -0.02em;
-    }
-
-    .section-card p {
-      margin: 0;
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--muted);
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .submit-wrap {
-      margin-top: 20px;
-    }
-
-    button {
-      width: 100%;
-      min-height: 58px;
-      border: 0;
-      border-radius: 18px;
-      background: linear-gradient(180deg, var(--accent), var(--accent-2));
-      color: #fff;
-      font-family: inherit;
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      cursor: pointer;
-      box-shadow: 0 14px 30px rgba(17, 24, 39, 0.18);
-      transition: transform 0.14s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 18px 32px rgba(17, 24, 39, 0.22);
-    }
-
-    button:disabled {
-      opacity: 0.75;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .success,
-    .error {
-      display: none;
-      margin-top: 14px;
-      padding: 14px 15px;
-      border-radius: 16px;
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.5;
-    }
-
-    .success {
-      background: var(--success-bg);
-      color: var(--success-text);
-      border: 1px solid #bbf7d0;
-    }
-
-    .error {
-      background: var(--error-bg);
-      color: var(--error-text);
-      border: 1px solid #fecaca;
-    }
-
-    .footer-note {
-      margin-top: 14px;
-      font-size: 12px;
-      line-height: 1.6;
-      color: #64748b;
-      text-align: center;
-    }
-
-    @media (min-width: 720px) {
-      .page {
-        padding: 24px 20px 56px;
-      }
-
-      .hero {
-        padding: 28px 24px 22px;
-      }
-
-      .content,
-      .form-wrap {
-        padding: 24px;
-      }
-
-      h1 {
-        font-size: 42px;
-      }
-
-      .section-title {
-        font-size: 20px;
-      }
-
-      .form-intro h2 {
-        font-size: 28px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Southampton Weekend Floor Crew</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        .form-input {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .form-input:focus {
+            border-color: #000;
+            box-shadow: 0 0 0 4px rgb(0 0 0 / 0.08);
+        }
+        .radio-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .radio-card:hover {
+            border-color: #000;
+            background-color: #fafafa;
+        }
+        .radio-card input:checked + span {
+            font-weight: 600;
+        }
+        .postcode-section {
+            opacity: 0;
+            transform: translateY(12px);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .postcode-section.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .success-message {
+            animation: fadeIn 0.4s ease forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body>
-  <main class="page">
-    <section class="card hero">
-      <div class="eyebrow">
-        <span class="eyebrow-dot"></span>
-        Southampton Pilot
-      </div>
-      <h1>Southampton Weekend Floor Crew</h1>
-      <p class="hero-sub">Register below.</p>
-    </section>
-
-    <section class="card content">
-      <div class="overview-block">
-        <h2 class="section-title">Who we are</h2>
-        <p>We are running a Southampton pilot for a short notice shift system that connects local workers with nearby venues when they need extra support during busy periods.</p>
-        <p>The work is simple floor support in busy bars, including collecting glasses, clearing tables and keeping areas tidy.</p>
-        <p>Shifts are a minimum of two hours and paid at least minimum wage, with venues often offering higher pay for urgent support.</p>
-        <p>All shifts are paid directly by the venue at the end of the shift and will always be located within a maximum 20 minute walk from your postcode.</p>
-      </div>
-
-      <div class="overview-block">
-        <h2 class="section-title">How the trial works</h2>
-        <ul>
-          <li>The pilot will be on Zoom - you will be logged into a Zoom call from 8pm to 11pm while at home or nearby. Your microphone and camera do not need to be on.</li>
-          <li>You can be doing your own thing, but you must stay logged in, responsive and ready to leave if you accept a shift.</li>
-          <li>You are always free to accept or ignore shift requests — you are in control of whether you take a shift.</li>
-          <li>You must be dressed in standard black bar shift clothing and ready to leave your home immediately if you accept a shift.</li>
-        </ul>
-      </div>
-
-      <div class="overview-block">
-        <h2 class="section-title">How shifts are assigned</h2>
-        <p>When a venue requests support, a message will be posted in the Zoom chat.</p>
-        <p>The first person to reply “YES – READY” gets the shift.</p>
-      </div>
-
-      <div class="overview-block">
-        <h2 class="section-title">Prize draw</h2>
-        <p>All registrations will be entered into a £50 cash draw.</p>
-        <p>Crew members who attend the full trial evenings (remaining logged in and responsive for both trial shifts) will be entered into an additional £100 prize draw.</p>
-        <p>Winners will be announced after the pilot concludes.</p>
-      </div>
-
-      <div class="overview-block">
-        <p><strong>We need a certain number of registrations to start the pilot - You will receive the pilot date and Zoom invite by email.</strong></p>
-      </div>
-    </section>
-
-    <form id="applicationForm" class="card form-wrap">
-      <div class="form-intro">
-        <h2>Register your interest</h2>
-        <p>Please complete all required fields below.</p>
-      </div>
-
-      <div class="field">
-        <label class="main-label" for="name">Full Name<br><span class="required">*</span></label>
-        <input id="name" name="name" type="text" required />
-      </div>
-
-      <div class="field">
-        <label class="main-label" for="phone">Mobile Number<br><span class="required">*</span></label>
-        <span class="helper">(WhatsApp required - this is how we contact you if selected)</span>
-        <input id="phone" name="phone" type="text" required />
-      </div>
-
-      <div class="field">
-        <label class="main-label" for="email">Email Address<br><span class="required">*</span></label>
-        <span class="helper">(This email must be the same as the one you use for Zoom)</span>
-        <input id="email" name="email" type="email" required />
-      </div>
-
-      <div class="field">
-        <label class="main-label" for="age_group">Age<br><span class="required">*</span></label>
-        <select id="age_group" name="age_group" required>
-          <option value="">Select one</option>
-          <option value="18-20">18-20</option>
-          <option value="21-24">21-24</option>
-          <option value="25+">25+</option>
-        </select>
-      </div>
-
-      <div class="section-card">
-        <h3>Clothing check</h3>
-      </div>
-
-      <div class="field">
-        <label class="main-label">Do you own appropriate black clothing for bar shifts? (Top, Jeans, Suitable Shoes)<br><span class="required">*</span></label>
-        <div class="choice-group">
-          <label class="choice-option">
-            <input type="radio" name="has_black_clothing" value="true" required />
-            <span>Yes</span>
-          </label>
-          <label class="choice-option">
-            <input type="radio" name="has_black_clothing" value="false" />
-            <span>No</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3>Physical Ability</h3>
-      </div>
-
-      <div class="field">
-        <label class="main-label">Are you physically able to be on your feet for 2-3 hours?<br><span class="required">*</span></label>
-        <div class="choice-group">
-          <label class="choice-option">
-            <input type="radio" name="physically_able" value="true" required />
-            <span>Yes</span>
-          </label>
-          <label class="choice-option">
-            <input type="radio" name="physically_able" value="false" />
-            <span>No</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3>English Speaking</h3>
-      </div>
-
-      <div class="field">
-        <label class="main-label">Is English your first language/are you confident speaking and understanding English in a fast paced environment?<br><span class="required">*</span></label>
-        <div class="choice-group">
-          <label class="choice-option">
-            <input type="radio" name="speaks_english" value="true" required />
-            <span>Yes</span>
-          </label>
-          <label class="choice-option">
-            <input type="radio" name="speaks_english" value="false" />
-            <span>No</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3>Understanding</h3>
-      </div>
-
-      <div class="field">
-        <label class="main-label">I understand this is a Zoom based trial with the possibility of being selected for 2-3 hours of paid, light bar work, per trial evening.</label>
-        <div class="choice-group">
-          <label class="choice-option">
-            <input type="radio" name="understands_trial" value="true" required />
-            <span>I understand</span>
-          </label>
-          <label class="choice-option">
-            <input type="radio" name="understands_trial" value="false" />
-            <span>I do not understand</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3>Reliability</h3>
-      </div>
-
-      <div class="field">
-        <label class="main-label" for="reliability_notes">Briefly describe any previous work experience and why you’d be reliable for short-notice shifts.<br><span class="required">*</span></label>
-        <textarea id="reliability_notes" name="reliability_notes" required></textarea>
-      </div>
-
-      <div class="section-card">
-        <h3>Work Standards</h3>
-        <p>If you accept a shift, you are representing Crew Dispatch and we only want polite, nice people representing us.</p>
-        <p>If you are one of those people, please show you understand below.</p>
-        <p>The next  and last section is a postcode sorter to ensure you are never more than 20 minutes away from paid work.<br><span class="required">*</span></p>
-      </div>
-
-      <div class="field">
-        <div class="choice-group">
-          <label class="choice-option">
-            <input type="radio" name="agrees_work_standard" value="true" required />
-            <span>I understand and agree</span>
-          </label>
-          <label class="choice-option">
-            <input type="radio" name="agrees_work_standard" value="false" />
-            <span>I do not agree</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3>POSTCODE SORTER</h3>
-        <p>To make sure venues get the fastest help, we organise workers by closest venue.</p>
-      </div>
-
-      <div class="field">
-        <label class="main-label" for="area">Which area do you currently live in?<br><span class="required">*</span></label>
-        <select id="area" name="area" required>
-          <option value="">Select one</option>
-          <option value="City Centre West ( Bedford Place area )">City Centre West ( Bedford Place area )</option>
-          <option value="City Centre East ( Ocean Village area )">City Centre East ( Ocean Village area )</option>
-          <option value="Portswood / Highfield / Southampton Uni">Portswood / Highfield / Southampton Uni</option>
-        </select>
-      </div>
-
-      <div id="westSection" class="section-card hidden">
-        <h3>City Centre West - Postcode Check</h3>
-        <p>This is only used to make sure you’re close enough to participating venues.</p>
-        <p>Select your postcode sector.</p>
-        <p>This is only used to make sure you’re close enough to participating venues.</p>
-
-        <div class="field" style="margin-top: 14px;">
-          <label class="main-label" for="west_postcode_sector"><span class="required">*</span></label>
-          <select id="west_postcode_sector">
-            <option value="">Select one</option>
-            <option value="SO15 1">SO15 1</option>
-            <option value="SO15 2">SO15 2</option>
-            <option value="SO15 3">SO15 3</option>
-            <option value="SO14 1">SO14 1</option>
-            <option value="SO14 2">SO14 2</option>
-          </select>
+<body class="bg-zinc-50 text-zinc-900">
+    <div class="max-w-md mx-auto bg-white min-h-screen flex flex-col">
+        <!-- Header -->
+        <div class="bg-black text-white px-6 py-10 text-center">
+            <div class="flex justify-center items-center gap-x-3">
+                <div class="w-11 h-11 bg-white text-black rounded-3xl flex items-center justify-center text-4xl font-bold leading-none">S</div>
+                <div>
+                    <h1 class="text-3xl font-semibold tracking-tighter">Southampton Weekend Floor Crew</h1>
+                    <p class="text-xs tracking-[1px] text-zinc-400 mt-1">PILOT REGISTRATION</p>
+                </div>
+            </div>
         </div>
 
-        <div class="field">
-          <label class="main-label" for="west_postcode_last3">Enter the last 3 characters of your postcode (e.g. 4AB)<br><span class="required">*</span></label>
-          <input id="west_postcode_last3" type="text" maxlength="3" />
+        <div class="flex-1 px-6 pt-8 pb-12 overflow-auto">
+            <!-- Overview Content -->
+            <div class="space-y-12 text-[15px]">
+                <div>
+                    <h2 class="text-3xl font-semibold mb-6">Who we are</h2>
+                    <p class="leading-relaxed">We are running a Southampton pilot for a short notice shift system that connects local workers with nearby venues when they need extra support during busy periods.</p>
+                    <p class="leading-relaxed mt-4">The work is simple floor support in busy bars, including collecting glasses, clearing tables and keeping areas tidy.</p>
+                    <p class="leading-relaxed mt-4">Shifts are a minimum of two hours and paid at least minimum wage, with venues often offering higher pay for urgent support.</p>
+                    <p class="leading-relaxed mt-4">All shifts are paid directly by the venue at the end of the shift and will always be located within a maximum 20 minute walk from your postcode.</p>
+                </div>
+
+                <div>
+                    <h2 class="text-3xl font-semibold mb-6">How the trial works</h2>
+                    <p class="leading-relaxed">The pilot will be on Zoom - you will be logged into a Zoom call from 8pm to 11pm while at home or nearby. Your microphone and camera do not need to be on.</p>
+                    <p class="leading-relaxed mt-4">You can be doing your own thing, but you must stay logged in, responsive and ready to leave if you accept a shift.</p>
+                    <p class="leading-relaxed mt-4">You are always free to accept or ignore shift requests — you are in control of whether you take a shift.</p>
+                    <p class="leading-relaxed mt-4">You must be dressed in standard black bar shift clothing and ready to leave your home immediately if you accept a shift.</p>
+                </div>
+
+                <div>
+                    <h2 class="text-3xl font-semibold mb-6">How shifts are assigned</h2>
+                    <p class="leading-relaxed">When a venue requests support, a message will be posted in the Zoom chat.</p>
+                    <p class="leading-relaxed mt-4">The first person to reply “YES – READY” gets the shift.</p>
+                </div>
+
+                <div>
+                    <h2 class="text-3xl font-semibold mb-6">Prize draw</h2>
+                    <p class="leading-relaxed">All registrations will be entered into a £50 cash draw.</p>
+                    <p class="leading-relaxed mt-4">Crew members who attend the full trial evenings (remaining logged in and responsive for both trial shifts) will be entered into an additional £100 prize draw.</p>
+                    <p class="leading-relaxed mt-4">Winners will be announced after the pilot concludes.</p>
+                    <p class="leading-relaxed mt-4">We need a certain number of registrations to start the pilot - You will receive the pilot date and Zoom invite by email.</p>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="mt-16 bg-white border border-zinc-100 rounded-3xl shadow-xl p-8">
+                <form id="application-form" class="space-y-9">
+                    <!-- Full Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-2">Full Name <span class="text-red-500">*</span></label>
+                        <input id="name" type="text" required class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base">
+                    </div>
+
+                    <!-- Mobile Number -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-2">Mobile Number <span class="text-red-500">*</span></label>
+                        <input id="phone" type="tel" required class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base">
+                        <p class="text-xs text-zinc-500 mt-2">(WhatsApp required - this is how we contact you if selected)</p>
+                    </div>
+
+                    <!-- Email Address -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-2">Email Address <span class="text-red-500">*</span></label>
+                        <input id="email" type="email" required class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base">
+                        <p class="text-xs text-zinc-500 mt-2">(This email must be the same as the one you use for Zoom)</p>
+                    </div>
+
+                    <!-- Age -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">Age <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center justify-center cursor-pointer">
+                                <input type="radio" name="age_group" value="18-20" class="hidden peer" required>
+                                <span class="peer-checked:font-semibold text-base">18-20</span>
+                            </label>
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center justify-center cursor-pointer">
+                                <input type="radio" name="age_group" value="21-24" class="hidden peer">
+                                <span class="peer-checked:font-semibold text-base">21-24</span>
+                            </label>
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center justify-center cursor-pointer">
+                                <input type="radio" name="age_group" value="25+" class="hidden peer">
+                                <span class="peer-checked:font-semibold text-base">25+</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Clothing check -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">Clothing check<br>Do you own appropriate black clothing for bar shifts? (Top, Jeans, Suitable Shoes) <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="has_black_clothing" value="Yes" class="accent-black" required>
+                                <span>Yes</span>
+                            </label>
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="has_black_clothing" value="No" class="accent-black">
+                                <span>No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Physical Ability -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">Physical Ability<br>Are you physically able to be on your feet for 2-3 hours? <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="physically_able" value="Yes" class="accent-black" required>
+                                <span>Yes</span>
+                            </label>
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="physically_able" value="No" class="accent-black">
+                                <span>No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- English Speaking -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">English Speaking<br>Is English your first language/are you confident speaking and understanding English in a fast paced environment? <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="speaks_english" value="Yes" class="accent-black" required>
+                                <span>Yes</span>
+                            </label>
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="speaks_english" value="No" class="accent-black">
+                                <span>No</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Understanding -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">Understanding<br>I understand this is a Zoom based trial with the possibility of being selected for 2-3 hours of paid, light bar work, per trial evening. <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="understands_trial" value="I understand" class="accent-black" required>
+                                <span>I understand</span>
+                            </label>
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="understands_trial" value="I do not understand" class="accent-black">
+                                <span>I do not understand</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Reliability -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-2">Reliability<br>Briefly describe any previous work experience and why you’d be reliable for short-notice shifts. <span class="text-red-500">*</span></label>
+                        <textarea id="reliability_notes" rows="4" required class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base resize-y min-h-[120px]"></textarea>
+                    </div>
+
+                    <!-- Work Standards -->
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">Work Standards<br>If you accept a shift, you are representing Crew Dispatch and we only want polite, nice people representing us.<br>If you are one of those people, please show you understand below.<br>The next and last section is a postcode sorter to ensure you are never more than 20 minutes away from paid work. <span class="text-red-500">*</span></label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="agrees_work_standard" value="I understand and agree" class="accent-black" required>
+                                <span>I understand and agree</span>
+                            </label>
+                            <label class="radio-card border border-zinc-300 rounded-3xl p-5 flex items-center gap-3 cursor-pointer">
+                                <input type="radio" name="agrees_work_standard" value="I do not agree" class="accent-black">
+                                <span>I do not agree</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- POSTCODE SORTER -->
+                    <div class="pt-4">
+                        <h3 class="font-semibold text-xl mb-5">POSTCODE SORTER</h3>
+                        <label class="block text-sm font-medium text-zinc-600 mb-3">Which area do you currently live in? <span class="text-red-500">*</span></label>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 border border-zinc-300 hover:border-black rounded-3xl px-6 py-5 cursor-pointer transition-all">
+                                <input type="radio" name="area" value="City Centre West ( Bedford Place area )" class="w-5 h-5 accent-black" required>
+                                <span class="text-base">City Centre West ( Bedford Place area )</span>
+                            </label>
+                            <label class="flex items-center gap-3 border border-zinc-300 hover:border-black rounded-3xl px-6 py-5 cursor-pointer transition-all">
+                                <input type="radio" name="area" value="City Centre East ( Ocean Village area )" class="w-5 h-5 accent-black">
+                                <span class="text-base">City Centre East ( Ocean Village area )</span>
+                            </label>
+                            <label class="flex items-center gap-3 border border-zinc-300 hover:border-black rounded-3xl px-6 py-5 cursor-pointer transition-all">
+                                <input type="radio" name="area" value="Portswood / Highfield / Southampton Uni" class="w-5 h-5 accent-black">
+                                <span class="text-base">Portswood / Highfield / Southampton Uni</span>
+                            </label>
+                        </div>
+
+                        <!-- WEST POSTCODE -->
+                        <div id="west-postcode" class="postcode-section hidden mt-10">
+                            <div class="bg-zinc-50 border border-zinc-200 rounded-3xl p-7">
+                                <h4 class="font-medium mb-5">City Centre West - Postcode Check</h4>
+                                <p class="text-xs text-zinc-500 mb-4">This is only used to make sure you’re close enough to participating venues.</p>
+                                <div class="space-y-1">
+                                    <label class="block text-sm font-medium">Select your postcode sector.</label>
+                                    <p class="text-xs text-zinc-500">This is only used to make sure you’re close enough to participating venues.</p>
+                                    <select id="west-sector" class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base">
+                                        <option value="">Select...</option>
+                                        <option value="SO15 1">SO15 1</option>
+                                        <option value="SO15 2">SO15 2</option>
+                                        <option value="SO15 3">SO15 3</option>
+                                        <option value="SO14 1">SO14 1</option>
+                                        <option value="SO14 2">SO14 2</option>
+                                    </select>
+                                </div>
+                                <div class="mt-7">
+                                    <label class="block text-sm font-medium mb-2">Enter the last 3 characters of your postcode (e.g. 4AB) <span class="text-red-500">*</span></label>
+                                    <input id="west-last3" type="text" maxlength="3" class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base uppercase tracking-widest" placeholder="e.g. 4AB">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- EAST POSTCODE -->
+                        <div id="east-postcode" class="postcode-section hidden mt-10">
+                            <div class="bg-zinc-50 border border-zinc-200 rounded-3xl p-7">
+                                <h4 class="font-medium mb-5">City Centre East - Postcode Check</h4>
+                                <p class="text-xs text-zinc-500 mb-4">This is only used to make sure you’re close enough to participating venues.</p>
+                                <div class="space-y-1">
+                                    <label class="block text-sm font-medium">Select your postcode sector</label>
+                                    <p class="text-xs text-zinc-500">This is used to confirm eligibility</p>
+                                    <select id="east-sector" class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base">
+                                        <option value="">Select...</option>
+                                        <option value="SO14 0">SO14 0</option>
+                                        <option value="SO14 1">SO14 1</option>
+                                        <option value="SO14 2">SO14 2</option>
+                                        <option value="SO14 3">SO14 3</option>
+                                    </select>
+                                </div>
+                                <div class="mt-7">
+                                    <label class="block text-sm font-medium mb-2">Enter the last 3 characters of your postcode (e.g. 4AB) <span class="text-red-500">*</span></label>
+                                    <input id="east-last3" type="text" maxlength="3" class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base uppercase tracking-widest" placeholder="e.g. 4AB">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PORTSWOOD POSTCODE -->
+                        <div id="portswood-postcode" class="postcode-section hidden mt-10">
+                            <div class="bg-zinc-50 border border-zinc-200 rounded-3xl p-7">
+                                <h4 class="font-medium mb-5">Portswood / Highfield / Universtity postcode check</h4>
+                                <p class="text-xs text-zinc-500 mb-4">This is only used to make sure you’re close enough to participating venues.</p>
+                                <div class="space-y-1">
+                                    <label class="block text-sm font-medium">Select your postcode sector</label>
+                                    <select id="portswood-sector" class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base">
+                                        <option value="">Select...</option>
+                                        <option value="SO17 1">SO17 1</option>
+                                        <option value="SO17 2">SO17 2</option>
+                                        <option value="SO17 3">SO17 3</option>
+                                        <option value="SO17 4">SO17 4</option>
+                                        <option value="SO17 5">SO17 5</option>
+                                    </select>
+                                </div>
+                                <div class="mt-7">
+                                    <label class="block text-sm font-medium mb-2">Enter the last 3 characters of your postcode (e.g. 4AB) <span class="text-red-500">*</span></label>
+                                    <input id="portswood-last3" type="text" maxlength="3" class="form-input w-full px-5 py-4 border border-zinc-300 rounded-3xl text-base uppercase tracking-widest" placeholder="e.g. 4AB">
+                                </div>
+                                <p class="text-xs text-zinc-500 mt-4">This is only used to make sure you’re close enough to participating venues.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-4">
+                        <button id="submit-btn" type="submit"
+                            class="w-full bg-black hover:bg-zinc-900 active:bg-black transition-all text-white font-semibold py-6 rounded-3xl text-lg shadow-inner">
+                            Submit Application
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Feedback -->
+                <div id="feedback" class="mt-6 text-center"></div>
+            </div>
         </div>
-      </div>
 
-      <div id="eastSection" class="section-card hidden">
-        <h3>City Centre East - Postcode Check</h3>
-        <p>This is only used to make sure you’re close enough to participating venues.</p>
-        <p>Select your postcode sector</p>
-        <p>This is used to confirm eligibility</p>
-
-        <div class="field" style="margin-top: 14px;">
-          <label class="main-label" for="east_postcode_sector"><span class="required">*</span></label>
-          <select id="east_postcode_sector">
-            <option value="">Select one</option>
-            <option value="SO14 0">SO14 0</option>
-            <option value="SO14 1">SO14 1</option>
-            <option value="SO14 2">SO14 2</option>
-            <option value="SO14 3">SO14 3</option>
-          </select>
+        <!-- Subtle footer -->
+        <div class="text-center py-6 text-[10px] text-zinc-400 tracking-widest">
+            POWERED BY CREW DISPATCH • CONFIDENTIAL
         </div>
+    </div>
 
-        <div class="field">
-          <label class="main-label" for="east_postcode_last3">Enter the last 3 characters of your postcode (e.g. 4AB)<br><span class="required">*</span></label>
-          <input id="east_postcode_last3" type="text" maxlength="3" />
-        </div>
-      </div>
+    <script>
+        // Supabase constants
+        const SUPABASE_URL = "https://hweytbyrqvjsviydmacv.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
 
-      <div id="portswoodSection" class="section-card hidden">
-        <h3>Portswood / Highfield / Universtity postcode check</h3>
-        <p>This is only used to make sure you’re close enough to participating venues.</p>
-        <p>Select your postcode sector</p>
+        // DOM elements
+        const form = document.getElementById('application-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const feedback = document.getElementById('feedback');
 
-        <div class="field" style="margin-top: 14px;">
-          <label class="main-label" for="portswood_postcode_sector"><span class="required">*</span></label>
-          <select id="portswood_postcode_sector">
-            <option value="">Select one</option>
-            <option value="SO17 1">SO17 1</option>
-            <option value="SO17 2">SO17 2</option>
-            <option value="SO17 3">SO17 3</option>
-            <option value="SO17 4">SO17 4</option>
-            <option value="SO17 5">SO17 5</option>
-          </select>
-        </div>
+        const westSection = document.getElementById('west-postcode');
+        const eastSection = document.getElementById('east-postcode');
+        const portswoodSection = document.getElementById('portswood-postcode');
 
-        <div class="field">
-          <label class="main-label" for="portswood_postcode_last3">Enter the last 3 characters of your postcode (e.g. 4AB)<br><span class="required">*</span></label>
-          <input id="portswood_postcode_last3" type="text" maxlength="3" />
-        </div>
+        const westSectorSelect = document.getElementById('west-sector');
+        const westLast3Input = document.getElementById('west-last3');
+        const eastSectorSelect = document.getElementById('east-sector');
+        const eastLast3Input = document.getElementById('east-last3');
+        const portswoodSectorSelect = document.getElementById('portswood-sector');
+        const portswoodLast3Input = document.getElementById('portswood-last3');
 
-        <p>This is only used to make sure you’re close enough to participating venues.</p>
-      </div>
-
-      <div class="submit-wrap">
-        <button type="submit" id="submitBtn">Submit application</button>
-      </div>
-
-      <div id="successMessage" class="success">
-        Thank you. Your application has been submitted.
-      </div>
-
-      <div id="errorMessage" class="error">
-        Something went wrong. Please try again.
-      </div>
-
-      <div class="footer-note">
-        Crew Dispatch will only use your details for pilot registration and shift communication.
-      </div>
-    </form>
-  </main>
-
-  <script>
-    const SUPABASE_URL = "https://hweytbyrqvjsviydmacv.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
-
-    const form = document.getElementById("applicationForm");
-    const submitBtn = document.getElementById("submitBtn");
-    const successMessage = document.getElementById("successMessage");
-    const errorMessage = document.getElementById("errorMessage");
-
-    const areaSelect = document.getElementById("area");
-    const westSection = document.getElementById("westSection");
-    const eastSection = document.getElementById("eastSection");
-    const portswoodSection = document.getElementById("portswoodSection");
-
-    const westSector = document.getElementById("west_postcode_sector");
-    const eastSector = document.getElementById("east_postcode_sector");
-    const portswoodSector = document.getElementById("portswood_postcode_sector");
-
-    const westLast3 = document.getElementById("west_postcode_last3");
-    const eastLast3 = document.getElementById("east_postcode_last3");
-    const portswoodLast3 = document.getElementById("portswood_postcode_last3");
-
-    function resetPostcodeRequirements() {
-      westSector.required = false;
-      eastSector.required = false;
-      portswoodSector.required = false;
-      westLast3.required = false;
-      eastLast3.required = false;
-      portswoodLast3.required = false;
-    }
-
-    function updateAreaSections() {
-      const area = areaSelect.value;
-
-      westSection.classList.add("hidden");
-      eastSection.classList.add("hidden");
-      portswoodSection.classList.add("hidden");
-      resetPostcodeRequirements();
-
-      if (area === "City Centre West ( Bedford Place area )") {
-        westSection.classList.remove("hidden");
-        westSector.required = true;
-        westLast3.required = true;
-      }
-
-      if (area === "City Centre East ( Ocean Village area )") {
-        eastSection.classList.remove("hidden");
-        eastSector.required = true;
-        eastLast3.required = true;
-      }
-
-      if (area === "Portswood / Highfield / Southampton Uni") {
-        portswoodSection.classList.remove("hidden");
-        portswoodSector.required = true;
-        portswoodLast3.required = true;
-      }
-    }
-
-    areaSelect.addEventListener("change", updateAreaSections);
-    updateAreaSections();
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      successMessage.style.display = "none";
-      errorMessage.style.display = "none";
-
-      const area = areaSelect.value;
-      let postcodeSector = "";
-      let postcodeLast3 = "";
-
-      if (area === "City Centre West ( Bedford Place area )") {
-        postcodeSector = westSector.value;
-        postcodeLast3 = westLast3.value;
-      }
-
-      if (area === "City Centre East ( Ocean Village area )") {
-        postcodeSector = eastSector.value;
-        postcodeLast3 = eastLast3.value;
-      }
-
-      if (area === "Portswood / Highfield / Southampton Uni") {
-        postcodeSector = portswoodSector.value;
-        postcodeLast3 = portswoodLast3.value;
-      }
-
-      const payload = {
-        name: document.getElementById("name").value,
-        phone: document.getElementById("phone").value,
-        email: document.getElementById("email").value,
-        age_group: document.getElementById("age_group").value,
-        has_black_clothing: form.querySelector('input[name="has_black_clothing"]:checked')?.value === "true",
-        physically_able: form.querySelector('input[name="physically_able"]:checked')?.value === "true",
-        speaks_english: form.querySelector('input[name="speaks_english"]:checked')?.value === "true",
-        understands_trial: form.querySelector('input[name="understands_trial"]:checked')?.value === "true",
-        reliability_notes: document.getElementById("reliability_notes").value,
-        agrees_work_standard: form.querySelector('input[name="agrees_work_standard"]:checked')?.value === "true",
-        area: area,
-        postcode_sector: postcodeSector,
-        postcode_last3: postcodeLast3.toUpperCase()
-      };
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Submitting...";
-
-      try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/applications`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Prefer": "return=minimal"
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to submit");
+        // Area radio listeners
+        function setupAreaListeners() {
+            const areaInputs = document.querySelectorAll('input[name="area"]');
+            areaInputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    hideAllPostcodeSections();
+                    if (input.value === 'City Centre West ( Bedford Place area )') {
+                        westSection.classList.remove('hidden');
+                        setTimeout(() => westSection.classList.add('show'), 10);
+                        westSectorSelect.required = true;
+                        westLast3Input.required = true;
+                    } else if (input.value === 'City Centre East ( Ocean Village area )') {
+                        eastSection.classList.remove('hidden');
+                        setTimeout(() => eastSection.classList.add('show'), 10);
+                        eastSectorSelect.required = true;
+                        eastLast3Input.required = true;
+                    } else if (input.value === 'Portswood / Highfield / Southampton Uni') {
+                        portswoodSection.classList.remove('hidden');
+                        setTimeout(() => portswoodSection.classList.add('show'), 10);
+                        portswoodSectorSelect.required = true;
+                        portswoodLast3Input.required = true;
+                    }
+                });
+            });
         }
 
-        form.reset();
-        updateAreaSections();
-        successMessage.style.display = "block";
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } catch (error) {
-        errorMessage.style.display = "block";
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit application";
-      }
-    });
-  </script>
+        function hideAllPostcodeSections() {
+            westSection.classList.add('hidden');
+            eastSection.classList.add('hidden');
+            portswoodSection.classList.add('hidden');
+            westSection.classList.remove('show');
+            eastSection.classList.remove('show');
+            portswoodSection.classList.remove('show');
+
+            westSectorSelect.required = false;
+            westLast3Input.required = false;
+            eastSectorSelect.required = false;
+            eastLast3Input.required = false;
+            portswoodSectorSelect.required = false;
+            portswoodLast3Input.required = false;
+        }
+
+        // Form submit handler
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            // Basic HTML5 validation
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="flex items-center justify-center gap-x-2">
+                    <span class="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full"></span>
+                    Submitting...
+                </span>
+            `;
+            feedback.innerHTML = '';
+
+            // Gather form values
+            const name = document.getElementById('name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const age_group = document.querySelector('input[name="age_group"]:checked').value;
+            const has_black_clothing = document.querySelector('input[name="has_black_clothing"]:checked').value === 'Yes';
+            const physically_able = document.querySelector('input[name="physically_able"]:checked').value === 'Yes';
+            const speaks_english = document.querySelector('input[name="speaks_english"]:checked').value === 'Yes';
+            const understands_trial = document.querySelector('input[name="understands_trial"]:checked').value === 'I understand';
+            const reliability_notes = document.getElementById('reliability_notes').value.trim();
+            const agrees_work_standard = document.querySelector('input[name="agrees_work_standard"]:checked').value === 'I understand and agree';
+
+            // Area
+            const areaInput = document.querySelector('input[name="area"]:checked');
+            const area = areaInput ? areaInput.value : '';
+
+            // Postcode values (only from visible section)
+            let postcode_sector = '';
+            let postcode_last3 = '';
+            if (!westSection.classList.contains('hidden')) {
+                postcode_sector = westSectorSelect.value;
+                postcode_last3 = westLast3Input.value.trim().toUpperCase();
+            } else if (!eastSection.classList.contains('hidden')) {
+                postcode_sector = eastSectorSelect.value;
+                postcode_last3 = eastLast3Input.value.trim().toUpperCase();
+            } else if (!portswoodSection.classList.contains('hidden')) {
+                postcode_sector = portswoodSectorSelect.value;
+                postcode_last3 = portswoodLast3Input.value.trim().toUpperCase();
+            }
+
+            const payload = {
+                name: name,
+                phone: phone,
+                email: email,
+                age_group: age_group,
+                has_black_clothing: has_black_clothing,
+                physically_able: physically_able,
+                speaks_english: speaks_english,
+                understands_trial: understands_trial,
+                reliability_notes: reliability_notes,
+                agrees_work_standard: agrees_work_standard,
+                area: area,
+                postcode_sector: postcode_sector,
+                postcode_last3: postcode_last3
+            };
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/applications`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error('Network error');
+
+                // Success
+                feedback.innerHTML = `
+                    <div class="success-message bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-3xl p-6 text-center">
+                        <div class="text-3xl mb-2">✅</div>
+                        <p class="font-medium">Thank you! Your application has been received.</p>
+                        <p class="text-xs text-emerald-700 mt-2">You will receive the pilot date and Zoom invite by email shortly.</p>
+                    </div>
+                `;
+                form.reset();
+                hideAllPostcodeSections();
+            } catch (err) {
+                feedback.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 text-red-700 rounded-3xl p-6 text-center text-sm font-medium">
+                        Submission failed. Please check your connection and try again.
+                    </div>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Application';
+            }
+        }
+
+        // Initialize everything
+        function initialize() {
+            // Tailwind ready
+            setupAreaListeners();
+            form.addEventListener('submit', handleSubmit);
+        }
+
+        window.onload = initialize;
+    </script>
 </body>
 </html>
