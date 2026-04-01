@@ -1,1 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Southampton Weekend Floor Crew</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #f5f5f4;
+      color: #18181b;
+    }
 
+    .glass-card {
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(10px);
+    }
+
+    .form-input {
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #000;
+      box-shadow: 0 0 0 4px rgba(0,0,0,0.08);
+    }
+
+    .submit-btn {
+      transition: all 0.2s ease;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .success-message {
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-md mx-auto min-h-screen flex flex-col p-4">
+
+    <div class="glass-card rounded-3xl shadow p-6 mb-4">
+      <div class="bg-black text-white p-5 rounded-2xl mb-5">
+        <h1 class="text-xl font-semibold">Southampton Weekend Floor Crew</h1>
+        <p class="text-xs text-zinc-400 mt-1 tracking-wider">CREW CHECK</p>
+      </div>
+
+      <div class="space-y-4 text-sm leading-relaxed">
+        <p class="font-semibold text-base text-black">
+          Quick check so everything runs smoothly.
+        </p>
+        <p>
+          This just makes sure you understand how shifts will work and that you're ready to receive and accept them when they come through.
+        </p>
+      </div>
+    </div>
+
+    <div class="glass-card rounded-3xl shadow p-6">
+      <form id="onboarding-form" class="space-y-5">
+
+        <div>
+          <label class="text-sm font-medium mb-1 block">Email Address *</label>
+          <input id="email" type="email" required class="form-input w-full px-4 py-3 border rounded-xl">
+          <p class="text-xs text-zinc-500 mt-1">Use the same email you registered with</p>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium mb-2 block">Do you have plain black clothing suitable for bar work? *</label>
+          <select id="has_black_clothing" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <option value="">Select an option</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium mb-2 block">Are you comfortable being on your feet and moving quickly for a full shift? *</label>
+          <select id="physically_able" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <option value="">Select an option</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium mb-2 block">Do you speak and understand English clearly in a fast-paced environment? *</label>
+          <select id="speaks_english" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <option value="">Select an option</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium mb-2 block">Do you understand how shifts will work? *</label>
+          <div class="text-xs text-zinc-600 leading-relaxed mb-2 space-y-1">
+            <p>- You may be invited to a Zoom call that acts as a live version of the system</p>
+            <p>- Shift requests may come through live</p>
+            <p>- If you accept a shift, you must be ready to leave</p>
+            <p>- Work includes glass collecting and clearing tables</p>
+          </div>
+          <select id="understands_trial" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <option value="">Select an option</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium mb-2 block">Do you agree to be reliable, responsive and polite when accepting shifts? *</label>
+          <select id="agrees_work_standard" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <option value="">Select an option</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium mb-1 block">Anything you'd like to add? (optional)</label>
+          <textarea id="reliability_notes" rows="4" class="form-input w-full px-4 py-3 border rounded-xl resize-none" placeholder="Optional"></textarea>
+        </div>
+
+        <div class="text-xs text-zinc-500 leading-relaxed pt-2">
+          This information will only be used for onboarding and shift coordination.
+        </div>
+
+        <button id="submit-btn" type="submit" class="submit-btn w-full bg-black text-white py-4 rounded-xl font-semibold mt-2">
+          Submit
+        </button>
+
+      </form>
+
+      <div id="feedback" class="mt-4 text-center"></div>
+    </div>
+
+    <div class="text-center text-[10px] text-zinc-400 mt-4 tracking-widest">
+      POWERED BY CREW DISPATCH • CONFIDENTIAL
+    </div>
+
+  </div>
+
+<script>
+const SUPABASE_URL = "https://hweytbyrqvjsviydmacv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
+
+const form = document.getElementById('onboarding-form');
+const submitBtn = document.getElementById('submit-btn');
+const feedback = document.getElementById('feedback');
+
+function toBool(value) {
+  return value === 'true';
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  const hasBlackClothing = document.getElementById('has_black_clothing').value;
+  const physicallyAble = document.getElementById('physically_able').value;
+  const speaksEnglish = document.getElementById('speaks_english').value;
+  const understandsTrial = document.getElementById('understands_trial').value;
+  const agreesWorkStandard = document.getElementById('agrees_work_standard').value;
+  const reliabilityNotes = document.getElementById('reliability_notes').value.trim();
+
+  if (!email || !hasBlackClothing || !physicallyAble || !speaksEnglish || !understandsTrial || !agreesWorkStandard) {
+    feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete all required fields.</div>`;
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Submitting...";
+
+  const payload = {
+    has_black_clothing: toBool(hasBlackClothing),
+    physically_able: toBool(physicallyAble),
+    speaks_english: toBool(speaksEnglish),
+    understands_trial: toBool(understandsTrial),
+    agrees_work_standard: toBool(agreesWorkStandard),
+    reliability_notes: reliabilityNotes || null
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/applications?email=eq.${encodeURIComponent(email)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error();
+
+    const data = await res.json();
+
+    if (!data || data.length === 0) {
+      feedback.innerHTML = `<div class="text-red-600 text-sm">We couldn't find your registration. Please use the same email you signed up with.</div>`;
+      submitBtn.disabled = false;
+      submitBtn.innerText = "Submit";
+      return;
+    }
+
+    feedback.innerHTML = `
+      <div class="success-message text-green-600 text-sm">
+        ✅ Done. You're all set and we'll be in touch with next steps.
+      </div>
+    `;
+
+    form.reset();
+
+  } catch {
+    feedback.innerHTML = `<div class="text-red-600 text-sm">Something went wrong. Try again.</div>`;
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.innerText = "Submit";
+});
+</script>
+
+</body>
+</html>
