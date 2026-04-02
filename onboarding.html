@@ -148,6 +148,15 @@
         </div>
 
         <div>
+          <label class="text-sm font-medium mb-2 block">Age group *</label>
+          <select id="age_group" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <option value="">Select an option</option>
+            <option value="18-24">18-24</option>
+            <option value="25+">25+</option>
+          </select>
+        </div>
+
+        <div>
           <label class="text-sm font-medium mb-2 block">Do you have plain black clothing suitable for bar work? *</label>
           <select id="has_black_clothing" required class="form-input w-full px-4 py-3 border rounded-xl">
             <option value="">Select an option</option>
@@ -232,6 +241,7 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const email = document.getElementById('email').value.trim().toLowerCase();
+  const ageGroup = document.getElementById('age_group').value;
   const hasBlackClothing = document.getElementById('has_black_clothing').value;
   const physicallyAble = document.getElementById('physically_able').value;
   const speaksEnglish = document.getElementById('speaks_english').value;
@@ -239,7 +249,7 @@ form.addEventListener('submit', async (e) => {
   const agreesWorkStandard = document.getElementById('agrees_work_standard').value;
   const reliabilityNotes = document.getElementById('reliability_notes').value.trim();
 
-  if (!email || !hasBlackClothing || !physicallyAble || !speaksEnglish || !understandsTrial || !agreesWorkStandard) {
+  if (!email || !ageGroup || !hasBlackClothing || !physicallyAble || !speaksEnglish || !understandsTrial || !agreesWorkStandard) {
     feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete all required fields.</div>`;
     return;
   }
@@ -248,6 +258,7 @@ form.addEventListener('submit', async (e) => {
   submitBtn.innerText = "Submitting...";
 
   const payload = {
+    age_group: ageGroup,
     has_black_clothing: toBool(hasBlackClothing),
     physically_able: toBool(physicallyAble),
     speaks_english: toBool(speaksEnglish),
