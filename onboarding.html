@@ -44,6 +44,36 @@
       animation: fadeIn 0.3s ease forwards;
     }
 
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid #d4d4d8;
+      border-radius: 14px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .radio-option:hover {
+      border-color: #000;
+      background: #fafafa;
+    }
+
+    .radio-option input[type="radio"] {
+      accent-color: #000;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .radio-option-text {
+      font-size: 14px;
+      line-height: 1.4;
+      color: #18181b;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -61,85 +91,32 @@
         </div>
 
         <div class="space-y-4 text-sm leading-relaxed">
-          <p class="font-semibold text-base text-black">
-            How shifts work
-          </p>
+          <p class="font-semibold text-base text-black">How shifts work</p>
 
-          <p>
-            On Friday and Saturday nights over the next couple of weeks, we’ll be offering short bar shifts when venues get busy.
-          </p>
+          <p>On Friday and Saturday nights over the next couple of weeks, we’ll be offering short bar shifts when venues get busy.</p>
+          <p>Bars send through requests when they need extra help, and we pass these on live.</p>
+          <p>Shifts will be at least minimum wage, last a few hours, and be no more than 20 minutes walking distance from your location — some of you may be just a few minutes away.</p>
+          <p>We guarantee venues extra help within 20 minutes, so all shifts stay within that range.</p>
 
-          <p>
-            Bars send through requests when they need extra help, and we pass these on live.
-          </p>
+          <p class="font-semibold text-base text-black">The work</p>
+          <p>The work is simple. Glass collecting, clearing tables and keeping the bar tidy.</p>
+          <p>No till work, no stocking, and nothing that requires training.</p>
 
-          <p>
-            Shifts will be at least minimum wage, last a few hours, and be no more than 20 minutes walking distance from your location — some of you may be just a few minutes away.
-          </p>
+          <p class="font-semibold text-base text-black">How you receive shifts</p>
+          <p>You’ll join a Zoom call during the evening, which acts as the live system.</p>
+          <p>You do not need your camera or microphone on. You can relax at home, but you must be ready to leave if you accept a shift.</p>
+          <p>When a shift comes in, it will be posted in the Zoom chat. The first person to respond “Yes - ready” gets the shift.</p>
+          <p>If you accept, you must be ready to leave immediately, share your live location via WhatsApp, and then head to the venue.</p>
 
-          <p>
-            We guarantee venues extra help within 20 minutes, so all shifts stay within that range.
-          </p>
+          <p class="font-semibold text-base text-black">After the shift</p>
+          <p>You complete your shift and you will be paid at the end of your shift, cash or BACS, by the bar.</p>
 
-          <p class="font-semibold text-base text-black">
-            The work
-          </p>
+          <p class="font-semibold text-base text-black">Important</p>
+          <p>You don’t have to accept every shift, but if you want to earn money you need to be ready and respond quickly. This is real, paid work.</p>
 
-          <p>
-            The work is simple. Glass collecting, clearing tables and keeping the bar tidy.
-          </p>
-
-          <p>
-            No till work, no stocking, and nothing that requires training.
-          </p>
-
-          <p class="font-semibold text-base text-black">
-            How you receive shifts
-          </p>
-
-          <p>
-            You’ll join a Zoom call during the evening, which acts as the live system.
-          </p>
-
-          <p>
-            You do not need your camera or microphone on. You can relax at home, but you must be ready to leave if you accept a shift.
-          </p>
-
-          <p>
-            When a shift comes in, it will be posted in the Zoom chat. The first person to respond “Yes - ready” gets the shift.
-          </p>
-
-          <p>
-            If you accept, you must be ready to leave immediately, share your live location via WhatsApp, and then head to the venue.
-          </p>
-
-          <p class="font-semibold text-base text-black">
-            After the shift
-          </p>
-
-          <p>
-            You complete your shift and you will be paid at the end of your shift, cash or BACS, by the bar.
-          </p>
-
-          <p class="font-semibold text-base text-black">
-            Important
-          </p>
-
-          <p>
-            You don’t have to accept every shift, but if you want to earn money you need to be ready and respond quickly. This is real, paid work.
-          </p>
-
-          <p class="font-semibold text-base text-black">
-            What this is
-          </p>
-
-          <p>
-            This is a simple live version of how the system will work.
-          </p>
-
-          <p>
-            Our app is already in development and will be launching soon, allowing you to clock in and look for shifts whenever you like.
-          </p>
+          <p class="font-semibold text-base text-black">What this is</p>
+          <p>This is a simple live version of how the system will work.</p>
+          <p>Our app is already in development and will be launching soon, allowing you to clock in and look for shifts whenever you like.</p>
 
           <button
             id="show-form-btn"
@@ -166,6 +143,15 @@
               <option value="">Select an option</option>
               <option value="18-24">18-24</option>
               <option value="25+">25+</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium mb-2 block">Are you legally allowed to work in the UK? *</label>
+            <select id="uk_work_right" required class="form-input w-full px-4 py-3 border rounded-xl">
+              <option value="">Select an option</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
           </div>
 
@@ -197,15 +183,6 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Do you understand how shifts will work? *</label>
-            <select id="understands_trial" required class="form-input w-full px-4 py-3 border rounded-xl">
-              <option value="">Select an option</option>
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-
-          <div>
             <label class="text-sm font-medium mb-2 block">Do you agree to be reliable, responsive and polite when accepting shifts? *</label>
             <select id="agrees_work_standard" required class="form-input w-full px-4 py-3 border rounded-xl">
               <option value="">Select an option</option>
@@ -217,6 +194,64 @@
           <div>
             <label class="text-sm font-medium mb-1 block">Anything you'd like to add? (optional)</label>
             <textarea id="reliability_notes" rows="4" class="form-input w-full px-4 py-3 border rounded-xl resize-none" placeholder="Optional"></textarea>
+          </div>
+
+          <div class="space-y-4 pt-2">
+            <p class="text-sm font-semibold text-black">Quick check</p>
+
+            <div>
+              <label class="text-sm font-medium mb-2 block">How do you receive shift requests?</label>
+              <div class="space-y-2">
+                <label class="radio-option">
+                  <input type="radio" name="q1" value="zoom">
+                  <span class="radio-option-text">Through a Zoom session</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="q1" value="whatsapp">
+                  <span class="radio-option-text">By WhatsApp message</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="q1" value="call">
+                  <span class="radio-option-text">By phone call</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-2 block">If you accept a shift, what are you expected to do?</label>
+              <div class="space-y-2">
+                <label class="radio-option">
+                  <input type="radio" name="q2" value="hour">
+                  <span class="radio-option-text">Arrive within an hour</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="q2" value="immediate">
+                  <span class="radio-option-text">Leave immediately and head to the venue</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="q2" value="wait">
+                  <span class="radio-option-text">Wait for further instructions</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-2 block">Which of the following is part of the role?</label>
+              <div class="space-y-2">
+                <label class="radio-option">
+                  <input type="radio" name="q3" value="till">
+                  <span class="radio-option-text">Working the till</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="q3" value="floor">
+                  <span class="radio-option-text">Glass collecting and clearing tables</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="q3" value="stock">
+                  <span class="radio-option-text">Managing stock in the back</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <div class="text-xs text-zinc-500 leading-relaxed pt-2">
@@ -264,15 +299,29 @@ form.addEventListener('submit', async (e) => {
 
   const email = document.getElementById('email').value.trim().toLowerCase();
   const ageGroup = document.getElementById('age_group').value;
+  const ukWorkRight = document.getElementById('uk_work_right').value;
   const hasBlackClothing = document.getElementById('has_black_clothing').value;
   const physicallyAble = document.getElementById('physically_able').value;
   const speaksEnglish = document.getElementById('speaks_english').value;
-  const understandsTrial = document.getElementById('understands_trial').value;
   const agreesWorkStandard = document.getElementById('agrees_work_standard').value;
   const reliabilityNotes = document.getElementById('reliability_notes').value.trim();
 
-  if (!email || !ageGroup || !hasBlackClothing || !physicallyAble || !speaksEnglish || !understandsTrial || !agreesWorkStandard) {
+  const q1 = document.querySelector('input[name="q1"]:checked')?.value;
+  const q2 = document.querySelector('input[name="q2"]:checked')?.value;
+  const q3 = document.querySelector('input[name="q3"]:checked')?.value;
+
+  if (!email || !ageGroup || !ukWorkRight || !hasBlackClothing || !physicallyAble || !speaksEnglish || !agreesWorkStandard) {
     feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete all required fields.</div>`;
+    return;
+  }
+
+  if (!q1 || !q2 || !q3) {
+    feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete the quick check before submitting.</div>`;
+    return;
+  }
+
+  if (q1 !== 'zoom' || q2 !== 'immediate' || q3 !== 'floor') {
+    feedback.innerHTML = `<div class="text-red-600 text-sm">One or more answers aren’t quite right — please check the section above and try again.</div>`;
     return;
   }
 
@@ -284,7 +333,6 @@ form.addEventListener('submit', async (e) => {
     has_black_clothing: toBool(hasBlackClothing),
     physically_able: toBool(physicallyAble),
     speaks_english: toBool(speaksEnglish),
-    understands_trial: toBool(understandsTrial),
     agrees_work_standard: toBool(agreesWorkStandard),
     reliability_notes: reliabilityNotes || null
   };
