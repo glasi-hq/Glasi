@@ -44,32 +44,76 @@
       animation: fadeIn 0.3s ease forwards;
     }
 
+    .quick-check-wrap {
+      margin-top: 4px;
+      padding: 18px;
+      border: 1px solid #e4e4e7;
+      border-radius: 20px;
+      background: linear-gradient(to bottom, #fafafa, #ffffff);
+    }
+
+    .quick-check-heading {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #71717a;
+      margin-bottom: 14px;
+    }
+
+    .question-block {
+      padding-top: 2px;
+    }
+
+    .question-block + .question-block {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid #ededed;
+    }
+
+    .question-title {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: #111827;
+      margin-bottom: 10px;
+    }
+
+    .answers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
     .radio-option {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      border: 1px solid #d4d4d8;
+      gap: 10px;
+      padding: 11px 12px;
+      border: 1px solid #e4e4e7;
       border-radius: 14px;
       background: #ffffff;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
     }
 
     .radio-option:hover {
-      border-color: #000;
-      background: #fafafa;
+      border-color: #bdbdc7;
+      background: #fcfcfc;
+      transform: translateY(-1px);
     }
 
     .radio-option input[type="radio"] {
       accent-color: #000;
-      width: 16px;
-      height: 16px;
+      width: 15px;
+      height: 15px;
       flex-shrink: 0;
+      margin: 0;
     }
 
     .radio-option-text {
-      font-size: 14px;
+      font-size: 12px;
       line-height: 1.4;
       color: #18181b;
     }
@@ -105,8 +149,10 @@
           <p class="font-semibold text-base text-black">How you receive shifts</p>
           <p>You’ll join a Zoom call during the evening, which acts as the live system.</p>
           <p>You do not need your camera or microphone on. You can relax at home, but you must be ready to leave if you accept a shift.</p>
+          <p> You are not paid for being on the Zoom - you are only paid if you accept and complete a shift. </p>
           <p>When a shift comes in, it will be posted in the Zoom chat. The first person to respond “Yes - ready” gets the shift.</p>
           <p>If you accept, you must be ready to leave immediately, share your live location via WhatsApp, and then head to the venue.</p>
+          
 
           <p class="font-semibold text-base text-black">After the shift</p>
           <p>You complete your shift and you will be paid at the end of your shift, cash or BACS, by the bar.</p>
@@ -196,12 +242,12 @@
             <textarea id="reliability_notes" rows="4" class="form-input w-full px-4 py-3 border rounded-xl resize-none" placeholder="Optional"></textarea>
           </div>
 
-          <div class="space-y-4 pt-2">
-            <p class="text-sm font-semibold text-black">Quick check</p>
+          <div class="quick-check-wrap">
+            <p class="quick-check-heading">Quick check</p>
 
-            <div>
-              <label class="text-sm font-medium mb-2 block">How do you receive shift requests?</label>
-              <div class="space-y-2">
+            <div class="question-block">
+              <label class="question-title">How do you receive shift requests?</label>
+              <div class="answers-list">
                 <label class="radio-option">
                   <input type="radio" name="q1" value="zoom">
                   <span class="radio-option-text">Through a Zoom session</span>
@@ -217,9 +263,9 @@
               </div>
             </div>
 
-            <div>
-              <label class="text-sm font-medium mb-2 block">If you accept a shift, what are you expected to do?</label>
-              <div class="space-y-2">
+            <div class="question-block">
+              <label class="question-title">If you accept a shift, what are you expected to do?</label>
+              <div class="answers-list">
                 <label class="radio-option">
                   <input type="radio" name="q2" value="hour">
                   <span class="radio-option-text">Arrive within an hour</span>
@@ -235,9 +281,9 @@
               </div>
             </div>
 
-            <div>
-              <label class="text-sm font-medium mb-2 block">Which of the following is part of the role?</label>
-              <div class="space-y-2">
+            <div class="question-block">
+              <label class="question-title">Which of the following is part of the role?</label>
+              <div class="answers-list">
                 <label class="radio-option">
                   <input type="radio" name="q3" value="till">
                   <span class="radio-option-text">Working the till</span>
