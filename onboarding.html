@@ -149,10 +149,9 @@
           <p class="font-semibold text-base text-black">How you receive shifts</p>
           <p>You’ll join a Zoom call during the evening, which acts as the live system.</p>
           <p>You do not need your camera or microphone on. You can relax at home, but you must be ready to leave if you accept a shift.</p>
-          <p> You are not paid for being on the Zoom - you are only paid if you accept and complete a shift. </p>
+          <p>You are not paid for being on the Zoom - you are only paid if you accept and complete a shift.</p>
           <p>When a shift comes in, it will be posted in the Zoom chat. The first person to respond “Yes - ready” gets the shift.</p>
           <p>If you accept, you must be ready to leave immediately, share your live location via WhatsApp, and then head to the venue.</p>
-          
 
           <p class="font-semibold text-base text-black">After the shift</p>
           <p>You complete your shift and you will be paid at the end of your shift, cash or BACS, by the bar.</p>
@@ -189,6 +188,15 @@
               <option value="">Select an option</option>
               <option value="18-24">18-24</option>
               <option value="25+">25+</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium mb-2 block">Do you have any hospitality experience? (It’s OK if you don’t) *</label>
+            <select id="hospitality_experience" required class="form-input w-full px-4 py-3 border rounded-xl">
+              <option value="">Select an option</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
           </div>
 
@@ -238,8 +246,8 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-1 block">Anything you'd like to add? (optional)</label>
-            <textarea id="reliability_notes" rows="4" class="form-input w-full px-4 py-3 border rounded-xl resize-none" placeholder="Optional"></textarea>
+            <label class="text-sm font-medium mb-1 block">Tell us about your experience, or why you'd be good for this role *</label>
+            <textarea id="reliability_notes" rows="4" required class="form-input w-full px-4 py-3 border rounded-xl resize-none" placeholder="E.g. bar work, events, or why you'd be a good fit"></textarea>
           </div>
 
           <div class="quick-check-wrap">
@@ -345,6 +353,7 @@ form.addEventListener('submit', async (e) => {
 
   const email = document.getElementById('email').value.trim().toLowerCase();
   const ageGroup = document.getElementById('age_group').value;
+  const hospitalityExperience = document.getElementById('hospitality_experience').value;
   const ukWorkRight = document.getElementById('uk_work_right').value;
   const hasBlackClothing = document.getElementById('has_black_clothing').value;
   const physicallyAble = document.getElementById('physically_able').value;
@@ -356,7 +365,7 @@ form.addEventListener('submit', async (e) => {
   const q2 = document.querySelector('input[name="q2"]:checked')?.value;
   const q3 = document.querySelector('input[name="q3"]:checked')?.value;
 
-  if (!email || !ageGroup || !ukWorkRight || !hasBlackClothing || !physicallyAble || !speaksEnglish || !agreesWorkStandard) {
+  if (!email || !ageGroup || !hospitalityExperience || !ukWorkRight || !hasBlackClothing || !physicallyAble || !speaksEnglish || !agreesWorkStandard || !reliabilityNotes) {
     feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete all required fields.</div>`;
     return;
   }
@@ -376,6 +385,8 @@ form.addEventListener('submit', async (e) => {
 
   const payload = {
     age_group: ageGroup,
+    hospitality_experience: toBool(hospitalityExperience),
+    uk_work_right: toBool(ukWorkRight),
     has_black_clothing: toBool(hasBlackClothing),
     physically_able: toBool(physicallyAble),
     speaks_english: toBool(speaksEnglish),
@@ -408,8 +419,8 @@ form.addEventListener('submit', async (e) => {
 
     feedback.innerHTML = `
       <div class="success-message text-green-600 text-sm space-y-3">
-<p>✅ You're all set - welcome to Crew Dispatch UK. </p>
-<p>The Zoom link will arrive by email, so keep an eye out and make sure you join to get your first shift. </p>
+        <p>✅ You're all set - welcome to Crew Dispatch UK.</p>
+        <p>The Zoom link will arrive by email, so keep an eye out and make sure you join to get your first shift.</p>
       </div>
     `;
 
