@@ -312,7 +312,7 @@
       line-height: 1.65;
     }
 
-    /* Toggle and Break-even styling */
+    /* Simple Toggle Styling */
     .toggle-row {
       display: flex;
       align-items: center;
@@ -324,6 +324,7 @@
     .toggle-label {
       display: flex;
       align-items: center;
+      gap: 12px;
       cursor: pointer;
       font-size: 15px;
       font-weight: 700;
@@ -335,11 +336,18 @@
       width: 52px;
       height: 28px;
     }
-    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch input { 
+      opacity: 0; 
+      width: 0; 
+      height: 0; 
+    }
     .slider {
       position: absolute;
       cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0;
       background: #ccc;
       transition: .3s;
       border-radius: 999px;
@@ -355,8 +363,12 @@
       transition: .3s;
       border-radius: 50%;
     }
-    input:checked + .slider { background: #111111; }
-    input:checked + .slider:before { transform: translateX(24px); }
+    input:checked + .slider { 
+      background: #111111; 
+    }
+    input:checked + .slider:before { 
+      transform: translateX(24px); 
+    }
 
     .break-even-box {
       margin-top: 20px;
@@ -365,7 +377,10 @@
       border: 1px solid var(--line);
       border-radius: 16px;
     }
-    .break-even-box h4 { margin: 0 0 16px; font-size: 18px; }
+    .break-even-box h4 { 
+      margin: 0 0 16px; 
+      font-size: 18px; 
+    }
     .break-even-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -377,8 +392,17 @@
       border-radius: 14px;
       border: 1px solid var(--line);
     }
-    .break-even-label { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
-    .break-even-value { font-size: 24px; font-weight: 700; margin: 0; }
+    .break-even-label { 
+      font-size: 13px; 
+      font-weight: 700; 
+      color: var(--muted); 
+      margin-bottom: 4px; 
+    }
+    .break-even-value { 
+      font-size: 24px; 
+      font-weight: 700; 
+      margin: 0; 
+    }
 
     .footer-note {
       margin-top: 18px;
@@ -534,12 +558,11 @@
 
       <div class="toggle-row">
         <label class="toggle-label">
-          <input type="checkbox" id="showBreakEvenToggle">
           <span class="switch">
             <input type="checkbox" id="showBreakEven">
             <span class="slider"></span>
           </span>
-          Show future £349/month Subscription Break-even Analysis
+          Subscription Break-even
         </label>
       </div>
 
@@ -592,7 +615,6 @@
     const formulaExplanationEl = document.getElementById("formulaExplanation");
     const errorMessageEl = document.getElementById("errorMessage");
 
-    const showBreakEvenToggle = document.getElementById("showBreakEvenToggle");
     const showBreakEven = document.getElementById("showBreakEven");
     const breakEvenSection = document.getElementById("breakEvenSection");
     const perRushValueEl = document.getElementById("perRushValue");
@@ -728,11 +750,6 @@
     }
 
     showBreakEven.addEventListener("change", handleToggleChange);
-    showBreakEvenToggle.addEventListener("change", () => {
-      showBreakEven.checked = showBreakEvenToggle.checked;
-      handleToggleChange();
-    });
-
     rushesPerMonthInput.addEventListener("input", updateBreakEven);
 
     calculateBtn.addEventListener("click", calculate);
