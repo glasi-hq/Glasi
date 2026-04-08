@@ -26,11 +26,9 @@
       --shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
       --radius: 22px;
     }
-
     * {
       box-sizing: border-box;
     }
-
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
@@ -41,20 +39,17 @@
         linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
       min-height: 100vh;
     }
-
     .page {
       max-width: 1140px;
       margin: 0 auto;
       padding: 40px 20px 60px;
     }
-
     .hero {
       display: grid;
       grid-template-columns: 1.15fr 0.85fr;
       gap: 22px;
       margin-bottom: 22px;
     }
-
     .hero-card,
     .card {
       background: var(--panel);
@@ -63,13 +58,11 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
-
     .hero-card {
       padding: 34px;
       position: relative;
       overflow: hidden;
     }
-
     .hero-card::after {
       content: "GLASI";
       position: absolute;
@@ -82,7 +75,6 @@
       pointer-events: none;
       user-select: none;
     }
-
     .eyebrow {
       display: inline-block;
       font-size: 12px;
@@ -95,7 +87,6 @@
       border-radius: 999px;
       margin-bottom: 16px;
     }
-
     .brand {
       font-size: 42px;
       font-weight: 700;
@@ -103,13 +94,11 @@
       margin: 0 0 8px;
       line-height: 1;
     }
-
     .hero-title {
       margin: 0 0 14px;
       font-size: 34px;
       line-height: 1.1;
     }
-
     .hero-text {
       margin: 0;
       max-width: 650px;
@@ -117,7 +106,6 @@
       font-size: 16px;
       line-height: 1.65;
     }
-
     .hero-side {
       padding: 28px;
       display: flex;
@@ -125,7 +113,6 @@
       justify-content: space-between;
       gap: 18px;
     }
-
     .side-label {
       font-size: 13px;
       font-weight: 700;
@@ -134,34 +121,29 @@
       color: #6b7280;
       margin: 0 0 10px;
     }
-
     .side-value {
       font-size: 28px;
       font-weight: 700;
       margin: 0;
       line-height: 1.15;
     }
-
     .side-copy {
       margin: 8px 0 0;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.6;
     }
-
     .mini-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
     }
-
     .mini-stat {
       padding: 14px;
       border-radius: 14px;
       background: #f8fafc;
       border: 1px solid var(--line);
     }
-
     .mini-stat-label {
       display: block;
       font-size: 12px;
@@ -171,23 +153,19 @@
       letter-spacing: 0.8px;
       font-weight: 700;
     }
-
     .mini-stat-value {
       font-size: 20px;
       font-weight: 700;
       margin: 0;
     }
-
     .card {
       padding: 28px;
       margin-bottom: 22px;
     }
-
     .section-title {
       margin: 0 0 8px;
       font-size: 24px;
     }
-
     .section-copy {
       margin: 0 0 24px;
       color: var(--muted);
@@ -195,32 +173,27 @@
       line-height: 1.65;
       max-width: 800px;
     }
-
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 18px;
     }
-
     .field-group {
       display: flex;
       flex-direction: column;
       gap: 8px;
       margin-bottom: 18px;
     }
-
     label {
       font-size: 14px;
       font-weight: 700;
     }
-
     .helper {
       font-size: 13px;
       color: var(--muted);
       margin-top: -2px;
       line-height: 1.5;
     }
-
     input {
       width: 100%;
       padding: 15px 16px;
@@ -231,21 +204,18 @@
       background: rgba(255, 255, 255, 0.96);
       transition: 0.18s ease;
     }
-
     input:focus {
       outline: none;
       border-color: #97a3b6;
       box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.06);
       transform: translateY(-1px);
     }
-
     .button-row {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       margin-top: 8px;
     }
-
     button {
       border: none;
       border-radius: 14px;
@@ -255,29 +225,24 @@
       cursor: pointer;
       transition: 0.18s ease;
     }
-
     .primary-btn {
       background: #111111;
       color: #ffffff;
       min-width: 170px;
       box-shadow: 0 12px 24px rgba(17, 17, 17, 0.18);
     }
-
     .primary-btn:hover {
       transform: translateY(-1px);
       opacity: 0.96;
     }
-
     .secondary-btn {
       background: var(--accent-soft);
       color: var(--text);
       min-width: 120px;
     }
-
     .secondary-btn:hover {
       background: #e6ebf2;
     }
-
     .error {
       color: #991b1b;
       font-weight: 700;
@@ -285,60 +250,50 @@
       font-size: 14px;
       min-height: 20px;
     }
-
     .results-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
-
     .result-card {
       border-radius: 18px;
       padding: 22px;
       border: 1px solid transparent;
       min-height: 165px;
     }
-
     .result-card h3 {
       margin: 0 0 10px;
       font-size: 15px;
       letter-spacing: 0.2px;
     }
-
     .result-value {
       font-size: 34px;
       font-weight: 700;
       margin: 0 0 8px;
       line-height: 1.1;
     }
-
     .result-desc {
       margin: 0;
       font-size: 14px;
       color: var(--muted);
       line-height: 1.6;
     }
-
     .blue {
       background: var(--blue-bg);
       border-color: var(--blue-border);
     }
-
     .red {
       background: var(--red-bg);
       border-color: var(--red-border);
     }
-
     .amber {
       background: var(--amber-bg);
       border-color: var(--amber-border);
     }
-
     .green {
       background: var(--green-bg);
       border-color: var(--green-border);
     }
-
     .formula-box {
       margin-top: 20px;
       padding: 18px 20px;
@@ -346,51 +301,42 @@
       border: 1px solid var(--line);
       border-radius: 16px;
     }
-
     .formula-box h4 {
       margin: 0 0 8px;
       font-size: 15px;
     }
-
     .formula-box p {
       margin: 0;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.65;
     }
-
     .footer-note {
       margin-top: 18px;
       font-size: 13px;
       color: var(--muted);
       line-height: 1.6;
     }
-
     @media (max-width: 900px) {
       .hero {
         grid-template-columns: 1fr;
       }
     }
-
     @media (max-width: 760px) {
       .grid,
       .results-grid,
       .mini-stats {
         grid-template-columns: 1fr;
       }
-
       .brand {
         font-size: 34px;
       }
-
       .hero-title {
         font-size: 28px;
       }
-
       .result-value {
         font-size: 28px;
       }
-
       .hero-card,
       .hero-side,
       .card {
@@ -412,7 +358,6 @@
           and the net revenue that can be protected.
         </p>
       </div>
-
       <div class="hero-side hero-card">
         <div>
           <p class="side-label">What this shows</p>
@@ -421,7 +366,6 @@
             Built for live venue conversations. Simple figures in, clear commercial picture out.
           </p>
         </div>
-
         <div class="mini-stats">
           <div class="mini-stat">
             <span class="mini-stat-label">Focus</span>
@@ -442,7 +386,6 @@
         lost to floor pressure, gaps in support, or staffing shortages that pull trained bartenders
         away from serving.
       </p>
-
       <div class="grid">
         <div>
           <div class="field-group">
@@ -450,27 +393,23 @@
             <div class="helper">How many bartenders are serving during the peak period?</div>
             <input type="number" id="bartenders" min="0" step="1" placeholder="e.g. 4" />
           </div>
-
           <div class="field-group">
             <label for="drinksPerHour">Average drinks served per bartender per hour</label>
             <div class="helper">Your estimate of what one bartender can put out per hour when it is busy.</div>
             <input type="number" id="drinksPerHour" min="0" step="1" placeholder="e.g. 70" />
           </div>
-
           <div class="field-group">
             <label for="drinkValue">Average drink value (£)</label>
             <div class="helper">Pre-filled at £7, but editable if you want to adjust it.</div>
             <input type="number" id="drinkValue" min="0" step="0.1" value="7" />
           </div>
         </div>
-
         <div>
           <div class="field-group">
             <label for="rushMinutes">Rush length (minutes)</label>
             <div class="helper">How long does the busy period usually last?</div>
             <input type="number" id="rushMinutes" min="0" step="1" placeholder="e.g. 180" />
           </div>
-
           <div class="field-group">
             <label for="lostMinutes">Bartender minutes lost per hour</label>
             <div class="helper">Total minutes per hour trained bartenders are pulled away from serving.</div>
@@ -478,12 +417,10 @@
           </div>
         </div>
       </div>
-
       <div class="button-row">
         <button class="primary-btn" id="calculateBtn">Calculate</button>
         <button class="secondary-btn" id="resetBtn" type="button">Reset</button>
       </div>
-
       <div class="error" id="errorMessage"></div>
     </div>
 
@@ -491,42 +428,36 @@
       <h2 class="section-title">Results</h2>
       <p class="section-copy">
         These figures show what the rush is worth, what is exposed when bartender time is lost,
-        what it costs to bring in Glasi cover for the same period, and the net revenue protected.
+        what it costs to bring in Glasi cover, and how much of the maximum rush revenue is protected.
       </p>
-
       <div class="results-grid">
         <div class="result-card blue">
           <h3>Maximum Rush Revenue</h3>
           <p class="result-value" id="maxRushRevenue">£0</p>
           <p class="result-desc">The potential revenue if bartenders stay serving throughout the rush.</p>
         </div>
-
         <div class="result-card red">
           <h3>Revenue at Risk</h3>
           <p class="result-value" id="revenueAtRisk">£0</p>
           <p class="result-desc">The revenue exposed when trained bartender time is lost during the rush.</p>
         </div>
-
         <div class="result-card amber">
           <h3>Cost of Glasi Cover</h3>
           <p class="result-value" id="glasiCost">£0</p>
           <p class="result-desc">Calculated at a capped £14 per hour for the same length as the rush.</p>
         </div>
-
         <div class="result-card green">
-          <h3>Net Revenue Protected</h3>
-          <p class="result-value" id="netProtected">£0</p>
-          <p class="result-desc">Revenue at risk minus the cost of Glasi cover for that same period.</p>
+          <h3>Revenue Protected</h3>
+          <p class="result-value" id="revenueProtected">£0 (0%)</p>
+          <p class="result-desc">How much of the maximum rush revenue is protected by using Glasi (shown as amount and %).</p>
         </div>
       </div>
-
       <div class="formula-box">
         <h4>Calculation summary</h4>
         <p id="formulaExplanation">
-          Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the net revenue protected.
+          Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the revenue protected as a percentage of maximum rush revenue.
         </p>
       </div>
-
       <p class="footer-note">
         This is a simple decision tool designed to show the value of keeping trained staff in their trained area during peak trading periods.
       </p>
@@ -539,14 +470,12 @@
     const drinkValueInput = document.getElementById("drinkValue");
     const rushMinutesInput = document.getElementById("rushMinutes");
     const lostMinutesInput = document.getElementById("lostMinutes");
-
     const calculateBtn = document.getElementById("calculateBtn");
     const resetBtn = document.getElementById("resetBtn");
-
     const maxRushRevenueEl = document.getElementById("maxRushRevenue");
     const revenueAtRiskEl = document.getElementById("revenueAtRisk");
     const glasiCostEl = document.getElementById("glasiCost");
-    const netProtectedEl = document.getElementById("netProtected");
+    const revenueProtectedEl = document.getElementById("revenueProtected");
     const formulaExplanationEl = document.getElementById("formulaExplanation");
     const errorMessageEl = document.getElementById("errorMessage");
 
@@ -564,9 +493,9 @@
       maxRushRevenueEl.textContent = "£0";
       revenueAtRiskEl.textContent = "£0";
       glasiCostEl.textContent = "£0";
-      netProtectedEl.textContent = "£0";
+      revenueProtectedEl.textContent = "£0 (0%)";
       formulaExplanationEl.textContent =
-        "Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the net revenue protected.";
+        "Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the revenue protected as a percentage of maximum rush revenue.";
       errorMessageEl.textContent = "";
     }
 
@@ -611,21 +540,26 @@
 
       const rushHours = rushMinutes / 60;
       const revenuePerBartenderPerHour = drinksPerHour * drinkValue;
-
       const maxRushRevenue = bartenders * revenuePerBartenderPerHour * rushHours;
       const revenueAtRisk = revenuePerBartenderPerHour * (lostMinutes / 60) * rushHours;
       const glasiCost = GLASI_HOURLY_COST * rushHours;
-      const netProtected = revenueAtRisk - glasiCost;
+
+      // Calculate percentage of maximum rush revenue that is protected
+      const protectedPercentage = maxRushRevenue > 0 
+        ? Math.round((revenueAtRisk / maxRushRevenue) * 100) 
+        : 0;
 
       maxRushRevenueEl.textContent = formatCurrency(maxRushRevenue);
       revenueAtRiskEl.textContent = formatCurrency(revenueAtRisk);
       glasiCostEl.textContent = formatCurrency(glasiCost);
-      netProtectedEl.textContent = formatCurrency(netProtected);
+      
+      // Display both amount and percentage
+      revenueProtectedEl.textContent = `${formatCurrency(revenueAtRisk)} (${protectedPercentage}%)`;
 
       formulaExplanationEl.textContent =
         `${bartenders} bartenders serving roughly ${drinksPerHour} drinks per hour at an average of ${formatCurrency(drinkValue)} per drink creates a maximum rush value of ${formatCurrency(maxRushRevenue)} over ${rushMinutes} minutes. ` +
-        `If ${lostMinutes} bartender minutes are lost per hour, that exposes ${formatCurrency(revenueAtRisk)}. ` +
-        `Glasi cover for the same period costs ${formatCurrency(glasiCost)}, leaving a net protected figure of ${formatCurrency(netProtected)}.`;
+        `If ${lostMinutes} bartender minutes are lost per hour, that exposes ${formatCurrency(revenueAtRisk)} — which is ${protectedPercentage}% of the maximum rush revenue. ` +
+        `Glasi cover for the same period costs ${formatCurrency(glasiCost)}.`;
     }
 
     function resetCalculator() {
