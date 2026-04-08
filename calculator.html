@@ -311,12 +311,82 @@
       font-size: 14px;
       line-height: 1.65;
     }
+
+    /* Toggle and Break-even styling */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 28px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      transition: .3s;
+      border-radius: 999px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background: #111111; }
+    input:checked + .slider:before { transform: translateX(24px); }
+
+    .break-even-box {
+      margin-top: 20px;
+      padding: 24px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    .break-even-box h4 { margin: 0 0 16px; font-size: 18px; }
+    .break-even-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .break-even-item {
+      background: white;
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+    }
+    .break-even-label { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .break-even-value { font-size: 24px; font-weight: 700; margin: 0; }
+
     .footer-note {
       margin-top: 18px;
       font-size: 13px;
       color: var(--muted);
       line-height: 1.6;
     }
+
     @media (max-width: 900px) {
       .hero {
         grid-template-columns: 1fr;
@@ -325,7 +395,8 @@
     @media (max-width: 760px) {
       .grid,
       .results-grid,
-      .mini-stats {
+      .mini-stats,
+      .break-even-grid {
         grid-template-columns: 1fr;
       }
       .brand {
@@ -461,6 +532,43 @@
         </p>
       </div>
 
+      <div class="toggle-row">
+        <label class="toggle-label">
+          <input type="checkbox" id="showBreakEvenToggle">
+          <span class="switch">
+            <input type="checkbox" id="showBreakEven">
+            <span class="slider"></span>
+          </span>
+          Show future £349/month Subscription Break-even Analysis
+        </label>
+      </div>
+
+      <div id="breakEvenSection" class="break-even-box" style="display: none;">
+        <h4>Subscription Break-even Analysis (£349/month)</h4>
+        <p id="perRushText" style="margin-bottom: 20px; font-size: 15px; color: var(--muted);">
+          Net benefit per rush (after Glasi cover cost): <strong id="perRushValue">£0</strong>
+        </p>
+
+        <div class="field-group">
+          <label for="rushesPerMonth">Estimated similar rushes per month</label>
+          <div class="helper">How many busy periods like this do you typically have in a month?</div>
+          <input type="number" id="rushesPerMonth" min="1" value="12" style="max-width: 180px;">
+        </div>
+
+        <div class="break-even-grid">
+          <div class="break-even-item">
+            <div class="break-even-label">Break-even point</div>
+            <p class="break-even-value" id="breakEvenRushes">0.0 rushes/month</p>
+            <p style="font-size:13px;color:var(--muted);margin:0;">You need this many rushes per month to cover the £349 subscription</p>
+          </div>
+          <div class="break-even-item">
+            <div class="break-even-label">Monthly net benefit</div>
+            <p class="break-even-value" id="monthlyNet">£0</p>
+            <p style="font-size:13px;color:var(--muted);margin:0;">After paying the subscription</p>
+          </div>
+        </div>
+      </div>
+
       <p class="footer-note">
         <strong>Important note:</strong> This calculation shows only the direct revenue protected (revenue at risk minus Glasi cost). 
         It does <strong>not</strong> include additional benefits such as cost savings from not needing to overstaff for expected rushes, 
@@ -484,7 +592,16 @@
     const formulaExplanationEl = document.getElementById("formulaExplanation");
     const errorMessageEl = document.getElementById("errorMessage");
 
+    const showBreakEvenToggle = document.getElementById("showBreakEvenToggle");
+    const showBreakEven = document.getElementById("showBreakEven");
+    const breakEvenSection = document.getElementById("breakEvenSection");
+    const perRushValueEl = document.getElementById("perRushValue");
+    const rushesPerMonthInput = document.getElementById("rushesPerMonth");
+    const breakEvenRushesEl = document.getElementById("breakEvenRushes");
+    const monthlyNetEl = document.getElementById("monthlyNet");
+
     const GLASI_HOURLY_COST = 14;
+    let currentTotalProtected = 0;
 
     function formatCurrency(value) {
       return new Intl.NumberFormat("en-GB", {
@@ -499,8 +616,32 @@
       revenueAtRiskEl.textContent = "£0";
       glasiCostEl.textContent = "£0";
       totalProtectedEl.textContent = "£0 (0%)";
-      formulaExplanationEl.textContent = "Enter your figures above and click Calculate to see the full breakdown.";
+      formulaExplanationEl.textContent = "Enter your figures above to see the calculations.";
       errorMessageEl.textContent = "";
+      currentTotalProtected = 0;
+      updateBreakEven();
+    }
+
+    function updateBreakEven() {
+      if (breakEvenSection.style.display === "none") return;
+
+      const netPerRush = currentTotalProtected;
+      perRushValueEl.textContent = formatCurrency(netPerRush);
+
+      const rushesPerMonth = parseFloat(rushesPerMonthInput.value) || 0;
+
+      if (netPerRush <= 0 || rushesPerMonth <= 0) {
+        breakEvenRushesEl.textContent = "—";
+        monthlyNetEl.textContent = "£0";
+        return;
+      }
+
+      const breakEvenRushes = (349 / netPerRush).toFixed(1);
+      breakEvenRushesEl.textContent = `${breakEvenRushes} rushes/month`;
+
+      const monthlyProtected = netPerRush * rushesPerMonth;
+      const monthlyNet = monthlyProtected - 349;
+      monthlyNetEl.textContent = formatCurrency(monthlyNet);
     }
 
     function calculate() {
@@ -549,6 +690,8 @@
       const glasiCost = GLASI_HOURLY_COST * rushHours;
       const totalProtectedAmount = revenueAtRisk - glasiCost;
 
+      currentTotalProtected = totalProtectedAmount;
+
       const protectedPercentage = maxRushRevenue > 0 
         ? Math.round((totalProtectedAmount / maxRushRevenue) * 100) 
         : 0;
@@ -560,8 +703,10 @@
 
       formulaExplanationEl.textContent =
         `${bartenders} bartenders × ${drinksPerHour} drinks per hour at £${drinkValue.toFixed(2)} each = ${formatCurrency(maxRushRevenue)} maximum rush revenue over ${rushMinutes} minutes. ` +
-        `Lost bartender time exposes ${formatCurrency(revenueAtRisk)} of revenue. ` +
+        `Lost bartender time exposes ${formatCurrency(revenueAtRisk)}. ` +
         `After subtracting the Glasi cover cost of ${formatCurrency(glasiCost)}, the total net revenue protected is ${formatCurrency(totalProtectedAmount)} — equal to ${protectedPercentage}% of the maximum rush revenue.`;
+
+      updateBreakEven();
     }
 
     function resetCalculator() {
@@ -572,6 +717,23 @@
       lostMinutesInput.value = "";
       clearResults();
     }
+
+    function handleToggleChange() {
+      if (showBreakEven.checked) {
+        breakEvenSection.style.display = "block";
+        updateBreakEven();
+      } else {
+        breakEvenSection.style.display = "none";
+      }
+    }
+
+    showBreakEven.addEventListener("change", handleToggleChange);
+    showBreakEvenToggle.addEventListener("change", () => {
+      showBreakEven.checked = showBreakEvenToggle.checked;
+      handleToggleChange();
+    });
+
+    rushesPerMonthInput.addEventListener("input", updateBreakEven);
 
     calculateBtn.addEventListener("click", calculate);
     resetBtn.addEventListener("click", resetCalculator);
