@@ -19,6 +19,8 @@
       --blue-border: #c7dafd;
       --red-bg: #fff1f1;
       --red-border: #f7caca;
+      --amber-bg: #fff8eb;
+      --amber-border: #f6deaa;
       --green-bg: #eefbf3;
       --green-border: #c8eed5;
       --shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
@@ -41,7 +43,7 @@
     }
 
     .page {
-      max-width: 1120px;
+      max-width: 1140px;
       margin: 0 auto;
       padding: 40px 20px 60px;
     }
@@ -147,6 +149,35 @@
       line-height: 1.6;
     }
 
+    .mini-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .mini-stat {
+      padding: 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+    }
+
+    .mini-stat-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+    }
+
+    .mini-stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+    }
+
     .card {
       padding: 28px;
       margin-bottom: 22px;
@@ -162,7 +193,7 @@
       color: var(--muted);
       font-size: 15px;
       line-height: 1.65;
-      max-width: 780px;
+      max-width: 800px;
     }
 
     .grid {
@@ -265,7 +296,7 @@
       border-radius: 18px;
       padding: 22px;
       border: 1px solid transparent;
-      min-height: 160px;
+      min-height: 165px;
     }
 
     .result-card h3 {
@@ -298,10 +329,14 @@
       border-color: var(--red-border);
     }
 
+    .amber {
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+    }
+
     .green {
       background: var(--green-bg);
       border-color: var(--green-border);
-      grid-column: 1 / -1;
     }
 
     .formula-box {
@@ -331,35 +366,6 @@
       line-height: 1.6;
     }
 
-    .mini-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .mini-stat {
-      padding: 14px;
-      border-radius: 14px;
-      background: #f8fafc;
-      border: 1px solid var(--line);
-    }
-
-    .mini-stat-label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      font-weight: 700;
-    }
-
-    .mini-stat-value {
-      font-size: 20px;
-      font-weight: 700;
-      margin: 0;
-    }
-
     @media (max-width: 900px) {
       .hero {
         grid-template-columns: 1fr;
@@ -385,10 +391,6 @@
         font-size: 28px;
       }
 
-      .green {
-        grid-column: auto;
-      }
-
       .hero-card,
       .hero-side,
       .card {
@@ -405,31 +407,29 @@
         <p class="brand">GLASI</p>
         <h1 class="hero-title">See how much revenue is exposed during a rush</h1>
         <p class="hero-text">
-          This calculator is built to show the value of keeping trained bartenders in
-          their trained area. Enter your figures below to see the revenue value of a rush,
-          how much is put at risk when bartenders are pulled away from serving, and what
-          that gap could be worth if covered properly.
+          This tool shows the revenue value of a busy period, how much is exposed when trained
+          bartenders are pulled away from serving, what it costs to protect that gap with Glasi,
+          and the net revenue that can be protected.
         </p>
       </div>
 
       <div class="hero-side hero-card">
         <div>
           <p class="side-label">What this shows</p>
-          <p class="side-value">Maximum rush value, revenue at risk, and revenue protected</p>
+          <p class="side-value">Rush value, revenue risk, cover cost, and protected upside</p>
           <p class="side-copy">
-            A simple tool for real conversations with venues. No fluff, just a clear way
-            to show what happens when trained staff are pulled away from the bar.
+            Built for live venue conversations. Simple figures in, clear commercial picture out.
           </p>
         </div>
 
         <div class="mini-stats">
           <div class="mini-stat">
             <span class="mini-stat-label">Focus</span>
-            <p class="mini-stat-value">Busy periods</p>
+            <p class="mini-stat-value">Peak trading</p>
           </div>
           <div class="mini-stat">
-            <span class="mini-stat-label">Use case</span>
-            <p class="mini-stat-value">Revenue risk</p>
+            <span class="mini-stat-label">Cover cost</span>
+            <p class="mini-stat-value">£14/hour</p>
           </div>
         </div>
       </div>
@@ -438,8 +438,8 @@
     <div class="card">
       <h2 class="section-title">Enter the rush figures</h2>
       <p class="section-copy">
-        Keep it simple. Use your rough estimate for what one bartender can generate per hour
-        when the venue is busy, then add the total minutes per hour bartenders are being pulled
+        Use your rough figures for a busy trading period. The lost time field can include time
+        lost to floor pressure, gaps in support, or staffing shortages that pull trained bartenders
         away from serving.
       </p>
 
@@ -452,17 +452,23 @@
           </div>
 
           <div class="field-group">
-            <label for="revenuePerBartender">Revenue per bartender per hour (£)</label>
-            <div class="helper">Your estimate of what one bartender can generate per hour when it is flying.</div>
-            <input type="number" id="revenuePerBartender" min="0" step="1" placeholder="e.g. 500" />
+            <label for="drinksPerHour">Average drinks served per bartender per hour</label>
+            <div class="helper">Your estimate of what one bartender can put out per hour when it is busy.</div>
+            <input type="number" id="drinksPerHour" min="0" step="1" placeholder="e.g. 70" />
+          </div>
+
+          <div class="field-group">
+            <label for="drinkValue">Average drink value (£)</label>
+            <div class="helper">Pre-filled at £7, but editable if you want to adjust it.</div>
+            <input type="number" id="drinkValue" min="0" step="0.1" value="7" />
           </div>
         </div>
 
         <div>
           <div class="field-group">
-            <label for="rushLength">Rush length (hours)</label>
+            <label for="rushMinutes">Rush length (minutes)</label>
             <div class="helper">How long does the busy period usually last?</div>
-            <input type="number" id="rushLength" min="0" step="0.25" placeholder="e.g. 3" />
+            <input type="number" id="rushMinutes" min="0" step="1" placeholder="e.g. 180" />
           </div>
 
           <div class="field-group">
@@ -474,7 +480,7 @@
       </div>
 
       <div class="button-row">
-        <button class="primary-btn" id="calculateBtn">Calculate revenue risk</button>
+        <button class="primary-btn" id="calculateBtn">Calculate</button>
         <button class="secondary-btn" id="resetBtn" type="button">Reset</button>
       </div>
 
@@ -484,56 +490,54 @@
     <div class="card">
       <h2 class="section-title">Results</h2>
       <p class="section-copy">
-        These figures show the revenue value of the rush, what is exposed when bartender time
-        is lost, and what that same gap could be worth if covered properly.
+        These figures show what the rush is worth, what is exposed when bartender time is lost,
+        what it costs to bring in Glasi cover for the same period, and the net revenue protected.
       </p>
 
       <div class="results-grid">
         <div class="result-card blue">
           <h3>Maximum Rush Revenue</h3>
           <p class="result-value" id="maxRushRevenue">£0</p>
-          <p class="result-desc">
-            The potential revenue if bartenders stay serving throughout the rush.
-          </p>
+          <p class="result-desc">The potential revenue if bartenders stay serving throughout the rush.</p>
         </div>
 
         <div class="result-card red">
           <h3>Revenue at Risk</h3>
           <p class="result-value" id="revenueAtRisk">£0</p>
-          <p class="result-desc">
-            The revenue exposed when trained bartender time is lost during the rush.
-          </p>
+          <p class="result-desc">The revenue exposed when trained bartender time is lost during the rush.</p>
+        </div>
+
+        <div class="result-card amber">
+          <h3>Cost of Glasi Cover</h3>
+          <p class="result-value" id="glasiCost">£0</p>
+          <p class="result-desc">Calculated at a capped £14 per hour for the same length as the rush.</p>
         </div>
 
         <div class="result-card green">
-          <h3>Revenue Protected by Glasi</h3>
-          <p class="result-value" id="revenueProtected">£0</p>
-          <p class="result-desc">
-            If that gap is covered and bartenders stay where they are most valuable, this is the
-            revenue that could be protected.
-          </p>
+          <h3>Net Revenue Protected</h3>
+          <p class="result-value" id="netProtected">£0</p>
+          <p class="result-desc">Revenue at risk minus the cost of Glasi cover for that same period.</p>
         </div>
       </div>
 
       <div class="formula-box">
         <h4>Calculation summary</h4>
         <p id="formulaExplanation">
-          Enter your figures above to calculate the revenue value of a rush and the amount at risk
-          when bartenders are pulled away from serving.
+          Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the net revenue protected.
         </p>
       </div>
 
       <p class="footer-note">
-        This is a simple decision tool designed to show the value of keeping trained staff in their
-        trained area during peak trading periods.
+        This is a simple decision tool designed to show the value of keeping trained staff in their trained area during peak trading periods.
       </p>
     </div>
   </div>
 
   <script>
     const bartendersInput = document.getElementById("bartenders");
-    const revenuePerBartenderInput = document.getElementById("revenuePerBartender");
-    const rushLengthInput = document.getElementById("rushLength");
+    const drinksPerHourInput = document.getElementById("drinksPerHour");
+    const drinkValueInput = document.getElementById("drinkValue");
+    const rushMinutesInput = document.getElementById("rushMinutes");
     const lostMinutesInput = document.getElementById("lostMinutes");
 
     const calculateBtn = document.getElementById("calculateBtn");
@@ -541,9 +545,12 @@
 
     const maxRushRevenueEl = document.getElementById("maxRushRevenue");
     const revenueAtRiskEl = document.getElementById("revenueAtRisk");
-    const revenueProtectedEl = document.getElementById("revenueProtected");
+    const glasiCostEl = document.getElementById("glasiCost");
+    const netProtectedEl = document.getElementById("netProtected");
     const formulaExplanationEl = document.getElementById("formulaExplanation");
     const errorMessageEl = document.getElementById("errorMessage");
+
+    const GLASI_HOURLY_COST = 14;
 
     function formatCurrency(value) {
       return new Intl.NumberFormat("en-GB", {
@@ -556,9 +563,10 @@
     function clearResults() {
       maxRushRevenueEl.textContent = "£0";
       revenueAtRiskEl.textContent = "£0";
-      revenueProtectedEl.textContent = "£0";
+      glasiCostEl.textContent = "£0";
+      netProtectedEl.textContent = "£0";
       formulaExplanationEl.textContent =
-        "Enter your figures above to calculate the revenue value of a rush and the amount at risk when bartenders are pulled away from serving.";
+        "Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the net revenue protected.";
       errorMessageEl.textContent = "";
     }
 
@@ -566,14 +574,16 @@
       errorMessageEl.textContent = "";
 
       const bartenders = parseFloat(bartendersInput.value);
-      const revenuePerBartender = parseFloat(revenuePerBartenderInput.value);
-      const rushLength = parseFloat(rushLengthInput.value);
+      const drinksPerHour = parseFloat(drinksPerHourInput.value);
+      const drinkValue = parseFloat(drinkValueInput.value);
+      const rushMinutes = parseFloat(rushMinutesInput.value);
       const lostMinutes = parseFloat(lostMinutesInput.value);
 
       if (
         isNaN(bartenders) ||
-        isNaN(revenuePerBartender) ||
-        isNaN(rushLength) ||
+        isNaN(drinksPerHour) ||
+        isNaN(drinkValue) ||
+        isNaN(rushMinutes) ||
         isNaN(lostMinutes)
       ) {
         clearResults();
@@ -581,7 +591,13 @@
         return;
       }
 
-      if (bartenders < 0 || revenuePerBartender < 0 || rushLength < 0 || lostMinutes < 0) {
+      if (
+        bartenders < 0 ||
+        drinksPerHour < 0 ||
+        drinkValue < 0 ||
+        rushMinutes < 0 ||
+        lostMinutes < 0
+      ) {
         clearResults();
         errorMessageEl.textContent = "Please enter positive numbers only.";
         return;
@@ -593,25 +609,30 @@
         return;
       }
 
-      const maxRushRevenue = bartenders * revenuePerBartender * rushLength;
-      const lostHoursAcrossRush = (lostMinutes / 60) * rushLength;
-      const revenueAtRisk = revenuePerBartender * lostHoursAcrossRush;
-      const revenueProtected = revenueAtRisk;
+      const rushHours = rushMinutes / 60;
+      const revenuePerBartenderPerHour = drinksPerHour * drinkValue;
+
+      const maxRushRevenue = bartenders * revenuePerBartenderPerHour * rushHours;
+      const revenueAtRisk = revenuePerBartenderPerHour * (lostMinutes / 60) * rushHours;
+      const glasiCost = GLASI_HOURLY_COST * rushHours;
+      const netProtected = revenueAtRisk - glasiCost;
 
       maxRushRevenueEl.textContent = formatCurrency(maxRushRevenue);
       revenueAtRiskEl.textContent = formatCurrency(revenueAtRisk);
-      revenueProtectedEl.textContent = formatCurrency(revenueProtected);
+      glasiCostEl.textContent = formatCurrency(glasiCost);
+      netProtectedEl.textContent = formatCurrency(netProtected);
 
       formulaExplanationEl.textContent =
-        `${bartenders} bartenders at ${formatCurrency(revenuePerBartender)} per hour across ${rushLength} hours creates a maximum rush value of ${formatCurrency(maxRushRevenue)}. ` +
-        `If ${lostMinutes} bartender minutes are lost per hour, that exposes ${formatCurrency(revenueAtRisk)} during the rush. ` +
-        `If that gap is covered properly, that same amount of revenue could be protected.`;
+        `${bartenders} bartenders serving roughly ${drinksPerHour} drinks per hour at an average of ${formatCurrency(drinkValue)} per drink creates a maximum rush value of ${formatCurrency(maxRushRevenue)} over ${rushMinutes} minutes. ` +
+        `If ${lostMinutes} bartender minutes are lost per hour, that exposes ${formatCurrency(revenueAtRisk)}. ` +
+        `Glasi cover for the same period costs ${formatCurrency(glasiCost)}, leaving a net protected figure of ${formatCurrency(netProtected)}.`;
     }
 
     function resetCalculator() {
       bartendersInput.value = "";
-      revenuePerBartenderInput.value = "";
-      rushLengthInput.value = "";
+      drinksPerHourInput.value = "";
+      drinkValueInput.value = "7";
+      rushMinutesInput.value = "";
       lostMinutesInput.value = "";
       clearResults();
     }
@@ -619,7 +640,7 @@
     calculateBtn.addEventListener("click", calculate);
     resetBtn.addEventListener("click", resetCalculator);
 
-    [bartendersInput, revenuePerBartenderInput, rushLengthInput, lostMinutesInput].forEach((input) => {
+    [bartendersInput, drinksPerHourInput, drinkValueInput, rushMinutesInput, lostMinutesInput].forEach((input) => {
       input.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
           calculate();
