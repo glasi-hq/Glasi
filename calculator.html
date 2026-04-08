@@ -428,7 +428,8 @@
       <h2 class="section-title">Results</h2>
       <p class="section-copy">
         These figures show what the rush is worth, what is exposed when bartender time is lost,
-        what it costs to bring in Glasi cover, and how much of the maximum rush revenue is protected.
+        what it costs to bring in Glasi cover for the same period, and the total revenue protected
+        after subtracting the cost of Glasi cover.
       </p>
       <div class="results-grid">
         <div class="result-card blue">
@@ -447,19 +448,23 @@
           <p class="result-desc">Calculated at a capped £14 per hour for the same length as the rush.</p>
         </div>
         <div class="result-card green">
-          <h3>Revenue Protected</h3>
-          <p class="result-value" id="revenueProtected">£0 (0%)</p>
-          <p class="result-desc">How much of the maximum rush revenue is protected by using Glasi (shown as amount and %).</p>
+          <h3>Total Revenue Protected</h3>
+          <p class="result-value" id="totalProtected">£0 (0%)</p>
+          <p class="result-desc">Revenue at risk minus Glasi cover cost — the true net bottom line benefit, shown as amount and % of maximum rush revenue.</p>
         </div>
       </div>
+
       <div class="formula-box">
         <h4>Calculation summary</h4>
         <p id="formulaExplanation">
-          Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the revenue protected as a percentage of maximum rush revenue.
+          Enter your figures above to see the calculations.
         </p>
       </div>
+
       <p class="footer-note">
-        This is a simple decision tool designed to show the value of keeping trained staff in their trained area during peak trading periods.
+        <strong>Important note:</strong> This calculation shows only the direct revenue protected (revenue at risk minus Glasi cost). 
+        It does <strong>not</strong> include additional benefits such as cost savings from not needing to overstaff for expected rushes, 
+        or the potential extra revenue gained from improved customer experience and better service levels.
       </p>
     </div>
   </div>
@@ -475,7 +480,7 @@
     const maxRushRevenueEl = document.getElementById("maxRushRevenue");
     const revenueAtRiskEl = document.getElementById("revenueAtRisk");
     const glasiCostEl = document.getElementById("glasiCost");
-    const revenueProtectedEl = document.getElementById("revenueProtected");
+    const totalProtectedEl = document.getElementById("totalProtected");
     const formulaExplanationEl = document.getElementById("formulaExplanation");
     const errorMessageEl = document.getElementById("errorMessage");
 
@@ -493,9 +498,8 @@
       maxRushRevenueEl.textContent = "£0";
       revenueAtRiskEl.textContent = "£0";
       glasiCostEl.textContent = "£0";
-      revenueProtectedEl.textContent = "£0 (0%)";
-      formulaExplanationEl.textContent =
-        "Enter your figures above to calculate the value of the rush, the revenue at risk, the cost of cover, and the revenue protected as a percentage of maximum rush revenue.";
+      totalProtectedEl.textContent = "£0 (0%)";
+      formulaExplanationEl.textContent = "Enter your figures above and click Calculate to see the full breakdown.";
       errorMessageEl.textContent = "";
     }
 
@@ -543,23 +547,21 @@
       const maxRushRevenue = bartenders * revenuePerBartenderPerHour * rushHours;
       const revenueAtRisk = revenuePerBartenderPerHour * (lostMinutes / 60) * rushHours;
       const glasiCost = GLASI_HOURLY_COST * rushHours;
+      const totalProtectedAmount = revenueAtRisk - glasiCost;
 
-      // Calculate percentage of maximum rush revenue that is protected
       const protectedPercentage = maxRushRevenue > 0 
-        ? Math.round((revenueAtRisk / maxRushRevenue) * 100) 
+        ? Math.round((totalProtectedAmount / maxRushRevenue) * 100) 
         : 0;
 
       maxRushRevenueEl.textContent = formatCurrency(maxRushRevenue);
       revenueAtRiskEl.textContent = formatCurrency(revenueAtRisk);
       glasiCostEl.textContent = formatCurrency(glasiCost);
-      
-      // Display both amount and percentage
-      revenueProtectedEl.textContent = `${formatCurrency(revenueAtRisk)} (${protectedPercentage}%)`;
+      totalProtectedEl.textContent = `${formatCurrency(totalProtectedAmount)} (${protectedPercentage}%)`;
 
       formulaExplanationEl.textContent =
-        `${bartenders} bartenders serving roughly ${drinksPerHour} drinks per hour at an average of ${formatCurrency(drinkValue)} per drink creates a maximum rush value of ${formatCurrency(maxRushRevenue)} over ${rushMinutes} minutes. ` +
-        `If ${lostMinutes} bartender minutes are lost per hour, that exposes ${formatCurrency(revenueAtRisk)} — which is ${protectedPercentage}% of the maximum rush revenue. ` +
-        `Glasi cover for the same period costs ${formatCurrency(glasiCost)}.`;
+        `${bartenders} bartenders × ${drinksPerHour} drinks per hour at £${drinkValue.toFixed(2)} each = ${formatCurrency(maxRushRevenue)} maximum rush revenue over ${rushMinutes} minutes. ` +
+        `Lost bartender time exposes ${formatCurrency(revenueAtRisk)} of revenue. ` +
+        `After subtracting the Glasi cover cost of ${formatCurrency(glasiCost)}, the total net revenue protected is ${formatCurrency(totalProtectedAmount)} — equal to ${protectedPercentage}% of the maximum rush revenue.`;
     }
 
     function resetCalculator() {
