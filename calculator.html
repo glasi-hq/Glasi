@@ -2,83 +2,632 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Glasi Calculator</title>
+  <title>GLASI Revenue Risk Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <style>
+    :root {
+      --bg-top: #0f1720;
+      --bg-bottom: #1e293b;
+      --panel: rgba(255, 255, 255, 0.94);
+      --panel-border: rgba(255, 255, 255, 0.18);
+      --text: #111827;
+      --muted: #5b6472;
+      --line: #d8dee8;
+      --accent: #111111;
+      --accent-soft: #eff3f8;
+      --blue-bg: #edf4ff;
+      --blue-border: #c7dafd;
+      --red-bg: #fff1f1;
+      --red-border: #f7caca;
+      --green-bg: #eefbf3;
+      --green-border: #c8eed5;
+      --shadow: 0 25px 60px rgba(0, 0, 0, 0.22);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, Helvetica, sans-serif;
-      background: #f5f5f5;
       margin: 0;
-      padding: 40px;
-      text-align: center;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(255,255,255,0.07), transparent 22%),
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+      min-height: 100vh;
     }
 
-    h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
     }
 
-    p {
-      color: #666;
-      margin-bottom: 30px;
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 22px;
+      margin-bottom: 22px;
     }
 
-    .container {
-      background: white;
-      padding: 30px;
-      max-width: 500px;
-      margin: auto;
-      border-radius: 10px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    .hero-card,
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: "GLASI";
+      position: absolute;
+      right: -10px;
+      bottom: -12px;
+      font-size: 108px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: rgba(17, 24, 39, 0.04);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #4b5563;
+      background: #eef2f7;
+      padding: 8px 12px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+
+    .brand {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin: 0 0 8px;
+      line-height: 1;
+    }
+
+    .hero-title {
+      margin: 0 0 14px;
+      font-size: 34px;
+      line-height: 1.1;
+    }
+
+    .hero-text {
+      margin: 0;
+      max-width: 650px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .hero-side {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .side-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin: 0 0 10px;
+    }
+
+    .side-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.15;
+    }
+
+    .side-copy {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .card {
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .section-copy {
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+      max-width: 780px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .helper {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: -2px;
+      line-height: 1.5;
     }
 
     input {
       width: 100%;
-      padding: 12px;
-      margin: 10px 0;
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
       font-size: 16px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.96);
+      transition: 0.18s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #97a3b6;
+      box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
     }
 
     button {
-      margin-top: 20px;
-      padding: 12px;
-      width: 100%;
-      font-size: 16px;
-      background: black;
-      color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 14px;
+      padding: 15px 20px;
+      font-size: 15px;
+      font-weight: 700;
       cursor: pointer;
+      transition: 0.18s ease;
     }
 
-    .result {
+    .primary-btn {
+      background: #111111;
+      color: #ffffff;
+      min-width: 170px;
+      box-shadow: 0 12px 24px rgba(17, 17, 17, 0.18);
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+
+    .secondary-btn {
+      background: var(--accent-soft);
+      color: var(--text);
+      min-width: 120px;
+    }
+
+    .secondary-btn:hover {
+      background: #e6ebf2;
+    }
+
+    .error {
+      color: #991b1b;
+      font-weight: 700;
+      margin-top: 14px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .result-card {
+      border-radius: 18px;
+      padding: 22px;
+      border: 1px solid transparent;
+      min-height: 160px;
+    }
+
+    .result-card h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+    }
+
+    .result-value {
+      font-size: 34px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      line-height: 1.1;
+    }
+
+    .result-desc {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .blue {
+      background: var(--blue-bg);
+      border-color: var(--blue-border);
+    }
+
+    .red {
+      background: var(--red-bg);
+      border-color: var(--red-border);
+    }
+
+    .green {
+      background: var(--green-bg);
+      border-color: var(--green-border);
+      grid-column: 1 / -1;
+    }
+
+    .formula-box {
       margin-top: 20px;
+      padding: 18px 20px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    .formula-box h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .formula-box p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .mini-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .mini-stat {
+      padding: 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+    }
+
+    .mini-stat-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+    }
+
+    .mini-stat-value {
       font-size: 20px;
-      font-weight: bold;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .grid,
+      .results-grid,
+      .mini-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .brand {
+        font-size: 34px;
+      }
+
+      .hero-title {
+        font-size: 28px;
+      }
+
+      .result-value {
+        font-size: 28px;
+      }
+
+      .green {
+        grid-column: auto;
+      }
+
+      .hero-card,
+      .hero-side,
+      .card {
+        padding: 22px;
+      }
     }
   </style>
 </head>
-
 <body>
+  <div class="page">
+    <div class="hero">
+      <div class="hero-card">
+        <span class="eyebrow">Glasi calculator</span>
+        <p class="brand">GLASI</p>
+        <h1 class="hero-title">See how much revenue is exposed during a rush</h1>
+        <p class="hero-text">
+          This calculator is built to show the value of keeping trained bartenders in
+          their trained area. Enter your figures below to see the revenue value of a rush,
+          how much is put at risk when bartenders are pulled away from serving, and what
+          that gap could be worth if covered properly.
+        </p>
+      </div>
 
-  <h1>GLASI</h1>
-  <p>Peak Revenue Calculator</p>
+      <div class="hero-side hero-card">
+        <div>
+          <p class="side-label">What this shows</p>
+          <p class="side-value">Maximum rush value, revenue at risk, and revenue protected</p>
+          <p class="side-copy">
+            A simple tool for real conversations with venues. No fluff, just a clear way
+            to show what happens when trained staff are pulled away from the bar.
+          </p>
+        </div>
 
-  <div class="container">
-
-    <input type="number" placeholder="Number of bartenders" />
-    <input type="number" placeholder="Estimated capacity" />
-
-    <button>Calculate</button>
-
-    <div class="result">
-      <!-- Result will go here -->
+        <div class="mini-stats">
+          <div class="mini-stat">
+            <span class="mini-stat-label">Focus</span>
+            <p class="mini-stat-value">Busy periods</p>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-label">Use case</span>
+            <p class="mini-stat-value">Revenue risk</p>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <div class="card">
+      <h2 class="section-title">Enter the rush figures</h2>
+      <p class="section-copy">
+        Keep it simple. Use your rough estimate for what one bartender can generate per hour
+        when the venue is busy, then add the total minutes per hour bartenders are being pulled
+        away from serving.
+      </p>
+
+      <div class="grid">
+        <div>
+          <div class="field-group">
+            <label for="bartenders">Bartenders on during the rush</label>
+            <div class="helper">How many bartenders are serving during the peak period?</div>
+            <input type="number" id="bartenders" min="0" step="1" placeholder="e.g. 4" />
+          </div>
+
+          <div class="field-group">
+            <label for="revenuePerBartender">Revenue per bartender per hour (£)</label>
+            <div class="helper">Your estimate of what one bartender can generate per hour when it is flying.</div>
+            <input type="number" id="revenuePerBartender" min="0" step="1" placeholder="e.g. 500" />
+          </div>
+        </div>
+
+        <div>
+          <div class="field-group">
+            <label for="rushLength">Rush length (hours)</label>
+            <div class="helper">How long does the busy period usually last?</div>
+            <input type="number" id="rushLength" min="0" step="0.25" placeholder="e.g. 3" />
+          </div>
+
+          <div class="field-group">
+            <label for="lostMinutes">Bartender minutes lost per hour</label>
+            <div class="helper">Total minutes per hour trained bartenders are pulled away from serving.</div>
+            <input type="number" id="lostMinutes" min="0" max="60" step="1" placeholder="e.g. 15" />
+          </div>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button class="primary-btn" id="calculateBtn">Calculate revenue risk</button>
+        <button class="secondary-btn" id="resetBtn" type="button">Reset</button>
+      </div>
+
+      <div class="error" id="errorMessage"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Results</h2>
+      <p class="section-copy">
+        These figures show the revenue value of the rush, what is exposed when bartender time
+        is lost, and what that same gap could be worth if covered properly.
+      </p>
+
+      <div class="results-grid">
+        <div class="result-card blue">
+          <h3>Maximum Rush Revenue</h3>
+          <p class="result-value" id="maxRushRevenue">£0</p>
+          <p class="result-desc">
+            The potential revenue if bartenders stay serving throughout the rush.
+          </p>
+        </div>
+
+        <div class="result-card red">
+          <h3>Revenue at Risk</h3>
+          <p class="result-value" id="revenueAtRisk">£0</p>
+          <p class="result-desc">
+            The revenue exposed when trained bartender time is lost during the rush.
+          </p>
+        </div>
+
+        <div class="result-card green">
+          <h3>Revenue Protected by Glasi</h3>
+          <p class="result-value" id="revenueProtected">£0</p>
+          <p class="result-desc">
+            If that gap is covered and bartenders stay where they are most valuable, this is the
+            revenue that could be protected.
+          </p>
+        </div>
+      </div>
+
+      <div class="formula-box">
+        <h4>Calculation summary</h4>
+        <p id="formulaExplanation">
+          Enter your figures above to calculate the revenue value of a rush and the amount at risk
+          when bartenders are pulled away from serving.
+        </p>
+      </div>
+
+      <p class="footer-note">
+        This is a simple decision tool designed to show the value of keeping trained staff in their
+        trained area during peak trading periods.
+      </p>
+    </div>
   </div>
 
+  <script>
+    const bartendersInput = document.getElementById("bartenders");
+    const revenuePerBartenderInput = document.getElementById("revenuePerBartender");
+    const rushLengthInput = document.getElementById("rushLength");
+    const lostMinutesInput = document.getElementById("lostMinutes");
+
+    const calculateBtn = document.getElementById("calculateBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const maxRushRevenueEl = document.getElementById("maxRushRevenue");
+    const revenueAtRiskEl = document.getElementById("revenueAtRisk");
+    const revenueProtectedEl = document.getElementById("revenueProtected");
+    const formulaExplanationEl = document.getElementById("formulaExplanation");
+    const errorMessageEl = document.getElementById("errorMessage");
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "GBP",
+        maximumFractionDigits: 0
+      }).format(value);
+    }
+
+    function clearResults() {
+      maxRushRevenueEl.textContent = "£0";
+      revenueAtRiskEl.textContent = "£0";
+      revenueProtectedEl.textContent = "£0";
+      formulaExplanationEl.textContent =
+        "Enter your figures above to calculate the revenue value of a rush and the amount at risk when bartenders are pulled away from serving.";
+      errorMessageEl.textContent = "";
+    }
+
+    function calculate() {
+      errorMessageEl.textContent = "";
+
+      const bartenders = parseFloat(bartendersInput.value);
+      const revenuePerBartender = parseFloat(revenuePerBartenderInput.value);
+      const rushLength = parseFloat(rushLengthInput.value);
+      const lostMinutes = parseFloat(lostMinutesInput.value);
+
+      if (
+        isNaN(bartenders) ||
+        isNaN(revenuePerBartender) ||
+        isNaN(rushLength) ||
+        isNaN(lostMinutes)
+      ) {
+        clearResults();
+        errorMessageEl.textContent = "Please complete all fields before calculating.";
+        return;
+      }
+
+      if (bartenders < 0 || revenuePerBartender < 0 || rushLength < 0 || lostMinutes < 0) {
+        clearResults();
+        errorMessageEl.textContent = "Please enter positive numbers only.";
+        return;
+      }
+
+      if (lostMinutes > 60) {
+        clearResults();
+        errorMessageEl.textContent = "Bartender minutes lost per hour cannot be more than 60.";
+        return;
+      }
+
+      const maxRushRevenue = bartenders * revenuePerBartender * rushLength;
+      const lostHoursAcrossRush = (lostMinutes / 60) * rushLength;
+      const revenueAtRisk = revenuePerBartender * lostHoursAcrossRush;
+      const revenueProtected = revenueAtRisk;
+
+      maxRushRevenueEl.textContent = formatCurrency(maxRushRevenue);
+      revenueAtRiskEl.textContent = formatCurrency(revenueAtRisk);
+      revenueProtectedEl.textContent = formatCurrency(revenueProtected);
+
+      formulaExplanationEl.textContent =
+        `${bartenders} bartenders at ${formatCurrency(revenuePerBartender)} per hour across ${rushLength} hours creates a maximum rush value of ${formatCurrency(maxRushRevenue)}. ` +
+        `If ${lostMinutes} bartender minutes are lost per hour, that exposes ${formatCurrency(revenueAtRisk)} during the rush. ` +
+        `If that gap is covered properly, that same amount of revenue could be protected.`;
+    }
+
+    function resetCalculator() {
+      bartendersInput.value = "";
+      revenuePerBartenderInput.value = "";
+      rushLengthInput.value = "";
+      lostMinutesInput.value = "";
+      clearResults();
+    }
+
+    calculateBtn.addEventListener("click", calculate);
+    resetBtn.addEventListener("click", resetCalculator);
+
+    [bartendersInput, revenuePerBartenderInput, rushLengthInput, lostMinutesInput].forEach((input) => {
+      input.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          calculate();
+        }
+      });
+    });
+
+    clearResults();
+  </script>
 </body>
 </html>
