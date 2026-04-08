@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>GLASI Revenue Risk Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --bg-top: #0f1720;
@@ -243,6 +244,13 @@
     .secondary-btn:hover {
       background: #e6ebf2;
     }
+    .export-btn {
+      background: #166534;
+      color: white;
+    }
+    .export-btn:hover {
+      background: #14532d;
+    }
     .error {
       color: #991b1b;
       font-weight: 700;
@@ -344,10 +352,7 @@
     .slider {
       position: absolute;
       cursor: pointer;
-      top: 0; 
-      left: 0; 
-      right: 0; 
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: #ccc;
       transition: .3s;
       border-radius: 999px;
@@ -363,12 +368,8 @@
       transition: .3s;
       border-radius: 50%;
     }
-    input:checked + .slider { 
-      background: #111111; 
-    }
-    input:checked + .slider:before { 
-      transform: translateX(24px); 
-    }
+    input:checked + .slider { background: #111111; }
+    input:checked + .slider:before { transform: translateX(24px); }
 
     .break-even-box {
       margin-top: 20px;
@@ -458,7 +459,7 @@
           <p class="side-label">What this shows</p>
           <p class="side-value">Rush value, revenue risk, cover cost, and protected upside</p>
           <p class="side-copy">
-            Simplifying the benefit of Glasi.
+            Built for live venue conversations. Simple figures in, clear commercial picture out.
           </p>
         </div>
         <div class="mini-stats">
@@ -483,6 +484,11 @@
       </p>
       <div class="grid">
         <div>
+          <div class="field-group">
+            <label for="barName">Bar / Venue Name</label>
+            <div class="helper">Optional – will appear on the exported PDF</div>
+            <input type="text" id="barName" placeholder="e.g. The Crown & Anchor" />
+          </div>
           <div class="field-group">
             <label for="bartenders">Bartenders on during the rush</label>
             <div class="helper">How many bartenders are serving during the peak period?</div>
@@ -526,6 +532,8 @@
         what it costs to bring in Glasi cover for the same period, and the total revenue protected
         after subtracting the cost of Glasi cover.
       </p>
+      <div id="barNameDisplay" style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #111827;"></div>
+
       <div class="results-grid">
         <div class="result-card blue">
           <h3>Maximum Rush Revenue</h3>
@@ -592,6 +600,10 @@
         </div>
       </div>
 
+      <div class="button-row" style="margin-top: 24px;">
+        <button class="export-btn" id="exportPdfBtn">Export as PDF</button>
+      </div>
+
       <p class="footer-note">
         <strong>Important note:</strong> This calculation shows only the direct revenue protected (revenue at risk minus Glasi cost). 
         It does <strong>not</strong> include additional benefits such as cost savings from not needing to overstaff for expected rushes, 
@@ -601,6 +613,7 @@
   </div>
 
   <script>
+    const barNameInput = document.getElementById("barName");
     const bartendersInput = document.getElementById("bartenders");
     const drinksPerHourInput = document.getElementById("drinksPerHour");
     const drinkValueInput = document.getElementById("drinkValue");
@@ -608,12 +621,15 @@
     const lostMinutesInput = document.getElementById("lostMinutes");
     const calculateBtn = document.getElementById("calculateBtn");
     const resetBtn = document.getElementById("resetBtn");
+    const exportPdfBtn = document.getElementById("exportPdfBtn");
+
     const maxRushRevenueEl = document.getElementById("maxRushRevenue");
     const revenueAtRiskEl = document.getElementById("revenueAtRisk");
     const glasiCostEl = document.getElementById("glasiCost");
     const totalProtectedEl = document.getElementById("totalProtected");
     const formulaExplanationEl = document.getElementById("formulaExplanation");
     const errorMessageEl = document.getElementById("errorMessage");
+    const barNameDisplay = document.getElementById("barNameDisplay");
 
     const showBreakEven = document.getElementById("showBreakEven");
     const breakEvenSection = document.getElementById("breakEvenSection");
@@ -624,6 +640,7 @@
 
     const GLASI_HOURLY_COST = 14;
     let currentTotalProtected = 0;
+    let currentBarName = "";
 
     function formatCurrency(value) {
       return new Intl.NumberFormat("en-GB", {
@@ -639,8 +656,10 @@
       glasiCostEl.textContent = "£0";
       totalProtectedEl.textContent = "£0 (0%)";
       formulaExplanationEl.textContent = "Enter your figures above to see the calculations.";
+      barNameDisplay.textContent = "";
       errorMessageEl.textContent = "";
       currentTotalProtected = 0;
+      currentBarName = "";
       updateBreakEven();
     }
 
@@ -713,6 +732,7 @@
       const totalProtectedAmount = revenueAtRisk - glasiCost;
 
       currentTotalProtected = totalProtectedAmount;
+      currentBarName = barNameInput.value.trim();
 
       const protectedPercentage = maxRushRevenue > 0 
         ? Math.round((totalProtectedAmount / maxRushRevenue) * 100) 
@@ -723,6 +743,8 @@
       glasiCostEl.textContent = formatCurrency(glasiCost);
       totalProtectedEl.textContent = `${formatCurrency(totalProtectedAmount)} (${protectedPercentage}%)`;
 
+      barNameDisplay.textContent = currentBarName ? `Bar / Venue: ${currentBarName}` : "";
+
       formulaExplanationEl.textContent =
         `${bartenders} bartenders × ${drinksPerHour} drinks per hour at £${drinkValue.toFixed(2)} each = ${formatCurrency(maxRushRevenue)} maximum rush revenue over ${rushMinutes} minutes. ` +
         `Lost bartender time exposes ${formatCurrency(revenueAtRisk)}. ` +
@@ -731,7 +753,20 @@
       updateBreakEven();
     }
 
+    function exportToPDF() {
+      const element = document.querySelector(".card:last-child");
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: currentBarName ? `${currentBarName.replace(/[^a-z0-9]/gi, '_')}_GLASI_Report.pdf` : 'GLASI_Revenue_Report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
     function resetCalculator() {
+      barNameInput.value = "";
       bartendersInput.value = "";
       drinksPerHourInput.value = "";
       drinkValueInput.value = "7";
@@ -751,9 +786,9 @@
 
     showBreakEven.addEventListener("change", handleToggleChange);
     rushesPerMonthInput.addEventListener("input", updateBreakEven);
-
     calculateBtn.addEventListener("click", calculate);
     resetBtn.addEventListener("click", resetCalculator);
+    exportPdfBtn.addEventListener("click", exportToPDF);
 
     [bartendersInput, drinksPerHourInput, drinkValueInput, rushMinutesInput, lostMinutesInput].forEach((input) => {
       input.addEventListener("keydown", function(event) {
