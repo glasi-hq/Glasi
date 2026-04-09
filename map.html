@@ -20,6 +20,7 @@
     h1 {
       text-align: center;
       margin-bottom: 20px;
+      color: #86efac;
     }
     .map-container {
       position: relative;
@@ -79,7 +80,8 @@
     <h1>Crew Dispatch UK - Southampton Weekend Floor Crew</h1>
     
     <div class="map-container">
-      <img src="dancing man brewery numbered markers.jpeg" alt="Southampton Map with markers" id="mapImage">
+      <img src="https://raw.githubusercontent.com/crewdispatchuk/crew-dispatch-site/main/dancing%20man%20brewery%20numbered%20markers.jpeg" 
+           alt="Southampton Map with markers" id="mapImage">
 
       <!-- Marker 1 -->
       <div class="marker" id="marker1" style="top: 68%; left: 42%;">1</div>
@@ -94,7 +96,7 @@
     <!-- Information Boxes -->
     <div id="info1" class="info-box">
       <h2>1. Yassine - Ex bartender at Zizzi and multiple venues 25+</h2>
-      <p>Your closest available, experienced worker is Yassine. If requested he can be in the venue in 9 minutes from request.</p>
+      <p>Your closest available, experienced worker is Yassine, if requested he can be in the venue in 9 minutes from request.</p>
     </div>
 
     <div id="info2" class="info-box">
@@ -117,7 +119,6 @@
     const info2 = document.getElementById('info2');
     const info3 = document.getElementById('info3');
 
-    // Hide all info boxes initially
     function hideAll() {
       info1.classList.remove('show');
       info2.classList.remove('show');
@@ -139,7 +140,7 @@
       info3.classList.add('show');
     });
 
-    // Optional: Click anywhere on the map to hide info (except on markers)
+    // Click anywhere on the map image to hide info
     document.getElementById('mapImage').addEventListener('click', (e) => {
       if (e.target.id === 'mapImage') {
         hideAll();
