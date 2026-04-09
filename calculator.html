@@ -491,29 +491,29 @@
           <div class="field-group">
             <label for="bartenders">Bartenders on during the rush</label>
             <div class="helper">How many bartenders are serving during the peak period?</div>
-            <input type="number" id="bartenders" min="0" step="1" placeholder="e.g. 4" />
+            <input type="number" id="bartenders" min="0" step="1" placeholder="e.g. 5" />
           </div>
           <div class="field-group">
             <label for="drinksPerHour">Average drinks served per bartender per hour</label>
             <div class="helper">Your estimate of what one bartender can put out per hour when it is busy.</div>
-            <input type="number" id="drinksPerHour" min="0" step="1" placeholder="e.g. 70" />
+            <input type="number" id="drinksPerHour" min="0" step="1" placeholder="e.g. 55" />
           </div>
           <div class="field-group">
             <label for="drinkValue">Average drink value (£)</label>
-            <div class="helper">Pre-filled at £7, but editable if you want to adjust it.</div>
-            <input type="number" id="drinkValue" min="0" step="0.1" value="7" />
+            <div class="helper">Pre-filled at £7.50 for this example, but editable.</div>
+            <input type="number" id="drinkValue" min="0" step="0.1" value="7.5" />
           </div>
         </div>
         <div>
           <div class="field-group">
             <label for="rushMinutes">Rush length (minutes)</label>
             <div class="helper">How long does the busy period usually last?</div>
-            <input type="number" id="rushMinutes" min="0" step="1" placeholder="e.g. 180" />
+            <input type="number" id="rushMinutes" min="0" step="1" placeholder="e.g. 90" />
           </div>
           <div class="field-group">
             <label for="lostMinutes">Minutes each bartender is pulled away per hour</label>
-            <div class="helper">Time each individual bartender loses from serving per hour (e.g. if each of 4 bartenders loses 5 minutes per hour, total lost time = 20 minutes per hour)</div>
-            <input type="number" id="lostMinutes" min="0" max="60" step="1" placeholder="e.g. 5" />
+            <div class="helper">Time each individual bartender loses from serving per hour (e.g. 10 minutes per bartender × 5 bartenders = 50 total lost minutes per hour)</div>
+            <input type="number" id="lostMinutes" min="0" max="60" step="1" placeholder="e.g. 10" />
           </div>
         </div>
       </div>
@@ -687,33 +687,15 @@
     function calculate() {
       errorMessageEl.textContent = "";
 
-      const bartenders = parseFloat(bartendersInput.value);
-      const drinksPerHour = parseFloat(drinksPerHourInput.value);
-      const drinkValue = parseFloat(drinkValueInput.value);
-      const rushMinutes = parseFloat(rushMinutesInput.value);
-      const lostMinutes = parseFloat(lostMinutesInput.value);
+      const bartenders = parseFloat(bartendersInput.value) || 0;
+      const drinksPerHour = parseFloat(drinksPerHourInput.value) || 0;
+      const drinkValue = parseFloat(drinkValueInput.value) || 0;
+      const rushMinutes = parseFloat(rushMinutesInput.value) || 0;
+      const lostMinutes = parseFloat(lostMinutesInput.value) || 0;
 
-      if (
-        isNaN(bartenders) ||
-        isNaN(drinksPerHour) ||
-        isNaN(drinkValue) ||
-        isNaN(rushMinutes) ||
-        isNaN(lostMinutes)
-      ) {
+      if (bartenders === 0 || drinksPerHour === 0 || drinkValue === 0 || rushMinutes === 0) {
         clearResults();
         errorMessageEl.textContent = "Please complete all fields before calculating.";
-        return;
-      }
-
-      if (
-        bartenders < 0 ||
-        drinksPerHour < 0 ||
-        drinkValue < 0 ||
-        rushMinutes < 0 ||
-        lostMinutes < 0
-      ) {
-        clearResults();
-        errorMessageEl.textContent = "Please enter positive numbers only.";
         return;
       }
 
@@ -726,7 +708,7 @@
       const rushHours = rushMinutes / 60;
       const revenuePerBartenderPerHour = drinksPerHour * drinkValue;
 
-      // Updated calculation: lostMinutes is per bartender → multiply by number of bartenders
+      // CORRECTED: lostMinutes is per bartender, so multiply by number of bartenders
       const totalLostMinutesPerHour = lostMinutes * bartenders;
       const maxRushRevenue = bartenders * revenuePerBartenderPerHour * rushHours;
       const revenueAtRisk = revenuePerBartenderPerHour * (totalLostMinutesPerHour / 60) * rushHours;
@@ -772,7 +754,7 @@
       barNameInput.value = "";
       bartendersInput.value = "";
       drinksPerHourInput.value = "";
-      drinkValueInput.value = "7";
+      drinkValueInput.value = "7.5";
       rushMinutesInput.value = "";
       lostMinutesInput.value = "";
       clearResults();
