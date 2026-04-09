@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Crew Dispatch UK - Southampton Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #111827;
+      color: #fff;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .map-container {
+      position: relative;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      border: 4px solid #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .map-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .marker {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      background: #22c55e;
+      color: #111827;
+      font-weight: bold;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      transition: transform 0.2s;
+    }
+    .marker:hover {
+      transform: scale(1.15);
+    }
+    .info-box {
+      margin-top: 30px;
+      padding: 25px;
+      background: #1e2937;
+      border-radius: 12px;
+      min-height: 120px;
+      display: none;
+      border-left: 6px solid #22c55e;
+    }
+    .info-box.show {
+      display: block;
+    }
+    .info-box h2 {
+      margin: 0 0 15px 0;
+      color: #86efac;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Crew Dispatch UK - Southampton Weekend Floor Crew</h1>
+    
+    <div class="map-container">
+      <img src="dancing man brewery numbered markers.jpeg" alt="Southampton Map with markers" id="mapImage">
+
+      <!-- Marker 1 -->
+      <div class="marker" id="marker1" style="top: 68%; left: 42%;">1</div>
+      
+      <!-- Marker 2 -->
+      <div class="marker" id="marker2" style="top: 38%; left: 52%;">2</div>
+      
+      <!-- Marker 3 -->
+      <div class="marker" id="marker3" style="top: 72%; left: 58%;">3</div>
+    </div>
+
+    <!-- Information Boxes -->
+    <div id="info1" class="info-box">
+      <h2>1. Yassine - Ex bartender at Zizzi and multiple venues 25+</h2>
+      <p>Your closest available, experienced worker is Yassine. If requested he can be in the venue in 9 minutes from request.</p>
+    </div>
+
+    <div id="info2" class="info-box">
+      <h2>2. Nina - 28 years hospitality experience</h2>
+      <p>A highly experienced option. Slightly further out, but with extensive experience and strong potential to become a regular support worker.</p>
+    </div>
+
+    <div id="info3" class="info-box">
+      <h2>3. Saltan - 3 years hospitality experience, St Marys, The Brook</h2>
+      <p>Experience across multiple venues. Has his own transport (Escooter/bike), meaning he can respond quickly even from slightly further out.</p>
+    </div>
+  </div>
+
+  <script>
+    const marker1 = document.getElementById('marker1');
+    const marker2 = document.getElementById('marker2');
+    const marker3 = document.getElementById('marker3');
+
+    const info1 = document.getElementById('info1');
+    const info2 = document.getElementById('info2');
+    const info3 = document.getElementById('info3');
+
+    // Hide all info boxes initially
+    function hideAll() {
+      info1.classList.remove('show');
+      info2.classList.remove('show');
+      info3.classList.remove('show');
+    }
+
+    marker1.addEventListener('click', () => {
+      hideAll();
+      info1.classList.add('show');
+    });
+
+    marker2.addEventListener('click', () => {
+      hideAll();
+      info2.classList.add('show');
+    });
+
+    marker3.addEventListener('click', () => {
+      hideAll();
+      info3.classList.add('show');
+    });
+
+    // Optional: Click anywhere on the map to hide info (except on markers)
+    document.getElementById('mapImage').addEventListener('click', (e) => {
+      if (e.target.id === 'mapImage') {
+        hideAll();
+      }
+    });
+  </script>
+</body>
+</html>
