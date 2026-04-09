@@ -511,9 +511,9 @@
             <input type="number" id="rushMinutes" min="0" step="1" placeholder="e.g. 180" />
           </div>
           <div class="field-group">
-            <label for="lostMinutes">Bartender minutes lost per hour</label>
-            <div class="helper">Total minutes per hour trained bartenders are pulled away from serving.</div>
-            <input type="number" id="lostMinutes" min="0" max="60" step="1" placeholder="e.g. 15" />
+            <label for="lostMinutes">Minutes each bartender is pulled away per hour</label>
+            <div class="helper">Time each individual bartender loses from serving per hour (e.g. if each of 4 bartenders loses 5 minutes per hour, total lost time = 20 minutes per hour)</div>
+            <input type="number" id="lostMinutes" min="0" max="60" step="1" placeholder="e.g. 5" />
           </div>
         </div>
       </div>
@@ -719,14 +719,17 @@
 
       if (lostMinutes > 60) {
         clearResults();
-        errorMessageEl.textContent = "Bartender minutes lost per hour cannot be more than 60.";
+        errorMessageEl.textContent = "Minutes each bartender is pulled away per hour cannot be more than 60.";
         return;
       }
 
       const rushHours = rushMinutes / 60;
       const revenuePerBartenderPerHour = drinksPerHour * drinkValue;
+
+      // Updated calculation: lostMinutes is per bartender → multiply by number of bartenders
+      const totalLostMinutesPerHour = lostMinutes * bartenders;
       const maxRushRevenue = bartenders * revenuePerBartenderPerHour * rushHours;
-      const revenueAtRisk = revenuePerBartenderPerHour * (lostMinutes / 60) * rushHours;
+      const revenueAtRisk = revenuePerBartenderPerHour * (totalLostMinutesPerHour / 60) * rushHours;
       const glasiCost = GLASI_HOURLY_COST * rushHours;
       const totalProtectedAmount = revenueAtRisk - glasiCost;
 
@@ -746,7 +749,8 @@
 
       formulaExplanationEl.textContent =
         `${bartenders} bartenders × ${drinksPerHour} drinks per hour at £${drinkValue.toFixed(2)} each = ${formatCurrency(maxRushRevenue)} maximum rush revenue over ${rushMinutes} minutes. ` +
-        `Lost bartender time exposes ${formatCurrency(revenueAtRisk)}. ` +
+        `Each bartender loses ${lostMinutes} minutes per hour, for a total of ${totalLostMinutesPerHour} lost bartender-minutes per hour. ` +
+        `This exposes ${formatCurrency(revenueAtRisk)}. ` +
         `After subtracting the Glasi cover cost of ${formatCurrency(glasiCost)}, the total net revenue protected is ${formatCurrency(totalProtectedAmount)} — equal to ${protectedPercentage}% of the maximum rush revenue.`;
 
       updateBreakEven();
