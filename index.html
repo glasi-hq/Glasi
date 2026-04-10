@@ -11,7 +11,6 @@
             --navy: #0F1F3D;
             --navy-dark: #0D1B2A;
             --ice: #A8D8EA;
-            --ice-light: #C8E6F5;
             --white: #FAFAFA;
         }
 
@@ -20,7 +19,7 @@
         body {
             font-family: 'Inter', system-ui, sans-serif;
             background: #f0f4f8;
-            color: #1a1a2e;
+            color: #374151;
             min-height: 100vh;
         }
 
@@ -124,20 +123,31 @@
         }
 
         .highlight {
-            color: var(--navy);
+            color: #374151;
             font-weight: 600;
         }
 
-        .ice-pill {
-            display: inline-block;
-            background: rgba(168,216,234,0.15);
-            color: var(--navy);
-            border: 1px solid rgba(168,216,234,0.4);
-            border-radius: 999px;
-            padding: 4px 12px;
-            font-size: 12px;
-            font-weight: 500;
-            letter-spacing: 0.3px;
+        .copy-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .copy-list li {
+            padding-left: 18px;
+            position: relative;
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 4px;
+        }
+
+        .copy-list li::before {
+            content: '—';
+            position: absolute;
+            left: 0;
+            color: var(--ice);
+            font-weight: 300;
         }
     </style>
 </head>
@@ -157,27 +167,25 @@
             </div>
 
             <div class="space-y-4 text-sm leading-relaxed">
-                <p class="font-semibold text-base text-gray-900">
+                <p class="font-semibold text-base text-gray-600">
                     Get paid the same day working short bar shifts in Southampton.
                 </p>
-                <p class="text-gray-600">
-                    Stay at home, receive live shift requests, and choose when you want to work.
-                </p>
-                <p class="text-gray-600">
-                    Work is simple — collecting glasses, clearing tables and helping keep the bar flowing during busy periods.
+                <p class="text-gray-500">
+                    Stay at home, receive live shift requests, and choose when you want to work. Work is simple — collecting glasses, clearing tables and helping keep the bar flowing during busy periods.
                 </p>
 
-                <div class="flex flex-wrap gap-2 py-1">
-                    <span class="ice-pill">Same day pay</span>
-                    <span class="ice-pill">Walking distance only</span>
-                    <span class="ice-pill">You choose your shifts</span>
-                </div>
+                <ul class="copy-list">
+                    <li>Same day pay</li>
+                    <li>Walking distance shifts only</li>
+                    <li>You choose when you work</li>
+                    <li>No experience required</li>
+                </ul>
 
-                <p class="text-gray-600">
+                <p class="text-gray-500">
                     All registrations are entered into a <span class="highlight">£50 cash draw</span>. Take part in the first shift sessions and you'll also be entered into an additional <span class="highlight">£100 cash draw</span>.
                 </p>
 
-                <p class="font-medium text-gray-900">
+                <p class="font-medium text-gray-500">
                     Register below to be considered.
                 </p>
             </div>
@@ -188,29 +196,29 @@
             <form id="application-form" class="space-y-5">
 
                 <div>
-                    <label class="text-sm font-medium mb-1 block text-gray-800">Full Name *</label>
+                    <label class="text-sm font-medium mb-1 block text-gray-600">Full Name *</label>
                     <input id="name" type="text" required class="form-input w-full px-4 py-3 bg-white">
                 </div>
 
                 <div>
-                    <label class="text-sm font-medium mb-1 block text-gray-800">Mobile Number *</label>
+                    <label class="text-sm font-medium mb-1 block text-gray-600">Mobile Number *</label>
                     <input id="phone" type="tel" required class="form-input w-full px-4 py-3 bg-white">
                     <p class="text-xs text-gray-400 mt-1">WhatsApp required</p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-medium mb-1 block text-gray-800">Email Address *</label>
+                    <label class="text-sm font-medium mb-1 block text-gray-600">Email Address *</label>
                     <input id="email" type="email" required class="form-input w-full px-4 py-3 bg-white">
                 </div>
 
                 <div>
-                    <label class="text-sm font-medium mb-1 block text-gray-800">Full Postcode *</label>
+                    <label class="text-sm font-medium mb-1 block text-gray-600">Full Postcode *</label>
                     <input id="postcode_full" type="text" required class="form-input w-full px-4 py-3 bg-white uppercase" placeholder="SO14 1AB">
                     <p class="text-xs text-gray-400 mt-1">Used to ensure shifts are nearby</p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-medium mb-1 block text-gray-800">Referred by (optional)</label>
+                    <label class="text-sm font-medium mb-1 block text-gray-600">Referred by (optional)</label>
                     <input id="referred_by" type="text" class="form-input w-full px-4 py-3 bg-white">
                 </div>
 
