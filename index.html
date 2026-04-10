@@ -3,37 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Southampton Weekend Floor Crew</title>
+    <title>Glasi — Worker Registration</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --navy: #0F1F3D;
+            --navy-dark: #0D1B2A;
+            --ice: #A8D8EA;
+            --ice-light: #C8E6F5;
+            --white: #FAFAFA;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
             font-family: 'Inter', system-ui, sans-serif;
-            background: #f5f5f4;
-            color: #18181b;
+            background: #f0f4f8;
+            color: #1a1a2e;
+            min-height: 100vh;
         }
 
         .glass-card {
-            background: rgba(255,255,255,0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .glasi-header {
+            background: var(--navy);
+            border-radius: 18px;
+            padding: 28px 24px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glasi-header::before {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(168,216,234,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .glasi-wordmark {
+            font-family: 'Raleway', sans-serif;
+            font-weight: 200;
+            font-size: 38px;
+            letter-spacing: 4px;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .glasi-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--ice);
+            flex-shrink: 0;
+        }
+
+        .glasi-sub {
+            font-family: 'Inter', sans-serif;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 3px;
+            color: var(--ice);
+            text-transform: uppercase;
+            text-align: center;
         }
 
         .form-input {
             transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
         }
 
         .form-input:focus {
             outline: none;
-            border-color: #000;
-            box-shadow: 0 0 0 4px rgba(0,0,0,0.08);
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(15,31,61,0.08);
         }
 
         .submit-btn {
+            background: var(--navy);
             transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.5px;
         }
 
         .submit-btn:hover {
             transform: translateY(-1px);
+            background: var(--navy-dark);
+            box-shadow: 0 8px 20px rgba(15,31,61,0.25);
         }
 
         .success-message {
@@ -41,98 +111,124 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer-text {
+            font-family: 'Raleway', sans-serif;
+            font-weight: 300;
+            letter-spacing: 3px;
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .highlight {
+            color: var(--navy);
+            font-weight: 600;
+        }
+
+        .ice-pill {
+            display: inline-block;
+            background: rgba(168,216,234,0.15);
+            color: var(--navy);
+            border: 1px solid rgba(168,216,234,0.4);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
         }
     </style>
 </head>
 <body>
-    <div class="max-w-md mx-auto min-h-screen flex flex-col p-4">
+    <div class="max-w-md mx-auto min-h-screen flex flex-col p-4 py-8">
 
         <!-- Header -->
-        <div class="glass-card rounded-3xl shadow p-6 mb-4">
-            <div class="bg-black text-white p-5 rounded-2xl mb-5">
-                <h1 class="text-xl font-semibold">Southampton Weekend Floor Crew</h1>
-                <p class="text-xs text-zinc-400 mt-1 tracking-wider">PILOT REGISTRATION</p>
+        <div class="glass-card rounded-3xl shadow-sm p-6 mb-4">
+
+            <div class="glasi-header">
+                <div class="glasi-wordmark">
+                    <span class="glasi-dot"></span>
+                    glasi
+                    <span class="glasi-dot"></span>
+                </div>
+                <p class="glasi-sub">Worker Registration</p>
             </div>
 
             <div class="space-y-4 text-sm leading-relaxed">
-                <p class="font-semibold text-base text-black">
+                <p class="font-semibold text-base text-gray-900">
                     Get paid the same day working short bar shifts in Southampton.
                 </p>
-                <p>
-                Stay at home, receive live shift requests, and choose when you want to work.
+                <p class="text-gray-600">
+                    Stay at home, receive live shift requests, and choose when you want to work.
+                </p>
+                <p class="text-gray-600">
+                    Work is simple — collecting glasses, clearing tables and helping keep the bar flowing during busy periods.
                 </p>
 
-                <p>
-                    Work is simple - collecting glasses, clearing tables and helping keep the bar flowing during busy periods.
+                <div class="flex flex-wrap gap-2 py-1">
+                    <span class="ice-pill">Same day pay</span>
+                    <span class="ice-pill">Walking distance only</span>
+                    <span class="ice-pill">You choose your shifts</span>
+                </div>
+
+                <p class="text-gray-600">
+                    All registrations are entered into a <span class="highlight">£50 cash draw</span>. Take part in the first shift sessions and you'll also be entered into an additional <span class="highlight">£100 cash draw</span>.
                 </p>
-                <p> 
-                    All registrations are entered into a £50 cash draw.
-                    
-                    If you take part in the first shift sessions, you will also be entered into an additional £100 cash draw.
-                </p>
-        
-                <p class="font-medium text-black">
+
+                <p class="font-medium text-gray-900">
                     Register below to be considered.
                 </p>
             </div>
         </div>
 
         <!-- Form -->
-        <div class="glass-card rounded-3xl shadow p-6">
+        <div class="glass-card rounded-3xl shadow-sm p-6">
             <form id="application-form" class="space-y-5">
 
-                <!-- Name -->
                 <div>
-                    <label class="text-sm font-medium mb-1 block">Full Name *</label>
-                    <input id="name" type="text" required class="form-input w-full px-4 py-3 border rounded-xl">
+                    <label class="text-sm font-medium mb-1 block text-gray-800">Full Name *</label>
+                    <input id="name" type="text" required class="form-input w-full px-4 py-3 bg-white">
                 </div>
 
-                <!-- Phone -->
                 <div>
-                    <label class="text-sm font-medium mb-1 block">Mobile Number *</label>
-                    <input id="phone" type="tel" required class="form-input w-full px-4 py-3 border rounded-xl">
-                    <p class="text-xs text-zinc-500 mt-1">WhatsApp required</p>
+                    <label class="text-sm font-medium mb-1 block text-gray-800">Mobile Number *</label>
+                    <input id="phone" type="tel" required class="form-input w-full px-4 py-3 bg-white">
+                    <p class="text-xs text-gray-400 mt-1">WhatsApp required</p>
                 </div>
 
-                <!-- Email -->
                 <div>
-                    <label class="text-sm font-medium mb-1 block">Email Address *</label>
-                    <input id="email" type="email" required class="form-input w-full px-4 py-3 border rounded-xl">
+                    <label class="text-sm font-medium mb-1 block text-gray-800">Email Address *</label>
+                    <input id="email" type="email" required class="form-input w-full px-4 py-3 bg-white">
                 </div>
 
-                <!-- Postcode -->
                 <div>
-                    <label class="text-sm font-medium mb-1 block">Full Postcode *</label>
-                    <input id="postcode_full" type="text" required class="form-input w-full px-4 py-3 border rounded-xl uppercase" placeholder="SO14 1AB">
-                    <p class="text-xs text-zinc-500 mt-1">Used to ensure shifts are nearby</p>
+                    <label class="text-sm font-medium mb-1 block text-gray-800">Full Postcode *</label>
+                    <input id="postcode_full" type="text" required class="form-input w-full px-4 py-3 bg-white uppercase" placeholder="SO14 1AB">
+                    <p class="text-xs text-gray-400 mt-1">Used to ensure shifts are nearby</p>
                 </div>
 
-                <!-- Referred by -->
                 <div>
-                    <label class="text-sm font-medium mb-1 block">Referred by (optional)</label>
-                    <input id="referred_by" type="text" class="form-input w-full px-4 py-3 border rounded-xl">
+                    <label class="text-sm font-medium mb-1 block text-gray-800">Referred by (optional)</label>
+                    <input id="referred_by" type="text" class="form-input w-full px-4 py-3 bg-white">
                 </div>
 
-                <!-- GDPR Notice -->
-                <div class="text-xs text-zinc-500 leading-relaxed pt-2">
-                    Your details will only be used to contact you about onboarding and this trial. They’ll be stored securely and handled in line with UK GDPR.
+                <div class="text-xs text-gray-400 leading-relaxed pt-1">
+                    Your details will only be used to contact you about onboarding and shifts. Stored securely and handled in line with UK GDPR.
                 </div>
 
-                <!-- Submit -->
-                <button id="submit-btn" type="submit" class="submit-btn w-full bg-black text-white py-4 rounded-xl font-semibold mt-2">
+                <button id="submit-btn" type="submit" class="submit-btn w-full text-white py-4 rounded-xl font-semibold mt-1">
                     Register Interest
                 </button>
 
             </form>
 
-            <!-- Feedback -->
             <div id="feedback" class="mt-4 text-center"></div>
         </div>
 
-        <div class="text-center text-[10px] text-zinc-400 mt-4 tracking-widest">
-            POWERED BY CREW DISPATCH • CONFIDENTIAL
+        <div class="text-center footer-text mt-5">
+            GLASI LTD &nbsp;·&nbsp; CONFIDENTIAL
         </div>
 
     </div>
@@ -163,7 +259,7 @@ form.addEventListener('submit', async (e) => {
     const referredBy = document.getElementById('referred_by').value.trim();
 
     if (!name || !phone || !email || !postcode) {
-        feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete all required fields.</div>`;
+        feedback.innerHTML = `<div class="text-red-500 text-sm">Please complete all required fields.</div>`;
         return;
     }
 
@@ -194,15 +290,15 @@ form.addEventListener('submit', async (e) => {
 
         feedback.innerHTML = `
             <div class="success-message text-green-600 text-sm">
-                ✅ You're in. You will have received an email with onboarding, please check your spam if you can't see it in your inbox. 
-                If you haven't received it, email crew.dispatch.uk@gmail.com for the link. Thanks!
+                ✅ You're in. Check your email for the onboarding link — check spam if you can't see it.
+                Any issues, email <strong>hello@glasi.co.uk</strong>.
             </div>
         `;
 
         form.reset();
 
     } catch {
-        feedback.innerHTML = `<div class="text-red-600 text-sm">Something went wrong. Try again.</div>`;
+        feedback.innerHTML = `<div class="text-red-500 text-sm">Something went wrong. Try again.</div>`;
     }
 
     submitBtn.disabled = false;
