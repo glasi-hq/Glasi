@@ -3,37 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Southampton Weekend Floor Crew</title>
+  <title>Glasi — Worker Onboarding</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --navy: #0F1F3D;
+      --navy-dark: #0D1B2A;
+      --ice: #A8D8EA;
+      --white: #FAFAFA;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: #f5f5f4;
-      color: #18181b;
+      background: #f0f4f8;
+      color: #374151;
+      min-height: 100vh;
     }
 
     .glass-card {
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: blur(10px);
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+
+    .glasi-header {
+      background: var(--navy);
+      border-radius: 18px;
+      padding: 28px 24px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glasi-header::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(168,216,234,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .glasi-wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 200;
+      font-size: 38px;
+      letter-spacing: 4px;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .glasi-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ice);
+      flex-shrink: 0;
+    }
+
+    .glasi-sub {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .section-heading {
+      font-weight: 600;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 6px;
+      margin-top: 4px;
     }
 
     .form-input {
       transition: all 0.2s ease;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
     }
 
     .form-input:focus {
       outline: none;
-      border-color: #000;
-      box-shadow: 0 0 0 4px rgba(0,0,0,0.08);
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(15,31,61,0.08);
     }
 
     .submit-btn {
+      background: var(--navy);
       transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.5px;
     }
 
     .submit-btn:hover {
       transform: translateY(-1px);
+      background: var(--navy-dark);
+      box-shadow: 0 8px 20px rgba(15,31,61,0.25);
+    }
+
+    .continue-btn {
+      background: var(--navy);
+      transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.5px;
+      width: 100%;
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      margin-top: 16px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .continue-btn:hover {
+      transform: translateY(-1px);
+      background: var(--navy-dark);
+      box-shadow: 0 8px 20px rgba(15,31,61,0.25);
     }
 
     .success-message {
@@ -44,20 +142,25 @@
       animation: fadeIn 0.3s ease forwards;
     }
 
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .quick-check-wrap {
       margin-top: 4px;
       padding: 18px;
-      border: 1px solid #e4e4e7;
-      border-radius: 20px;
-      background: linear-gradient(to bottom, #fafafa, #ffffff);
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      background: #f8fafc;
     }
 
     .quick-check-heading {
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      color: #71717a;
+      color: #6b7280;
       margin-bottom: 14px;
     }
 
@@ -68,7 +171,7 @@
     .question-block + .question-block {
       margin-top: 18px;
       padding-top: 18px;
-      border-top: 1px solid #ededed;
+      border-top: 1px solid #e2e8f0;
     }
 
     .question-title {
@@ -76,7 +179,7 @@
       font-size: 13px;
       font-weight: 600;
       line-height: 1.45;
-      color: #111827;
+      color: #374151;
       margin-bottom: 10px;
     }
 
@@ -91,21 +194,20 @@
       align-items: center;
       gap: 10px;
       padding: 11px 12px;
-      border: 1px solid #e4e4e7;
-      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
       background: #ffffff;
       cursor: pointer;
-      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+      transition: border-color 0.18s ease, background 0.18s ease;
     }
 
     .radio-option:hover {
-      border-color: #bdbdc7;
-      background: #fcfcfc;
-      transform: translateY(-1px);
+      border-color: var(--ice);
+      background: #f8fafc;
     }
 
     .radio-option input[type="radio"] {
-      accent-color: #000;
+      accent-color: var(--navy);
       width: 15px;
       height: 15px;
       flex-shrink: 0;
@@ -113,87 +215,145 @@
     }
 
     .radio-option-text {
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.4;
-      color: #18181b;
+      color: #374151;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .footer-text {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 300;
+      letter-spacing: 3px;
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    /* Available hours grid */
+    .hours-grid {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .hours-grid th {
+      background: #f1f5f9;
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 11px;
+      padding: 8px 6px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+
+    .hours-grid th:first-child {
+      text-align: left;
+      padding-left: 10px;
+      min-width: 70px;
+    }
+
+    .hours-grid td {
+      border: 1px solid #e2e8f0;
+      padding: 6px;
+      text-align: center;
+      background: white;
+    }
+
+    .hours-grid td:first-child {
+      font-weight: 500;
+      color: #374151;
+      font-size: 12px;
+      padding-left: 10px;
+      text-align: left;
+      background: #f8fafc;
+    }
+
+    .hours-grid input[type="checkbox"] {
+      accent-color: var(--navy);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .hours-grid tr:hover td {
+      background: #f8fafc;
+    }
+
+    .hours-grid tr:hover td:first-child {
+      background: #f1f5f9;
     }
   </style>
 </head>
 <body>
-  <div class="max-w-md md:max-w-5xl mx-auto min-h-screen flex flex-col p-4 md:p-6">
+  <div class="max-w-md md:max-w-5xl mx-auto min-h-screen flex flex-col p-4 md:p-6 py-8">
     <div class="md:grid md:grid-cols-2 md:gap-6 md:items-start">
 
-      <div class="glass-card rounded-3xl shadow p-6 mb-4 md:mb-0">
-        <div class="bg-black text-white p-5 rounded-2xl mb-5">
-          <h1 class="text-xl font-semibold">Southampton Weekend Floor Crew</h1>
-          <p class="text-xs text-zinc-400 mt-1 tracking-wider">CREW CHECK</p>
+      <!-- Left panel — info -->
+      <div class="glass-card rounded-3xl shadow-sm p-6 mb-4 md:mb-0">
+
+        <div class="glasi-header">
+          <div class="glasi-wordmark">
+            <span class="glasi-dot"></span>
+            glasi
+            <span class="glasi-dot"></span>
+          </div>
+          <p class="glasi-sub">Worker Onboarding</p>
         </div>
 
-        <div class="space-y-4 text-sm leading-relaxed">
-          <p class="font-semibold text-base text-black">How shifts work</p>
+        <div class="space-y-4 text-sm leading-relaxed text-gray-500">
 
-          <p>On Friday and Saturday nights over the next couple of weeks, we’ll be offering short bar shifts when venues get busy.</p>
-          <p>Bars send through requests when they need extra help, and we pass these on live.</p>
-          <p>Shifts will be at least minimum wage, last a few hours, and be no more than 20 minutes walking distance from your location — some of you may be just a few minutes away.</p>
-          <p>We guarantee venues extra help within 20 minutes, so all shifts stay within that range.</p>
+          <p class="section-heading">How shifts work</p>
+          <p>On Friday and Saturday nights we'll be offering short bar shifts when venues get busy. Bars send through requests when they need extra help and we pass these on live.</p>
+          <p>Shifts will be at least minimum wage, last a few hours, and be no more than 20 minutes walking distance from your location.</p>
+          <p>We aim to have someone at the venue within 20 minutes of a request, so all shifts stay within that range.</p>
 
-          <p class="font-semibold text-base text-black">The work</p>
-          <p>The work is simple. Glass collecting, clearing tables and keeping the bar tidy.</p>
-          <p>No till work, no stocking, and nothing that requires training.</p>
+          <p class="section-heading">The work</p>
+          <p>Glass collecting, clearing tables and keeping the bar tidy. No till work, no stocking, and nothing that requires training.</p>
 
-          <p class="font-semibold text-base text-black">How you receive shifts</p>
-          <p>You’ll join a Zoom call during the evening, which acts as the live system.</p>
-          <p>You do not need your camera or microphone on. You can relax at home, but you must be ready to leave if you accept a shift.</p>
-          <p>You are not paid for being on the Zoom - you are only paid if you accept and complete a shift.</p>
-          <p>When a shift comes in, it will be posted in the Zoom chat. The first person to respond “Yes - ready” gets the shift.</p>
-          <p>If you accept, you must be ready to leave immediately, share your live location via WhatsApp, and then head to the venue.</p>
+          <p class="section-heading">How you receive shifts</p>
+          <p>During the trial you'll join a Zoom call during the evening, which acts as the live dispatch system.</p>
+          <p>You do not need your camera or microphone on. You can relax at home, but you must be ready to leave immediately if you accept a shift.</p>
+          <p>You are not paid for being on the Zoom — you are only paid if you accept and complete a shift.</p>
+          <p>When a shift comes in, it will be posted in the Zoom chat. The first person to respond "Yes — ready" gets the shift.</p>
+          <p>If you accept, you must be ready to leave immediately, share your live location via WhatsApp, and head to the venue.</p>
 
-          <p class="font-semibold text-base text-black">After the shift</p>
-          <p>You complete your shift and you will be paid at the end of your shift, cash or BACS, by the bar.</p>
+          <p class="section-heading">After the shift</p>
+          <p>You complete your shift and will be paid promptly through our payroll system. Same day pay is our goal.</p>
 
-          <p class="font-semibold text-base text-black">Important</p>
-          <p>You don’t have to accept every shift, but if you want to earn money you need to be ready and respond quickly. This is real, paid work.</p>
+          <p class="section-heading">Important</p>
+          <p>You don't have to accept every shift, but if you want to earn money you need to be ready and respond quickly. This is real, paid work.</p>
 
-          <p class="font-semibold text-base text-black">What this is</p>
-          <p>This is a simple live version of how the system will work.</p>
-          <p>Our app is already in development and will be launching soon, allowing you to clock in and look for shifts whenever you like.</p>
+          <p class="section-heading">What this is</p>
+          <p>This is the trial phase of Glasi. A full app is planned for later this year, which will allow you to go online, receive shift notifications, and track your earnings whenever you like.</p>
 
-          <button
-            id="show-form-btn"
-            type="button"
-            class="submit-btn w-full bg-black text-white py-4 rounded-xl font-semibold mt-4"
-          >
+          <button id="show-form-btn" type="button" class="continue-btn">
             Continue to Onboarding
           </button>
         </div>
       </div>
 
-      <div id="form-card" class="glass-card rounded-3xl shadow p-6 hidden">
+      <!-- Right panel — form -->
+      <div id="form-card" class="glass-card rounded-3xl shadow-sm p-6 hidden">
         <form id="onboarding-form" class="space-y-5">
 
           <div>
-            <label class="text-sm font-medium mb-1 block">Email Address *</label>
-            <input id="email" type="email" required class="form-input w-full px-4 py-3 border rounded-xl">
-            <p class="text-xs text-zinc-500 mt-1">Use the same email you registered with</p>
+            <label class="text-sm font-medium mb-1 block text-gray-600">Email Address *</label>
+            <input id="email" type="email" required class="form-input w-full px-4 py-3 bg-white">
+            <p class="text-xs text-gray-400 mt-1">Use the same email you registered with</p>
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Age group *</label>
-            <select id="age_group" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <label class="text-sm font-medium mb-2 block text-gray-600">Age group *</label>
+            <select id="age_group" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
-              <option value="18-24">18-24</option>
+              <option value="18-20">18-20</option>
+              <option value="21-24">21-24</option>
               <option value="25+">25+</option>
             </select>
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Do you have any hospitality experience? (It’s OK if you don’t) *</label>
-            <select id="hospitality_experience" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <label class="text-sm font-medium mb-2 block text-gray-600">Do you have any hospitality experience? (It's OK if you don't) *</label>
+            <select id="hospitality_experience" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -201,8 +361,8 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Are you legally allowed to work in the UK? *</label>
-            <select id="uk_work_right" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <label class="text-sm font-medium mb-2 block text-gray-600">Are you legally allowed to work in the UK? *</label>
+            <select id="uk_work_right" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -210,8 +370,8 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Do you have plain black clothing suitable for bar work? *</label>
-            <select id="has_black_clothing" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <label class="text-sm font-medium mb-2 block text-gray-600">Do you have plain black clothing suitable for bar work? *</label>
+            <select id="has_black_clothing" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -219,8 +379,8 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Are you comfortable being on your feet and moving quickly for a full shift? *</label>
-            <select id="physically_able" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <label class="text-sm font-medium mb-2 block text-gray-600">Are you comfortable being on your feet and moving quickly for a full shift? *</label>
+            <select id="physically_able" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -228,8 +388,8 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Do you speak and understand English clearly in a fast-paced environment? *</label>
-            <select id="speaks_english" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <label class="text-sm font-medium mb-2 block text-gray-600">Do you speak and understand English clearly in a fast-paced environment? *</label>
+            <select id="speaks_english" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -237,8 +397,8 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block">Do you agree to be reliable, responsive and polite when accepting shifts? *</label>
-            <select id="agrees_work_standard" required class="form-input w-full px-4 py-3 border rounded-xl">
+            <label class="text-sm font-medium mb-2 block text-gray-600">Do you agree to be reliable, responsive and polite when accepting shifts? *</label>
+            <select id="agrees_work_standard" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -246,10 +406,73 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-1 block">Tell us about your experience, or why you'd be good for this role *</label>
-            <textarea id="reliability_notes" rows="4" required class="form-input w-full px-4 py-3 border rounded-xl resize-none" placeholder="E.g. bar work, events, or why you'd be a good fit"></textarea>
+            <label class="text-sm font-medium mb-1 block text-gray-600">Tell us about your experience, or why you'd be good for this role *</label>
+            <textarea id="reliability_notes" rows="4" required class="form-input w-full px-4 py-3 bg-white border border-gray-200 resize-none" placeholder="E.g. bar work, events, or why you'd be a good fit"></textarea>
           </div>
 
+          <!-- Available hours grid -->
+          <div>
+            <label class="text-sm font-medium mb-1 block text-gray-600">When are you typically available? (Select all that apply)</label>
+            <p class="text-xs text-gray-400 mb-3">This helps us match you to shifts in your area. Not a commitment.</p>
+            <div style="overflow-x: auto;">
+              <table class="hours-grid">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>12pm–4pm</th>
+                    <th>4pm–8pm</th>
+                    <th>8pm–12am</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Mon</td>
+                    <td><input type="checkbox" name="hours" value="mon_12_16"></td>
+                    <td><input type="checkbox" name="hours" value="mon_16_20"></td>
+                    <td><input type="checkbox" name="hours" value="mon_20_00"></td>
+                  </tr>
+                  <tr>
+                    <td>Tue</td>
+                    <td><input type="checkbox" name="hours" value="tue_12_16"></td>
+                    <td><input type="checkbox" name="hours" value="tue_16_20"></td>
+                    <td><input type="checkbox" name="hours" value="tue_20_00"></td>
+                  </tr>
+                  <tr>
+                    <td>Wed</td>
+                    <td><input type="checkbox" name="hours" value="wed_12_16"></td>
+                    <td><input type="checkbox" name="hours" value="wed_16_20"></td>
+                    <td><input type="checkbox" name="hours" value="wed_20_00"></td>
+                  </tr>
+                  <tr>
+                    <td>Thu</td>
+                    <td><input type="checkbox" name="hours" value="thu_12_16"></td>
+                    <td><input type="checkbox" name="hours" value="thu_16_20"></td>
+                    <td><input type="checkbox" name="hours" value="thu_20_00"></td>
+                  </tr>
+                  <tr>
+                    <td>Fri</td>
+                    <td><input type="checkbox" name="hours" value="fri_12_16"></td>
+                    <td><input type="checkbox" name="hours" value="fri_16_20"></td>
+                    <td><input type="checkbox" name="hours" value="fri_20_00"></td>
+                  </tr>
+                  <tr>
+                    <td>Sat</td>
+                    <td><input type="checkbox" name="hours" value="sat_12_16"></td>
+                    <td><input type="checkbox" name="hours" value="sat_16_20"></td>
+                    <td><input type="checkbox" name="hours" value="sat_20_00"></td>
+                  </tr>
+                  <tr>
+                    <td>Sun</td>
+                    <td><input type="checkbox" name="hours" value="sun_12_16"></td>
+                    <td><input type="checkbox" name="hours" value="sun_16_20"></td>
+                    <td><input type="checkbox" name="hours" value="sun_20_00"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Quick check -->
           <div class="quick-check-wrap">
             <p class="quick-check-heading">Quick check</p>
 
@@ -308,11 +531,11 @@
             </div>
           </div>
 
-          <div class="text-xs text-zinc-500 leading-relaxed pt-2">
-            This information will only be used for onboarding and shift coordination.
+          <div class="text-xs text-gray-400 leading-relaxed pt-1">
+            This information will only be used for onboarding and shift coordination. Stored securely and handled in line with UK GDPR.
           </div>
 
-          <button id="submit-btn" type="submit" class="submit-btn w-full bg-black text-white py-4 rounded-xl font-semibold mt-2">
+          <button id="submit-btn" type="submit" class="submit-btn w-full text-white py-4 rounded-xl font-semibold mt-2">
             Submit
           </button>
 
@@ -323,8 +546,8 @@
 
     </div>
 
-    <div class="text-center text-[10px] text-zinc-400 mt-4 tracking-widest">
-      POWERED BY CREW DISPATCH • CONFIDENTIAL
+    <div class="text-center footer-text mt-6">
+      GLASI LTD &nbsp;·&nbsp; CONFIDENTIAL
     </div>
   </div>
 
@@ -361,22 +584,25 @@ form.addEventListener('submit', async (e) => {
   const agreesWorkStandard = document.getElementById('agrees_work_standard').value;
   const reliabilityNotes = document.getElementById('reliability_notes').value.trim();
 
+  const checkedHours = Array.from(document.querySelectorAll('input[name="hours"]:checked')).map(cb => cb.value);
+  const availableHours = checkedHours.length > 0 ? checkedHours.join(',') : null;
+
   const q1 = document.querySelector('input[name="q1"]:checked')?.value;
   const q2 = document.querySelector('input[name="q2"]:checked')?.value;
   const q3 = document.querySelector('input[name="q3"]:checked')?.value;
 
   if (!email || !ageGroup || !hospitalityExperience || !ukWorkRight || !hasBlackClothing || !physicallyAble || !speaksEnglish || !agreesWorkStandard || !reliabilityNotes) {
-    feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete all required fields.</div>`;
+    feedback.innerHTML = `<div class="text-red-500 text-sm">Please complete all required fields.</div>`;
     return;
   }
 
   if (!q1 || !q2 || !q3) {
-    feedback.innerHTML = `<div class="text-red-600 text-sm">Please complete the quick check before submitting.</div>`;
+    feedback.innerHTML = `<div class="text-red-500 text-sm">Please complete the quick check before submitting.</div>`;
     return;
   }
 
   if (q1 !== 'zoom' || q2 !== 'immediate' || q3 !== 'floor') {
-    feedback.innerHTML = `<div class="text-red-600 text-sm">One or more answers aren’t quite right — please check the section above and try again.</div>`;
+    feedback.innerHTML = `<div class="text-red-500 text-sm">One or more answers aren't quite right — please check the section above and try again.</div>`;
     return;
   }
 
@@ -391,7 +617,8 @@ form.addEventListener('submit', async (e) => {
     physically_able: toBool(physicallyAble),
     speaks_english: toBool(speaksEnglish),
     agrees_work_standard: toBool(agreesWorkStandard),
-    reliability_notes: reliabilityNotes || null
+    reliability_notes: reliabilityNotes || null,
+    available_hours: availableHours
   };
 
   try {
@@ -411,23 +638,23 @@ form.addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (!data || data.length === 0) {
-      feedback.innerHTML = `<div class="text-red-600 text-sm">We couldn't find your registration. Please use the same email you signed up with.</div>`;
+      feedback.innerHTML = `<div class="text-red-500 text-sm">We couldn't find your registration. Please use the same email you signed up with.</div>`;
       submitBtn.disabled = false;
       submitBtn.innerText = "Submit";
       return;
     }
 
     feedback.innerHTML = `
-      <div class="success-message text-green-600 text-sm space-y-3">
-        <p>✅ You're all set - welcome to Crew Dispatch UK.</p>
-        <p>The Zoom link will arrive by email, so keep an eye out and make sure you join to get your first shift.</p>
+      <div class="success-message text-green-600 text-sm space-y-2">
+        <p>✅ You're all set — welcome to Glasi.</p>
+        <p>The Zoom link will arrive by email before your first available shift window. Keep an eye out and make sure you join to get your first shift.</p>
       </div>
     `;
 
     form.reset();
 
   } catch {
-    feedback.innerHTML = `<div class="text-red-600 text-sm">Something went wrong. Try again.</div>`;
+    feedback.innerHTML = `<div class="text-red-500 text-sm">Something went wrong. Try again.</div>`;
   }
 
   submitBtn.disabled = false;
