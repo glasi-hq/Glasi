@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Glasi — Worker Registration</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --navy: #0F1F3D;
@@ -34,40 +34,22 @@
             border-radius: 18px;
             padding: 28px 24px;
             margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .glasi-header::before {
-            content: '';
-            position: absolute;
-            top: -40px;
-            right: -40px;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle, rgba(168,216,234,0.12) 0%, transparent 70%);
-            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
         }
 
         .glasi-wordmark {
             font-family: 'Raleway', sans-serif;
-            font-weight: 200;
-            font-size: 38px;
-            letter-spacing: 4px;
+            font-weight: 400;
+            font-size: 34px;
+            letter-spacing: 8px;
             color: var(--white);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 6px;
-        }
-
-        .glasi-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--ice);
-            flex-shrink: 0;
+            border: 1.5px solid var(--white);
+            border-radius: 6px;
+            padding: 10px 24px;
+            line-height: 1;
         }
 
         .glasi-sub {
@@ -143,7 +125,7 @@
         }
 
         .copy-list li::before {
-            content: '—';
+            content: '-';
             position: absolute;
             left: 0;
             color: var(--ice);
@@ -154,15 +136,10 @@
 <body>
     <div class="max-w-md mx-auto min-h-screen flex flex-col p-4 py-8">
 
-        <!-- Header -->
         <div class="glass-card rounded-3xl shadow-sm p-6 mb-4">
 
             <div class="glasi-header">
-                <div class="glasi-wordmark">
-                    <span class="glasi-dot"></span>
-                    glasi
-                    <span class="glasi-dot"></span>
-                </div>
+                <span class="glasi-wordmark">GLASI</span>
                 <p class="glasi-sub">Worker Registration</p>
             </div>
 
@@ -191,7 +168,6 @@
             </div>
         </div>
 
-        <!-- Form -->
         <div class="glass-card rounded-3xl shadow-sm p-6">
             <form id="application-form" class="space-y-5">
 
@@ -298,7 +274,7 @@ form.addEventListener('submit', async (e) => {
 
         feedback.innerHTML = `
             <div class="success-message text-green-600 text-sm">
-                ✅ You're in. Check your email for the onboarding link — check spam if you can't see it.
+                You're in. Check your email for the onboarding link - check spam if you can't see it.
                 Any issues, email <strong>hello@glasi.co.uk</strong>.
             </div>
         `;
