@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Glasi — Worker Onboarding</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --navy: #0F1F3D;
@@ -34,40 +34,22 @@
       border-radius: 18px;
       padding: 28px 24px;
       margin-bottom: 20px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .glasi-header::before {
-      content: '';
-      position: absolute;
-      top: -40px;
-      right: -40px;
-      width: 180px;
-      height: 180px;
-      background: radial-gradient(circle, rgba(168,216,234,0.12) 0%, transparent 70%);
-      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
 
     .glasi-wordmark {
       font-family: 'Raleway', sans-serif;
-      font-weight: 200;
-      font-size: 38px;
-      letter-spacing: 4px;
+      font-weight: 400;
+      font-size: 34px;
+      letter-spacing: 8px;
       color: var(--white);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 6px;
-    }
-
-    .glasi-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--ice);
-      flex-shrink: 0;
+      border: 1.5px solid var(--white);
+      border-radius: 6px;
+      padding: 10px 24px;
+      line-height: 1;
     }
 
     .glasi-sub {
@@ -228,7 +210,6 @@
       color: #94a3b8;
     }
 
-    /* Available hours grid */
     .hours-grid {
       width: 100%;
       border-collapse: collapse;
@@ -273,29 +254,16 @@
       height: 16px;
       cursor: pointer;
     }
-
-    .hours-grid tr:hover td {
-      background: #f8fafc;
-    }
-
-    .hours-grid tr:hover td:first-child {
-      background: #f1f5f9;
-    }
   </style>
 </head>
 <body>
   <div class="max-w-md md:max-w-5xl mx-auto min-h-screen flex flex-col p-4 md:p-6 py-8">
     <div class="md:grid md:grid-cols-2 md:gap-6 md:items-start">
 
-      <!-- Left panel — info -->
       <div class="glass-card rounded-3xl shadow-sm p-6 mb-4 md:mb-0">
 
         <div class="glasi-header">
-          <div class="glasi-wordmark">
-            <span class="glasi-dot"></span>
-            glasi
-            <span class="glasi-dot"></span>
-          </div>
+          <span class="glasi-wordmark">GLASI</span>
           <p class="glasi-sub">Worker Onboarding</p>
         </div>
 
@@ -331,7 +299,6 @@
         </div>
       </div>
 
-      <!-- Right panel — form -->
       <div id="form-card" class="glass-card rounded-3xl shadow-sm p-6 hidden">
         <form id="onboarding-form" class="space-y-5">
 
@@ -410,7 +377,6 @@
             <textarea id="reliability_notes" rows="4" required class="form-input w-full px-4 py-3 bg-white border border-gray-200 resize-none" placeholder="E.g. bar work, events, or why you'd be a good fit"></textarea>
           </div>
 
-          <!-- Available hours grid -->
           <div>
             <label class="text-sm font-medium mb-1 block text-gray-600">When are you typically available? (Select all that apply)</label>
             <p class="text-xs text-gray-400 mb-3">This helps us match you to shifts in your area. Not a commitment.</p>
@@ -419,114 +385,51 @@
                 <thead>
                   <tr>
                     <th></th>
-                    <th>12pm–4pm</th>
-                    <th>4pm–8pm</th>
-                    <th>8pm–12am</th>
+                    <th>12pm-4pm</th>
+                    <th>4pm-8pm</th>
+                    <th>8pm-12am</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>Mon</td>
-                    <td><input type="checkbox" name="hours" value="mon_12_16"></td>
-                    <td><input type="checkbox" name="hours" value="mon_16_20"></td>
-                    <td><input type="checkbox" name="hours" value="mon_20_00"></td>
-                  </tr>
-                  <tr>
-                    <td>Tue</td>
-                    <td><input type="checkbox" name="hours" value="tue_12_16"></td>
-                    <td><input type="checkbox" name="hours" value="tue_16_20"></td>
-                    <td><input type="checkbox" name="hours" value="tue_20_00"></td>
-                  </tr>
-                  <tr>
-                    <td>Wed</td>
-                    <td><input type="checkbox" name="hours" value="wed_12_16"></td>
-                    <td><input type="checkbox" name="hours" value="wed_16_20"></td>
-                    <td><input type="checkbox" name="hours" value="wed_20_00"></td>
-                  </tr>
-                  <tr>
-                    <td>Thu</td>
-                    <td><input type="checkbox" name="hours" value="thu_12_16"></td>
-                    <td><input type="checkbox" name="hours" value="thu_16_20"></td>
-                    <td><input type="checkbox" name="hours" value="thu_20_00"></td>
-                  </tr>
-                  <tr>
-                    <td>Fri</td>
-                    <td><input type="checkbox" name="hours" value="fri_12_16"></td>
-                    <td><input type="checkbox" name="hours" value="fri_16_20"></td>
-                    <td><input type="checkbox" name="hours" value="fri_20_00"></td>
-                  </tr>
-                  <tr>
-                    <td>Sat</td>
-                    <td><input type="checkbox" name="hours" value="sat_12_16"></td>
-                    <td><input type="checkbox" name="hours" value="sat_16_20"></td>
-                    <td><input type="checkbox" name="hours" value="sat_20_00"></td>
-                  </tr>
-                  <tr>
-                    <td>Sun</td>
-                    <td><input type="checkbox" name="hours" value="sun_12_16"></td>
-                    <td><input type="checkbox" name="hours" value="sun_16_20"></td>
-                    <td><input type="checkbox" name="hours" value="sun_20_00"></td>
-                  </tr>
+                  <tr><td>Mon</td><td><input type="checkbox" name="hours" value="mon_12_16"></td><td><input type="checkbox" name="hours" value="mon_16_20"></td><td><input type="checkbox" name="hours" value="mon_20_00"></td></tr>
+                  <tr><td>Tue</td><td><input type="checkbox" name="hours" value="tue_12_16"></td><td><input type="checkbox" name="hours" value="tue_16_20"></td><td><input type="checkbox" name="hours" value="tue_20_00"></td></tr>
+                  <tr><td>Wed</td><td><input type="checkbox" name="hours" value="wed_12_16"></td><td><input type="checkbox" name="hours" value="wed_16_20"></td><td><input type="checkbox" name="hours" value="wed_20_00"></td></tr>
+                  <tr><td>Thu</td><td><input type="checkbox" name="hours" value="thu_12_16"></td><td><input type="checkbox" name="hours" value="thu_16_20"></td><td><input type="checkbox" name="hours" value="thu_20_00"></td></tr>
+                  <tr><td>Fri</td><td><input type="checkbox" name="hours" value="fri_12_16"></td><td><input type="checkbox" name="hours" value="fri_16_20"></td><td><input type="checkbox" name="hours" value="fri_20_00"></td></tr>
+                  <tr><td>Sat</td><td><input type="checkbox" name="hours" value="sat_12_16"></td><td><input type="checkbox" name="hours" value="sat_16_20"></td><td><input type="checkbox" name="hours" value="sat_20_00"></td></tr>
+                  <tr><td>Sun</td><td><input type="checkbox" name="hours" value="sun_12_16"></td><td><input type="checkbox" name="hours" value="sun_16_20"></td><td><input type="checkbox" name="hours" value="sun_20_00"></td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- Quick check -->
           <div class="quick-check-wrap">
             <p class="quick-check-heading">Quick check</p>
 
             <div class="question-block">
               <label class="question-title">How do you receive shift requests?</label>
               <div class="answers-list">
-                <label class="radio-option">
-                  <input type="radio" name="q1" value="zoom">
-                  <span class="radio-option-text">Through a Zoom session</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="q1" value="whatsapp">
-                  <span class="radio-option-text">By WhatsApp message</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="q1" value="call">
-                  <span class="radio-option-text">By phone call</span>
-                </label>
+                <label class="radio-option"><input type="radio" name="q1" value="zoom"><span class="radio-option-text">Through a Zoom session</span></label>
+                <label class="radio-option"><input type="radio" name="q1" value="whatsapp"><span class="radio-option-text">By WhatsApp message</span></label>
+                <label class="radio-option"><input type="radio" name="q1" value="call"><span class="radio-option-text">By phone call</span></label>
               </div>
             </div>
 
             <div class="question-block">
               <label class="question-title">If you accept a shift, what are you expected to do?</label>
               <div class="answers-list">
-                <label class="radio-option">
-                  <input type="radio" name="q2" value="hour">
-                  <span class="radio-option-text">Arrive within an hour</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="q2" value="immediate">
-                  <span class="radio-option-text">Leave immediately and head to the venue</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="q2" value="wait">
-                  <span class="radio-option-text">Wait for further instructions</span>
-                </label>
+                <label class="radio-option"><input type="radio" name="q2" value="hour"><span class="radio-option-text">Arrive within an hour</span></label>
+                <label class="radio-option"><input type="radio" name="q2" value="immediate"><span class="radio-option-text">Leave immediately and head to the venue</span></label>
+                <label class="radio-option"><input type="radio" name="q2" value="wait"><span class="radio-option-text">Wait for further instructions</span></label>
               </div>
             </div>
 
             <div class="question-block">
               <label class="question-title">Which of the following is part of the role?</label>
               <div class="answers-list">
-                <label class="radio-option">
-                  <input type="radio" name="q3" value="till">
-                  <span class="radio-option-text">Working the till</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="q3" value="floor">
-                  <span class="radio-option-text">Glass collecting and clearing tables</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="q3" value="stock">
-                  <span class="radio-option-text">Managing stock in the back</span>
-                </label>
+                <label class="radio-option"><input type="radio" name="q3" value="till"><span class="radio-option-text">Working the till</span></label>
+                <label class="radio-option"><input type="radio" name="q3" value="floor"><span class="radio-option-text">Glass collecting and clearing tables</span></label>
+                <label class="radio-option"><input type="radio" name="q3" value="stock"><span class="radio-option-text">Managing stock in the back</span></label>
               </div>
             </div>
           </div>
@@ -602,7 +505,7 @@ form.addEventListener('submit', async (e) => {
   }
 
   if (q1 !== 'zoom' || q2 !== 'immediate' || q3 !== 'floor') {
-    feedback.innerHTML = `<div class="text-red-500 text-sm">One or more answers aren't quite right — please check the section above and try again.</div>`;
+    feedback.innerHTML = `<div class="text-red-500 text-sm">One or more answers aren't quite right - please check the section above and try again.</div>`;
     return;
   }
 
@@ -646,7 +549,7 @@ form.addEventListener('submit', async (e) => {
 
     feedback.innerHTML = `
       <div class="success-message text-green-600 text-sm space-y-2">
-        <p>✅ You're all set — welcome to Glasi.</p>
+        <p>You're all set - welcome to Glasi.</p>
         <p>The Zoom link will arrive by email before your first available shift window. Keep an eye out and make sure you join to get your first shift.</p>
       </div>
     `;
