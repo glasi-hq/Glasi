@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/onboarding", "destination": "/onboarding.html" },
+    { "source": "/calculator", "destination": "/calculator.html" }
+  ]
+}
