@@ -302,10 +302,10 @@ const KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
 const H = { 'Content-Type':'application/json', 'apikey':KEY, 'Authorization':`Bearer ${KEY}` };
 
 const ZONES = [
-  { id:'southampton-city-centre', name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc' },
-  { id:'southampton-north', name:'Southampton North', meta:'SO16 · Bassett, Shirley area' },
-  { id:'southampton-east', name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area' },
-  { id:'portsmouth-city-centre', name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area' }
+  { id:'southampton-city-centre', name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc', postcodes:['SO14','SO15'] },
+  { id:'southampton-north', name:'Southampton North', meta:'SO16 · Bassett, Shirley area', postcodes:['SO16','SO17'] },
+  { id:'southampton-east', name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area', postcodes:['SO17','SO18','SO19'] },
+  { id:'portsmouth-city-centre', name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area', postcodes:['PO1','PO2','PO3','PO4','PO5'] }
 ];
 
 let zone = null, allW = [], sessW = [], shifts = [], activeSid = null, starRating = 0, log = [];
@@ -372,14 +372,21 @@ function renderWorkers() {
 
 function openOv(name) {
   if(name==='add-workers') {
-    const ex=sessW.map(w=>w.worker_name);
-    const av=allW.filter(w=>!ex.includes(w.name));
+    const ex=Array.isArray(sessW)?sessW.map(w=>w.worker_name):[];
+    const zoneData=ZONES.find(z=>z.id===zone.id);
+    const prefixes=zoneData?.postcodes||[];
+    const av=allW.filter(w=>{
+      if(ex.includes(w.name)) return false;
+      if(!w.postcode_full) return false;
+      const pc=w.postcode_full.trim().toUpperCase();
+      return prefixes.some(p=>pc.startsWith(p));
+    });
     document.getElementById('worker-pick-list').innerHTML=av.length?av.map(w=>`
       <label class="pick-item">
         <input type="checkbox" value="${w.email}" data-name="${w.name}" data-phone="${w.phone||''}" />
         <span class="pick-name">${w.name}</span>
         <span class="pick-post">${w.postcode_full||''}</span>
-      </label>`).join(''):'<div style="padding:14px;color:var(--grey);font-size:13px;">All workers already added.</div>';
+      </label>`).join(''):'<div style="padding:14px;color:var(--grey);font-size:13px;">No workers found in this zone.</div>';
   }
   if(name==='new-request') {
     document.getElementById('req-time').value=nowT();
