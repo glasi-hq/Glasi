@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glasi | Dispatch</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0F1F3D;
+      --navy-mid: #162842;
+      --navy-light: #1e3a5f;
+      --ice: #A8D8EA;
+      --ice-dim: rgba(168,216,234,0.15);
+      --white: #FAFAFA;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --grey: #64748b;
+      --border: rgba(168,216,234,0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Raleway', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* LOGIN */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--navy);
+    }
+
+    .login-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .login-wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 28px;
+      letter-spacing: 8px;
+      color: var(--white);
+      border: 1.5px solid var(--white);
+      border-radius: 6px;
+      padding: 8px 20px;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+
+    .login-sub {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+
+    .login-card input {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--white);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .login-card input:focus {
+      border-color: var(--ice);
+    }
+
+    .login-btn {
+      width: 100%;
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-family: 'Raleway', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .login-btn:hover { opacity: 0.85; }
+
+    .login-error {
+      color: var(--red);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    /* DASHBOARD */
+    #dashboard { display: none; min-height: 100vh; }
+
+    /* HEADER */
+    .header {
+      background: var(--navy-mid);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 18px;
+      letter-spacing: 6px;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      padding: 4px 12px;
+    }
+
+    .header-title {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .session-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--ice);
+    }
+
+    .logout-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--grey);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-family: 'Raleway', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .logout-btn:hover {
+      border-color: var(--ice);
+      color: var(--ice);
+    }
+
+    /* MAIN LAYOUT */
+    .main {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      height: calc(100vh - 57px);
+      overflow: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      background: var(--navy-mid);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .sidebar-section {
+      margin-bottom: 28px;
+    }
+
+    .sidebar-heading {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .add-btn {
+      width: 100%;
+      background: var(--ice-dim);
+      border: 1px dashed rgba(168,216,234,0.3);
+      color: var(--ice);
+      border-radius: 10px;
+      padding: 9px;
+      font-family: 'Raleway', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .add-btn:hover {
+      background: rgba(168,216,234,0.2);
+      border-color: var(--ice);
+    }
+
+    .zone-tab {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      text-align: left;
+      color: var(--white);
+      font-family: 'Raleway', sans-serif;
+      font-size: 13px;
+    }
+
+    .zone-tab:hover, .zone-tab.active {
+      background: var(--ice-dim);
+      border-color: var(--ice);
+      color: var(--ice);
+    }
+
+    .zone-tab-name {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .zone-tab-meta {
+      font-size: 10px;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* CENTRE PANEL */
+    .centre {
+      overflow-y: auto;
+      padding: 24px;
+      background: var(--navy);
+    }
+
+    .centre-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .centre-title {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--white);
+    }
+
+    .centre-sub {
+      font-size: 11px;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px;
+    }
+
+    .primary-btn {
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      padding: 9px 18px;
+      font-family: 'Raleway', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .primary-btn:hover { opacity: 0.85; }
+
+    /* BARS SECTION */
+    .section-label {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      margin-top: 24px;
+    }
+
+    .bar-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .bar-name {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 3px;
+    }
+
+    .bar-contact {
+      font-size: 11px;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .dispatch-btn {
+      background: var(--navy);
+      border: 1px solid var(--ice);
+      color: var(--ice);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-family: 'Raleway', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .dispatch-btn:hover {
+      background: var(--ice);
+      color: var(--navy);
+    }
+
+    /* WORKERS GRID */
+    .workers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .worker-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .worker-card:hover {
+      border-color: var(--ice);
+    }
+
+    .worker-card.on-shift {
+      border-color: var(--amber);
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .worker-card.completed {
+      border-color: var(--green);
+      opacity: 0.5;
+    }
+
+    .worker-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      position: absolute;
+      top: 14px;
+      right: 14px;
+    }
+
+    .worker-card.on-shift .worker-status-dot { background: var(--amber); }
+    .worker-card.completed .worker-status-dot { background: var(--grey); }
+
+    .worker-name {
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 3px;
+      padding-right: 16px;
+    }
+
+    .worker-postcode {
+      font-size: 10px;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 6px;
+    }
+
+    .worker-status-label {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--green);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .worker-card.on-shift .worker-status-label { color: var(--amber); }
+    .worker-card.completed .worker-status-label { color: var(--grey); }
+
+    /* RIGHT PANEL */
+    .right-panel {
+      background: var(--navy-mid);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .right-heading {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .shift-log-item {
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+    }
+
+    .shift-log-bar {
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .shift-log-worker {
+      font-size: 11px;
+      color: var(--ice);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 4px;
+    }
+
+    .shift-log-time {
+      font-size: 10px;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .shift-log-status {
+      display: inline-block;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .status-active { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .status-complete { background: rgba(34,197,94,0.15); color: var(--green); }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--grey);
+    }
+
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state-text {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      display: none;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--white);
+    }
+
+    .modal label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      margin-top: 14px;
+    }
+
+    .modal input, .modal select, .modal textarea {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--white);
+      font-family: 'Raleway', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .modal input:focus, .modal select:focus, .modal textarea:focus {
+      border-color: var(--ice);
+    }
+
+    .modal select option { background: var(--navy-mid); }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .cancel-btn {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--grey);
+      border-radius: 10px;
+      padding: 11px;
+      font-family: 'Raleway', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cancel-btn:hover { border-color: var(--ice); color: var(--ice); }
+
+    .confirm-btn {
+      flex: 2;
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      padding: 11px;
+      font-family: 'Raleway', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .confirm-btn:hover { opacity: 0.85; }
+
+    .worker-checkbox-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+    }
+
+    .worker-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .worker-checkbox-item:hover { background: var(--ice-dim); }
+
+    .worker-checkbox-item input { width: auto; }
+
+    .worker-checkbox-name { font-size: 13px; }
+    .worker-checkbox-postcode {
+      font-size: 10px;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+      margin-left: auto;
+    }
+
+    .star-rating {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .star {
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--grey);
+      transition: color 0.15s;
+    }
+
+    .star.selected { color: var(--amber); }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-wordmark">GLASI</div>
+    <p class="login-sub">Dispatch Portal</p>
+    <input type="email" id="login-email" placeholder="Email" autocomplete="email" />
+    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" />
+    <button class="login-btn" onclick="handleLogin()">Sign In</button>
+    <p class="login-error" id="login-error"></p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-wordmark">GLASI</div>
+      <div class="header-title">Dispatch</div>
+    </div>
+    <div class="header-right">
+      <div class="session-date" id="session-date"></div>
+      <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- SIDEBAR: ZONES -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Zones</div>
+        <button class="add-btn" onclick="openModal('add-zone')">+ Add Zone</button>
+        <div id="zones-list"></div>
+      </div>
+    </div>
+
+    <!-- CENTRE: ACTIVE ZONE -->
+    <div class="centre">
+      <div id="zone-empty" class="empty-state">
+        <div class="empty-state-icon">📍</div>
+        <div class="empty-state-text">Select a zone or create one to get started</div>
+      </div>
+
+      <div id="zone-view" style="display:none;">
+        <div class="centre-header">
+          <div>
+            <div class="centre-title" id="zone-title"></div>
+            <div class="centre-sub" id="zone-sub"></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="primary-btn" onclick="openModal('add-bar')" style="background:var(--navy-mid);color:var(--ice);border:1px solid var(--ice);">+ Add Bar</button>
+            <button class="primary-btn" onclick="openModal('add-workers')">+ Add Workers</button>
+          </div>
+        </div>
+
+        <div class="section-label">Active Bars This Session</div>
+        <div id="bars-list"></div>
+
+        <div class="section-label">Workers In Room</div>
+        <div class="workers-grid" id="workers-grid"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SHIFT LOG -->
+    <div class="right-panel">
+      <div class="right-heading">Shift Log</div>
+      <div id="shift-log"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALS -->
+
+<!-- Add Zone -->
+<div class="modal-overlay" id="modal-add-zone">
+  <div class="modal">
+    <div class="modal-title">Add Zone</div>
+    <label>Zone Name</label>
+    <input type="text" id="new-zone-name" placeholder="e.g. Southampton City Centre" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('add-zone')">Cancel</button>
+      <button class="confirm-btn" onclick="addZone()">Add Zone</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Bar -->
+<div class="modal-overlay" id="modal-add-bar">
+  <div class="modal">
+    <div class="modal-title">Add Bar to Zone</div>
+    <label>Bar Name</label>
+    <input type="text" id="new-bar-name" placeholder="e.g. Dancing Man Brewery" />
+    <label>Contact Name</label>
+    <input type="text" id="new-bar-contact" placeholder="e.g. Aidan" />
+    <label>Contact Phone</label>
+    <input type="text" id="new-bar-phone" placeholder="07..." />
+    <label>Address</label>
+    <input type="text" id="new-bar-address" placeholder="e.g. King Street, Southampton" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('add-bar')">Cancel</button>
+      <button class="confirm-btn" onclick="addBar()">Add Bar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Workers -->
+<div class="modal-overlay" id="modal-add-workers">
+  <div class="modal">
+    <div class="modal-title">Add Workers to Zone</div>
+    <label>Select Workers</label>
+    <div class="worker-checkbox-list" id="worker-checkbox-list"></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('add-workers')">Cancel</button>
+      <button class="confirm-btn" onclick="addWorkersToZone()">Add to Zone</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dispatch Shift -->
+<div class="modal-overlay" id="modal-dispatch">
+  <div class="modal">
+    <div class="modal-title">Log Shift</div>
+    <label>Bar</label>
+    <select id="dispatch-bar"></select>
+    <label>Worker</label>
+    <select id="dispatch-worker"></select>
+    <label>Shift Length (hours)</label>
+    <select id="dispatch-length">
+      <option value="1">1 hour</option>
+      <option value="1.5">1.5 hours</option>
+      <option value="2">2 hours</option>
+      <option value="2.5">2.5 hours</option>
+      <option value="3" selected>3 hours</option>
+      <option value="3.5">3.5 hours</option>
+      <option value="4">4 hours</option>
+    </select>
+    <label>Accepted Time</label>
+    <input type="time" id="dispatch-accepted" />
+    <label>Clock In Code</label>
+    <input type="text" id="dispatch-clockin-code" placeholder="e.g. GLASI47" />
+    <label>Clock In Time</label>
+    <input type="time" id="dispatch-clockin-time" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('dispatch')">Cancel</button>
+      <button class="confirm-btn" onclick="logShift()">Log Shift</button>
+    </div>
+  </div>
+</div>
+
+<!-- Complete Shift -->
+<div class="modal-overlay" id="modal-complete">
+  <div class="modal">
+    <div class="modal-title">Complete Shift</div>
+    <label>Clock Out Code</label>
+    <input type="text" id="complete-clockout-code" placeholder="e.g. DONE47" />
+    <label>Clock Out Time</label>
+    <input type="time" id="complete-clockout-time" />
+    <label>Bar Rating</label>
+    <div class="star-rating" id="star-rating">
+      <span class="star" onclick="setRating(1)">★</span>
+      <span class="star" onclick="setRating(2)">★</span>
+      <span class="star" onclick="setRating(3)">★</span>
+      <span class="star" onclick="setRating(4)">★</span>
+      <span class="star" onclick="setRating(5)">★</span>
+    </div>
+    <label>Notes</label>
+    <textarea id="complete-notes" rows="3" placeholder="Any feedback from the bar..."></textarea>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeModal('complete')">Cancel</button>
+      <button class="confirm-btn" onclick="completeShift()">Complete Shift</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://hweytbyrqvjsviydmacv.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
+const VALID_EMAIL = "sam@glasi.co.uk";
+const VALID_PASSWORD = "Sponger64112!";
+
+const headers = {
+  'Content-Type': 'application/json',
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`
+};
+
+let activeZoneId = null;
+let activeZoneName = null;
+let allWorkers = [];
+let sessionWorkers = [];
+let activeBars = [];
+let shiftLog = [];
+let activeShiftId = null;
+let selectedRating = 0;
+let completeWorkerId = null;
+
+// AUTH
+function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (email === VALID_EMAIL && password === VALID_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('session-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+    loadZones();
+    loadAllWorkers();
+  } else {
+    document.getElementById('login-error').textContent = 'Incorrect email or password.';
+  }
+}
+
+function handleLogout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+
+// SUPABASE HELPERS
+async function sbGet(table, query = '') {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, { headers });
+  return res.json();
+}
+
+async function sbPost(table, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { ...headers, 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function sbPatch(table, query, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+    method: 'PATCH',
+    headers: { ...headers, 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ZONES
+async function loadZones() {
+  const zones = await sbGet('zones', '?order=created_at.asc');
+  const list = document.getElementById('zones-list');
+  list.innerHTML = '';
+  zones.forEach(z => {
+    const btn = document.createElement('button');
+    btn.className = 'zone-tab' + (z.id === activeZoneId ? ' active' : '');
+    btn.innerHTML = `<div class="zone-tab-name">${z.name}</div><div class="zone-tab-meta">tap to open</div>`;
+    btn.onclick = () => selectZone(z.id, z.name);
+    list.appendChild(btn);
+  });
+}
+
+async function addZone() {
+  const name = document.getElementById('new-zone-name').value.trim();
+  if (!name) return;
+  await sbPost('zones', { name });
+  document.getElementById('new-zone-name').value = '';
+  closeModal('add-zone');
+  loadZones();
+}
+
+async function selectZone(id, name) {
+  activeZoneId = id;
+  activeZoneName = name;
+  document.getElementById('zone-empty').style.display = 'none';
+  document.getElementById('zone-view').style.display = 'block';
+  document.getElementById('zone-title').textContent = name;
+  document.getElementById('zone-sub').textContent = 'Active session';
+  document.querySelectorAll('.zone-tab').forEach(t => t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  await loadBars();
+  await loadSessionWorkers();
+  await loadShiftLog();
+}
+
+// BARS
+async function loadBars() {
+  const bars = await sbGet('bars', `?zone_id=eq.${activeZoneId}&order=created_at.asc`);
+  activeBars = bars;
+  const list = document.getElementById('bars-list');
+  list.innerHTML = '';
+  if (!bars.length) {
+    list.innerHTML = '<div style="color:var(--grey);font-size:13px;padding:12px 0;">No bars added yet. Add a bar to get started.</div>';
+    return;
+  }
+  bars.forEach(b => {
+    const card = document.createElement('div');
+    card.className = 'bar-card';
+    card.innerHTML = `
+      <div>
+        <div class="bar-name">${b.name}</div>
+        <div class="bar-contact">Contact: ${b.contact_name || 'N/A'} ${b.contact_phone ? '· ' + b.contact_phone : ''}</div>
+      </div>
+      <button class="dispatch-btn" onclick="openDispatchForBar(${b.id}, '${b.name}')">Log Shift</button>
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function addBar() {
+  const name = document.getElementById('new-bar-name').value.trim();
+  const contact_name = document.getElementById('new-bar-contact').value.trim();
+  const contact_phone = document.getElementById('new-bar-phone').value.trim();
+  const address = document.getElementById('new-bar-address').value.trim();
+  if (!name) return;
+  await sbPost('bars', { zone_id: activeZoneId, name, contact_name, contact_phone, address });
+  ['new-bar-name','new-bar-contact','new-bar-phone','new-bar-address'].forEach(id => document.getElementById(id).value = '');
+  closeModal('add-bar');
+  loadBars();
+}
+
+// WORKERS
+async function loadAllWorkers() {
+  allWorkers = await sbGet('applications', '?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email');
+}
+
+async function loadSessionWorkers() {
+  const today = new Date().toISOString().split('T')[0];
+  sessionWorkers = await sbGet('session_workers', `?zone_id=eq.${activeZoneId}&session_date=eq.${today}&order=created_at.asc`);
+  renderWorkers();
+}
+
+function renderWorkers() {
+  const grid = document.getElementById('workers-grid');
+  grid.innerHTML = '';
+  if (!sessionWorkers.length) {
+    grid.innerHTML = '<div style="color:var(--grey);font-size:13px;padding:12px 0;grid-column:1/-1;">No workers added to this zone yet.</div>';
+    return;
+  }
+  sessionWorkers.forEach(w => {
+    const card = document.createElement('div');
+    const statusClass = w.status === 'on-shift' ? 'on-shift' : w.status === 'completed' ? 'completed' : '';
+    const statusLabel = w.status === 'on-shift' ? 'On Shift' : w.status === 'completed' ? 'Completed' : 'Available';
+    card.className = `worker-card ${statusClass}`;
+    card.innerHTML = `
+      <div class="worker-status-dot"></div>
+      <div class="worker-name">${w.worker_name}</div>
+      <div class="worker-postcode">${w.worker_phone || ''}</div>
+      <div class="worker-status-label">${statusLabel}</div>
+    `;
+    if (w.status === 'on-shift') {
+      card.onclick = () => openCompleteShift(w.id);
+    }
+    grid.appendChild(card);
+  });
+}
+
+async function addWorkersToZone() {
+  const checked = document.querySelectorAll('#worker-checkbox-list input:checked');
+  const today = new Date().toISOString().split('T')[0];
+  for (const cb of checked) {
+    const worker = allWorkers.find(w => w.email === cb.value);
+    if (worker) {
+      await sbPost('session_workers', {
+        zone_id: activeZoneId,
+        worker_name: worker.name,
+        worker_phone: worker.phone,
+        session_date: today,
+        status: 'available'
+      });
+    }
+  }
+  closeModal('add-workers');
+  loadSessionWorkers();
+}
+
+// DISPATCH
+function openDispatchForBar(barId, barName) {
+  const barSelect = document.getElementById('dispatch-bar');
+  barSelect.innerHTML = activeBars.map(b => `<option value="${b.id}" ${b.id === barId ? 'selected' : ''}>${b.name}</option>`).join('');
+  const workerSelect = document.getElementById('dispatch-worker');
+  workerSelect.innerHTML = sessionWorkers.filter(w => w.status === 'available').map(w => `<option value="${w.id}">${w.worker_name}</option>`).join('');
+  const now = new Date();
+  document.getElementById('dispatch-accepted').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  openModal('dispatch');
+}
+
+async function logShift() {
+  const barId = document.getElementById('dispatch-bar').value;
+  const workerId = document.getElementById('dispatch-worker').value;
+  const shiftLength = document.getElementById('dispatch-length').value;
+  const acceptedTime = document.getElementById('dispatch-accepted').value;
+  const clockInCode = document.getElementById('dispatch-clockin-code').value;
+  const clockInTime = document.getElementById('dispatch-clockin-time').value;
+
+  const bar = activeBars.find(b => b.id == barId);
+  const worker = sessionWorkers.find(w => w.id == workerId);
+
+  const today = new Date().toISOString().split('T')[0];
+  const acceptedAt = acceptedTime ? new Date(`${today}T${acceptedTime}`).toISOString() : null;
+  const clockInAt = clockInTime ? new Date(`${today}T${clockInTime}`).toISOString() : null;
+
+  const shift = await sbPost('shifts', {
+    bar_name: bar?.name,
+    contact_name: bar?.contact_name,
+    worker_name: worker?.worker_name,
+    worker_phone: worker?.worker_phone,
+    zoom_room: activeZoneName,
+    shift_length_hours: parseFloat(shiftLength),
+    accepted_at: acceptedAt,
+    clock_in_code: clockInCode || null,
+    clock_in_confirmed_at: clockInAt,
+    status: 'active'
+  });
+
+  await sbPatch('session_workers', `?id=eq.${workerId}`, { status: 'on-shift' });
+  activeShiftId = shift[0]?.id;
+  completeWorkerId = workerId;
+
+  closeModal('dispatch');
+  loadSessionWorkers();
+  loadShiftLog();
+}
+
+// COMPLETE
+function openCompleteShift(workerId) {
+  completeWorkerId = workerId;
+  selectedRating = 0;
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('selected'));
+  const now = new Date();
+  document.getElementById('complete-clockout-time').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  openModal('complete');
+}
+
+function setRating(n) {
+  selectedRating = n;
+  document.querySelectorAll('.star').forEach((s, i) => {
+    s.classList.toggle('selected', i < n);
+  });
+}
+
+async function completeShift() {
+  const clockOutCode = document.getElementById('complete-clockout-code').value;
+  const clockOutTime = document.getElementById('complete-clockout-time').value;
+  const notes = document.getElementById('complete-notes').value;
+  const today = new Date().toISOString().split('T')[0];
+  const clockOutAt = clockOutTime ? new Date(`${today}T${clockOutTime}`).toISOString() : null;
+
+  const worker = sessionWorkers.find(w => w.id == completeWorkerId);
+  const activeShifts = await sbGet('shifts', `?worker_name=eq.${encodeURIComponent(worker?.worker_name)}&status=eq.active&order=created_at.desc&limit=1`);
+  if (activeShifts.length) {
+    await sbPatch('shifts', `?id=eq.${activeShifts[0].id}`, {
+      clock_out_code: clockOutCode || null,
+      clock_out_confirmed_at: clockOutAt,
+      bar_rating: selectedRating || null,
+      notes: notes || null,
+      status: 'completed'
+    });
+  }
+
+  await sbPatch('session_workers', `?id=eq.${completeWorkerId}`, { status: 'completed' });
+  closeModal('complete');
+  loadSessionWorkers();
+  loadShiftLog();
+}
+
+// SHIFT LOG
+async function loadShiftLog() {
+  const log = document.getElementById('shift-log');
+  const shifts = await sbGet('shifts', `?zoom_room=eq.${encodeURIComponent(activeZoneName)}&order=created_at.desc&limit=20`);
+  shiftLog = shifts;
+  log.innerHTML = '';
+  if (!shifts.length) {
+    log.innerHTML = '<div style="color:var(--grey);font-size:12px;">No shifts logged yet.</div>';
+    return;
+  }
+  shifts.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'shift-log-item';
+    const statusClass = s.status === 'active' ? 'status-active' : 'status-complete';
+    const statusLabel = s.status === 'active' ? 'On Shift' : 'Completed';
+    const clockIn = s.clock_in_confirmed_at ? new Date(s.clock_in_confirmed_at).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '--:--';
+    const clockOut = s.clock_out_confirmed_at ? new Date(s.clock_out_confirmed_at).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '--:--';
+    const stars = s.bar_rating ? '★'.repeat(s.bar_rating) + '☆'.repeat(5 - s.bar_rating) : '';
+    item.innerHTML = `
+      <div class="shift-log-bar">${s.bar_name}</div>
+      <div class="shift-log-worker">${s.worker_name}</div>
+      <div class="shift-log-time">In: ${clockIn} · Out: ${clockOut} · ${s.shift_length_hours}hr</div>
+      ${stars ? `<div style="color:var(--amber);font-size:12px;margin-top:4px;">${stars}</div>` : ''}
+      <span class="shift-log-status ${statusClass}">${statusLabel}</span>
+    `;
+    log.appendChild(item);
+  });
+}
+
+// MODALS
+function openModal(name) {
+  if (name === 'add-workers') {
+    const list = document.getElementById('worker-checkbox-list');
+    const existing = sessionWorkers.map(w => w.worker_name);
+    list.innerHTML = allWorkers.filter(w => !existing.includes(w.name)).map(w => `
+      <label class="worker-checkbox-item">
+        <input type="checkbox" value="${w.email}" />
+        <span class="worker-checkbox-name">${w.name}</span>
+        <span class="worker-checkbox-postcode">${w.postcode_full || ''}</span>
+      </label>
+    `).join('');
+  }
+  document.getElementById(`modal-${name}`).classList.add('open');
+}
+
+function closeModal(name) {
+  document.getElementById(`modal-${name}`).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      overlay.classList.remove('open');
+    }
+  });
+});
+</script>
+
+</body>
+</html>
