@@ -9,274 +9,381 @@
     :root {
       --navy: #0F1F3D;
       --navy-mid: #162842;
+      --navy-light: #1e3a5f;
       --ice: #A8D8EA;
       --ice-dim: rgba(168,216,234,0.12);
       --white: #FAFAFA;
       --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
       --amber: #f59e0b;
+      --amber-dim: rgba(245,158,11,0.12);
       --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.12);
       --grey: #64748b;
       --border: rgba(168,216,234,0.15);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Raleway', sans-serif; background: var(--navy); color: var(--white); min-height: 100vh; }
+    input, select, textarea, button { font-family: 'Raleway', sans-serif; }
 
-    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* LOGIN */
+    #screen-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
     .login-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 380px; text-align: center; }
-    .wordmark { font-family: 'Raleway', sans-serif; font-weight: 400; font-size: 26px; letter-spacing: 8px; color: var(--white); border: 1.5px solid var(--white); border-radius: 6px; padding: 8px 20px; display: inline-block; margin-bottom: 8px; }
-    .login-sub { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 32px; }
-    .field { width: 100%; background: var(--navy); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--white); font-family: 'JetBrains Mono', monospace; font-size: 13px; margin-bottom: 10px; outline: none; transition: border-color 0.2s; }
+    .wordmark { font-weight: 400; font-size: 26px; letter-spacing: 8px; color: var(--white); border: 1.5px solid var(--white); border-radius: 6px; padding: 8px 20px; display: inline-block; margin-bottom: 8px; font-family: 'Raleway', sans-serif; }
+    .sub-label { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 32px; }
+    .field { width: 100%; background: var(--navy); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--white); font-size: 13px; margin-bottom: 10px; outline: none; transition: border-color 0.2s; }
     .field:focus { border-color: var(--ice); }
     .field option { background: var(--navy-mid); }
-    .login-btn { width: 100%; background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 13px; font-family: 'Raleway', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; margin-top: 4px; }
-    .login-btn:hover { opacity: 0.85; }
+    .ice-btn { background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 13px; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; width: 100%; margin-top: 4px; }
+    .ice-btn:hover { opacity: 0.85; }
     .err { color: var(--red); font-size: 12px; margin-top: 8px; }
 
-    #dashboard { display: none; }
-    .header { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
-    .header-left { display: flex; align-items: center; gap: 14px; }
-    .header-title { font-size: 10px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; }
-    .header-right { display: flex; align-items: center; gap: 10px; }
-    .date-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--grey); }
-    .ghost-btn { background: transparent; border: 1px solid var(--border); color: var(--grey); border-radius: 8px; padding: 6px 14px; font-family: 'Raleway', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    /* HEADER */
+    #header { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; display: none; }
+    .hdr-left { display: flex; align-items: center; gap: 14px; }
+    .hdr-wordmark { font-weight: 400; font-size: 16px; letter-spacing: 5px; color: var(--white); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 12px; }
+    .hdr-title { font-size: 10px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; }
+    .hdr-right { display: flex; align-items: center; gap: 10px; }
+    .hdr-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--grey); }
+    .ghost-btn { background: transparent; border: 1px solid var(--border); color: var(--grey); border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
     .ghost-btn:hover { border-color: var(--ice); color: var(--ice); }
 
-    #zone-select { padding: 48px 24px; max-width: 680px; margin: 0 auto; }
-    .zone-select-title { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
-    .zone-select-sub { font-size: 12px; color: var(--grey); margin-bottom: 32px; font-family: 'JetBrains Mono', monospace; }
+    /* SCREENS */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ZONE SELECT */
+    #screen-zones { padding: 48px 24px; max-width: 680px; margin: 0 auto; }
+    .page-title { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+    .page-sub { font-size: 12px; color: var(--grey); margin-bottom: 32px; font-family: 'JetBrains Mono', monospace; }
     .zones-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .zone-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: left; width: 100%; font-family: 'Raleway', sans-serif; color: var(--white); }
+    .zone-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: left; width: 100%; color: var(--white); }
     .zone-card:hover { border-color: var(--ice); background: var(--ice-dim); }
     .zone-card-name { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
     .zone-card-meta { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
 
-    #dispatch-view { display: none; }
-    .main { display: grid; grid-template-columns: 280px 1fr 320px; height: calc(100vh - 57px); overflow: hidden; }
+    /* SETUP */
+    #screen-setup { padding: 32px 24px; max-width: 900px; margin: 0 auto; }
+    .setup-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .setup-title { font-size: 20px; font-weight: 500; }
+    .setup-sub { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .section-label { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .worker-setup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 28px; }
+    .worker-setup-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .worker-setup-info { flex: 1; min-width: 0; }
+    .worker-setup-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .worker-setup-meta { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .remove-btn { background: transparent; border: none; color: var(--grey); cursor: pointer; font-size: 16px; padding: 4px; transition: color 0.2s; flex-shrink: 0; }
+    .remove-btn:hover { color: var(--red); }
+    .add-worker-row { display: flex; gap: 10px; align-items: center; margin-bottom: 28px; }
+    .add-worker-select { flex: 1; }
+    .small-ice-btn { background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 10px 20px; font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }
+    .small-ice-btn:hover { opacity: 0.85; }
+    .start-session-btn { width: 100%; background: var(--green); color: var(--navy); border: none; border-radius: 12px; padding: 16px; font-weight: 600; font-size: 16px; cursor: pointer; transition: opacity 0.2s; margin-top: 8px; }
+    .start-session-btn:hover { opacity: 0.85; }
 
-    .left-panel { background: var(--navy-mid); border-right: 1px solid var(--border); overflow-y: auto; padding: 20px; }
-    .panel-heading { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .small-btn { background: var(--ice-dim); border: 1px solid rgba(168,216,234,0.25); color: var(--ice); border-radius: 6px; padding: 4px 10px; font-family: 'Raleway', sans-serif; font-size: 10px; cursor: pointer; transition: all 0.2s; }
-    .small-btn:hover { background: rgba(168,216,234,0.2); }
-    .worker-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 6px; }
-    .worker-row.on-shift { border-color: var(--amber); opacity: 0.75; }
-    .worker-row.completed { border-color: rgba(34,197,94,0.3); opacity: 0.5; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--green); }
-    .worker-row.on-shift .dot { background: var(--amber); }
-    .worker-row.completed .dot { background: var(--grey); }
-    .wi { flex: 1; min-width: 0; }
-    .wn { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wm { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
-    .wtag { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; color: var(--green); }
-    .worker-row.on-shift .wtag { color: var(--amber); }
-    .worker-row.completed .wtag { color: var(--grey); }
+    /* SESSION */
+    #screen-session { height: calc(100vh - 49px); display: none; flex-direction: column; }
+    #screen-session.active { display: flex; }
+    .session-tabs { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 4px; }
+    .tab-btn { background: transparent; border: none; color: var(--grey); padding: 14px 18px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; position: relative; }
+    .tab-btn.active { color: var(--ice); border-bottom-color: var(--ice); }
+    .tab-count { background: var(--amber); color: var(--navy); border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 600; margin-left: 6px; display: none; }
+    .tab-count.show { display: inline; }
+    .session-body { flex: 1; overflow: hidden; display: flex; }
 
-    .centre { overflow-y: auto; padding: 24px; }
-    .centre-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
-    .centre-zone { font-size: 20px; font-weight: 500; }
-    .centre-sub { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
-    .primary-btn { background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 10px 20px; font-family: 'Raleway', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.2s; }
-    .primary-btn:hover { opacity: 0.85; }
-    .section-label { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 12px; margin-top: 8px; }
+    /* ROOM VIEW */
+    .room-view { flex: 1; overflow-y: auto; padding: 24px; }
+    .room-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .room-title { font-size: 18px; font-weight: 500; }
+    .room-meta { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .session-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ice); }
+    .worker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 
-    .shift-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; }
-    .shift-card.active { border-color: var(--amber); }
-    .shift-card.completed { border-color: rgba(34,197,94,0.3); opacity: 0.75; }
-    .sc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
-    .sc-bar { font-size: 15px; font-weight: 500; }
-    .sc-worker { font-size: 12px; color: var(--ice); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
-    .badge { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; }
-    .b-active { background: rgba(245,158,11,0.15); color: var(--amber); }
-    .b-done { background: rgba(34,197,94,0.15); color: var(--green); }
+    /* WORKER CARDS */
+    .worker-card { background: var(--navy-mid); border: 2px solid var(--border); border-radius: 16px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
+    .worker-card:hover { border-color: var(--ice); transform: translateY(-1px); }
+    .worker-card.available { border-color: rgba(34,197,94,0.4); }
+    .worker-card.left { border-color: var(--border); opacity: 0.45; cursor: default; }
+    .worker-card.left:hover { transform: none; border-color: var(--border); }
+    .worker-card.dispatched { border-color: var(--amber); background: var(--amber-dim); cursor: default; }
+    .worker-card.dispatched:hover { transform: none; }
+    .wc-status-dot { width: 8px; height: 8px; border-radius: 50%; position: absolute; top: 14px; right: 14px; background: var(--green); }
+    .worker-card.left .wc-status-dot { background: var(--grey); }
+    .worker-card.dispatched .wc-status-dot { background: var(--amber); }
+    .wc-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; padding-right: 16px; }
+    .wc-phone { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-bottom: 3px; }
+    .wc-postcode { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-bottom: 10px; }
+    .wc-status-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; color: var(--green); }
+    .worker-card.left .wc-status-label { color: var(--grey); }
+    .worker-card.dispatched .wc-status-label { color: var(--amber); }
+    .wc-bar { font-size: 11px; color: var(--amber); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+    .wc-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .wc-btn { flex: 1; border: none; border-radius: 8px; padding: 7px; font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .wc-btn:hover { opacity: 0.85; }
+    .wc-btn-dispatch { background: var(--ice); color: var(--navy); }
+    .wc-btn-left { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .wc-btn-restore { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.3); font-size: 10px; }
 
-    .timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
-    .ts { background: var(--navy); border-radius: 10px; padding: 10px; text-align: center; border: 1px solid transparent; }
-    .ts.done { border-color: rgba(34,197,94,0.3); }
-    .tl { font-size: 9px; letter-spacing: 1px; color: var(--grey); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
-    .tv { font-size: 13px; font-family: 'JetBrains Mono', monospace; color: var(--white); }
-    .ts.done .tv { color: var(--green); }
+    /* ON SHIFT VIEW */
+    .onshift-view { flex: 1; overflow-y: auto; padding: 24px; }
+    .shift-active-card { background: var(--navy-mid); border: 1px solid var(--amber); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; }
+    .sac-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+    .sac-name { font-size: 15px; font-weight: 500; }
+    .sac-bar { font-size: 12px; color: var(--amber); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .sac-details { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
 
-    .code-block { background: var(--navy); border: 1px solid var(--ice); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .cl { font-size: 9px; letter-spacing: 2px; color: var(--ice); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 3px; }
-    .cv { font-size: 26px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--ice); letter-spacing: 6px; }
-    .copy-btn { background: var(--ice-dim); border: 1px solid rgba(168,216,234,0.3); color: var(--ice); border-radius: 6px; padding: 6px 14px; font-size: 11px; cursor: pointer; font-family: 'Raleway', sans-serif; transition: all 0.2s; }
-    .copy-btn:hover { background: rgba(168,216,234,0.2); }
+    .code-confirm-row { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+    .code-confirm-input { flex: 1; background: var(--navy); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--white); font-family: 'JetBrains Mono', monospace; font-size: 16px; letter-spacing: 4px; outline: none; transition: border-color 0.2s; text-align: center; }
+    .code-confirm-input:focus { border-color: var(--amber); }
+    .code-confirm-btn { background: var(--amber); color: var(--navy); border: none; border-radius: 8px; padding: 10px 16px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .code-confirm-btn:hover { opacity: 0.85; }
 
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .act-btn { background: var(--navy); border: 1px solid var(--border); color: var(--white); border-radius: 8px; padding: 8px 14px; font-family: 'Raleway', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.2s; }
-    .act-btn:hover { border-color: var(--ice); color: var(--ice); }
-    .act-btn.hi { background: var(--ice); color: var(--navy); border-color: var(--ice); font-weight: 600; }
-    .act-btn.hi:hover { opacity: 0.85; }
+    .shift-complete-card { background: var(--navy-mid); border: 1px solid rgba(34,197,94,0.3); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; opacity: 0.75; }
+    .complete-top { display: flex; align-items: center; justify-content: space-between; }
+    .complete-name { font-size: 14px; font-weight: 500; }
+    .complete-bar { font-size: 11px; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+    .complete-meta { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
+    .complete-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .complete-btn { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.3); border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+    .edit-btn { background: var(--ice-dim); color: var(--ice); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
 
-    .right-panel { background: var(--navy-mid); border-left: 1px solid var(--border); overflow-y: auto; padding: 20px; }
-    .log-item { background: var(--navy); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border-left: 3px solid var(--border); }
-    .log-item.t-dispatch { border-left-color: var(--ice); }
-    .log-item.t-clockin { border-left-color: var(--amber); }
-    .log-item.t-complete { border-left-color: var(--green); }
-    .log-item.t-worker { border-left-color: var(--grey); }
-    .lt { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-bottom: 3px; }
-    .lx { font-size: 12px; line-height: 1.5; }
+    /* LOG VIEW */
+    .log-view { flex: 1; overflow-y: auto; padding: 24px; }
+    .log-table { width: 100%; border-collapse: collapse; }
+    .log-table th { text-align: left; font-size: 9px; letter-spacing: 2px; color: var(--ice); text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 500; }
+    .log-table td { padding: 12px 12px; font-size: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .log-table td:first-child { font-weight: 500; }
+    .log-table tr:hover td { background: var(--ice-dim); }
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--grey); }
+    .export-row { display: flex; justify-content: flex-end; margin-bottom: 16px; }
 
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 100; }
+    /* OVERLAY */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 200; }
     .overlay.open { display: flex; }
     .modal { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 20px; padding: 32px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
-    .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+    .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .modal-sub { font-size: 12px; color: var(--grey); margin-bottom: 24px; font-family: 'JetBrains Mono', monospace; }
     .modal label { display: block; font-size: 10px; letter-spacing: 1px; color: var(--ice); text-transform: uppercase; margin-bottom: 6px; margin-top: 16px; }
+    .modal label:first-of-type { margin-top: 0; }
     .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
-    .cancel-btn { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--grey); border-radius: 10px; padding: 11px; font-family: 'Raleway', sans-serif; font-size: 13px; cursor: pointer; }
+    .cancel-btn { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--grey); border-radius: 10px; padding: 11px; font-size: 13px; cursor: pointer; }
     .cancel-btn:hover { border-color: var(--ice); color: var(--ice); }
-    .confirm-btn { flex: 2; background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 11px; font-family: 'Raleway', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .confirm-btn { flex: 2; background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 11px; font-weight: 600; font-size: 13px; cursor: pointer; }
     .confirm-btn:hover { opacity: 0.85; }
 
-    .pick-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
-    .pick-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
-    .pick-item:last-child { border-bottom: none; }
-    .pick-item:hover { background: var(--ice-dim); }
-    .pick-item input[type=checkbox] { width: auto; accent-color: var(--ice); }
-    .pick-name { font-size: 13px; flex: 1; }
-    .pick-post { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
+    /* CODE DISPLAY */
+    .code-display { background: var(--navy); border: 2px solid var(--ice); border-radius: 14px; padding: 20px 24px; text-align: center; margin: 20px 0; }
+    .code-display-label { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
+    .code-display-value { font-size: 48px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--ice); letter-spacing: 12px; }
+    .code-copy-btn { background: var(--ice-dim); border: 1px solid rgba(168,216,234,0.3); color: var(--ice); border-radius: 8px; padding: 8px 20px; font-size: 12px; cursor: pointer; margin-top: 12px; transition: all 0.2s; }
+    .code-copy-btn:hover { background: rgba(168,216,234,0.2); }
+    .code-prompt { font-size: 13px; color: var(--white); text-align: center; margin-bottom: 4px; }
+    .code-prompt-sub { font-size: 11px; color: var(--grey); text-align: center; font-family: 'JetBrains Mono', monospace; }
 
     .star-row { display: flex; gap: 8px; margin-top: 6px; }
     .star { font-size: 28px; cursor: pointer; color: var(--grey); transition: color 0.15s; line-height: 1; }
     .star.on { color: var(--amber); }
 
-    .empty { text-align: center; padding: 40px 16px; color: var(--grey); font-size: 13px; line-height: 1.7; }
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .empty { text-align: center; padding: 48px 20px; color: var(--grey); font-size: 13px; line-height: 1.7; }
+
+    .close-session-btn { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+    .close-session-btn:hover { background: rgba(239,68,68,0.2); }
+
+    .editable { cursor: text; border-bottom: 1px dashed var(--border); display: inline-block; min-width: 60px; padding: 1px 2px; transition: border-color 0.2s; }
+    .editable:focus { outline: none; border-bottom-color: var(--ice); }
   </style>
 </head>
 <body>
 
-<div id="login-screen">
+<!-- LOGIN -->
+<div id="screen-login">
   <div class="login-card">
     <div class="wordmark">GLASI</div>
-    <p class="login-sub">Dispatch Portal</p>
+    <p class="sub-label">Dispatch Portal</p>
     <input class="field" type="email" id="l-email" placeholder="Email" />
     <input class="field" type="password" id="l-pass" placeholder="Password" />
-    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <button class="ice-btn" onclick="doLogin()">Sign In</button>
     <p class="err" id="l-err"></p>
   </div>
 </div>
 
-<div id="dashboard">
-  <div class="header">
-    <div class="header-left">
-      <div class="wordmark" style="font-size:16px;letter-spacing:5px;padding:4px 12px;">GLASI</div>
-      <div class="header-title">Dispatch</div>
+<!-- HEADER -->
+<div id="header">
+  <div class="hdr-left">
+    <div class="hdr-wordmark">GLASI</div>
+    <div class="hdr-title" id="hdr-zone">Dispatch</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-date" id="hdr-date"></div>
+    <button class="ghost-btn" onclick="goToZones()">Change Zone</button>
+    <button class="ghost-btn" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- ZONE SELECT -->
+<div id="screen-zones" class="screen">
+  <div class="page-title">Select your zone</div>
+  <div class="page-sub">Choose the zone you are dispatching for this session</div>
+  <div class="zones-grid" id="zones-grid"></div>
+</div>
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen">
+  <div class="setup-header">
+    <div>
+      <div class="setup-title" id="setup-zone-name"></div>
+      <div class="setup-sub">Session setup. Add workers then start the session.</div>
     </div>
-    <div class="header-right">
-      <div class="date-tag" id="hdr-date"></div>
-      <button class="ghost-btn" onclick="backToZones()">Change Zone</button>
-      <button class="ghost-btn" onclick="doLogout()">Sign Out</button>
-    </div>
+    <button class="ghost-btn" onclick="goToZones()">Back</button>
   </div>
 
-  <div id="zone-select">
-    <div class="zone-select-title">Select your zone</div>
-    <div class="zone-select-sub">Choose the zone you are dispatching for this session</div>
-    <div class="zones-grid" id="zones-grid"></div>
+  <div class="section-label">Add Workers to Room</div>
+  <div class="add-worker-row">
+    <select class="field add-worker-select" id="worker-select"></select>
+    <button class="small-ice-btn" onclick="addWorkerToSetup()">Add to Room</button>
   </div>
 
-  <div id="dispatch-view">
-    <div class="main">
-      <div class="left-panel">
-        <div class="panel-heading">
-          <span>Workers in Room</span>
-          <button class="small-btn" onclick="openOv('add-workers')">+ Add</button>
+  <div class="section-label">Workers in Room (<span id="worker-count">0</span>)</div>
+  <div class="worker-setup-grid" id="worker-setup-list"></div>
+
+  <button class="start-session-btn" onclick="startSession()">Start Session</button>
+</div>
+
+<!-- SESSION -->
+<div id="screen-session" class="screen">
+  <div class="session-tabs">
+    <button class="tab-btn active" onclick="switchTab('room')" id="tab-room">
+      Room <span class="tab-count" id="count-room"></span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('onshift')" id="tab-onshift">
+      On Shift <span class="tab-count show" id="count-onshift">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
+      Shift Log <span class="tab-count" id="count-log"></span>
+    </button>
+    <div style="flex:1;"></div>
+    <div class="session-time" id="session-timer"></div>
+    <button class="close-session-btn" style="margin-left:16px;" onclick="confirmCloseSession()">Close Session</button>
+  </div>
+
+  <div class="session-body">
+    <!-- ROOM TAB -->
+    <div id="tab-content-room" class="room-view">
+      <div class="room-header">
+        <div>
+          <div class="room-title" id="session-zone-name"></div>
+          <div class="room-meta">Click a worker to dispatch them</div>
         </div>
-        <div id="workers-list"></div>
       </div>
+      <div class="worker-grid" id="worker-grid"></div>
+    </div>
 
-      <div class="centre">
-        <div class="centre-top">
-          <div>
-            <div class="centre-zone" id="zone-name-display"></div>
-            <div class="centre-sub" id="zone-date-display"></div>
-          </div>
-          <button class="primary-btn" onclick="openOv('new-request')">+ Log Request</button>
-        </div>
-        <div class="section-label">Active Shifts</div>
-        <div id="active-shifts"></div>
-        <div class="section-label" style="margin-top:20px;">Completed Shifts</div>
-        <div id="completed-shifts"></div>
+    <!-- ON SHIFT TAB -->
+    <div id="tab-content-onshift" class="onshift-view" style="display:none;">
+      <div style="margin-bottom:20px;">
+        <div class="page-title" style="font-size:18px;">On Shift</div>
+        <div class="page-sub">Enter the code the worker sends you to confirm arrival</div>
       </div>
-
-      <div class="right-panel">
-        <div class="panel-heading">Event Log</div>
-        <div id="event-log"></div>
+      <div id="onshift-list"></div>
+      <div style="margin-top:32px;">
+        <div class="section-label">Completed This Session</div>
+        <div id="completed-list"></div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Add Workers -->
-<div class="overlay" id="ov-add-workers">
-  <div class="modal">
-    <div class="modal-title">Add Workers to Room</div>
-    <label>Select from vetted workers</label>
-    <div class="pick-list" id="worker-pick-list"></div>
-    <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeOv('add-workers')">Cancel</button>
-      <button class="confirm-btn" onclick="confirmAddWorkers()">Add to Room</button>
+    <!-- LOG TAB -->
+    <div id="tab-content-log" class="log-view" style="display:none;">
+      <div class="export-row">
+        <button class="small-ice-btn" onclick="exportCSV()">Export Timesheet CSV</button>
+      </div>
+      <table class="log-table" id="log-table">
+        <thead>
+          <tr>
+            <th>Worker</th>
+            <th>Bar</th>
+            <th>Request</th>
+            <th>Dispatched</th>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+            <th>Length</th>
+            <th>Wage</th>
+            <th>Code</th>
+            <th>Rating</th>
+          </tr>
+        </thead>
+        <tbody id="log-tbody"></tbody>
+      </table>
+      <div id="log-empty" class="empty">No shifts logged yet.</div>
     </div>
   </div>
 </div>
 
-<!-- New Request -->
-<div class="overlay" id="ov-new-request">
+<!-- OVERLAY: DISPATCH STEP 1 - Select Bar -->
+<div class="overlay" id="ov-dispatch-bar">
   <div class="modal">
-    <div class="modal-title">Log Shift Request</div>
-    <label>Bar Name</label>
-    <input class="field" type="text" id="req-bar" placeholder="e.g. Dancing Man Brewery" />
-    <label>Contact Name</label>
-    <input class="field" type="text" id="req-contact" placeholder="e.g. Aidan" />
-    <label>Contact Phone</label>
-    <input class="field" type="text" id="req-phone" placeholder="07..." />
-    <label>How did they request?</label>
-    <select class="field" id="req-method">
-      <option value="WhatsApp">WhatsApp</option>
-      <option value="Phone call">Phone call</option>
-      <option value="In person">In person</option>
-    </select>
-    <label>Request Time</label>
-    <input class="field" type="time" id="req-time" />
-    <label>Shift Length</label>
-    <select class="field" id="req-length">
-      <option value="1">1 hour</option>
-      <option value="1.5">1.5 hours</option>
-      <option value="2">2 hours</option>
-      <option value="2.5">2.5 hours</option>
-      <option value="3" selected>3 hours</option>
-      <option value="3.5">3.5 hours</option>
-      <option value="4">4 hours</option>
-    </select>
-    <label>Worker Assigned</label>
-    <select class="field" id="req-worker"></select>
-    <label>Accepted Time</label>
-    <input class="field" type="time" id="req-accepted" />
+    <div class="modal-title" id="dispatch-worker-name"></div>
+    <div class="modal-sub" id="dispatch-worker-details"></div>
+    <label>Dispatch to which bar?</label>
+    <select class="field" id="dispatch-bar-select"></select>
     <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeOv('new-request')">Cancel</button>
-      <button class="confirm-btn" onclick="confirmRequest()">Log Shift</button>
+      <button class="cancel-btn" onclick="closeOv('dispatch-bar')">Cancel</button>
+      <button class="confirm-btn" onclick="confirmDispatchBar()">Confirm Dispatch</button>
     </div>
   </div>
 </div>
 
-<!-- Clock In -->
-<div class="overlay" id="ov-clockin">
+<!-- OVERLAY: DISPATCH STEP 2 - Code + Log -->
+<div class="overlay" id="ov-dispatch-code">
   <div class="modal">
-    <div class="modal-title">Confirm Clock In</div>
-    <label>Clock In Time</label>
-    <input class="field" type="time" id="ci-time" />
+    <div class="modal-title">Worker Dispatched</div>
+    <div class="modal-sub" id="code-worker-bar"></div>
+    <div class="code-display">
+      <div class="code-display-label">Clock In Code</div>
+      <div class="code-display-value" id="code-value"></div>
+      <button class="code-copy-btn" id="code-copy-btn" onclick="copyCode()">Copy Code</button>
+    </div>
+    <p class="code-prompt">Send this code to the bar manager now</p>
+    <p class="code-prompt-sub" id="code-bar-contact"></p>
+
+    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+      <label>Time Request Received</label>
+      <input class="field" type="time" id="log-req-time" />
+      <label>How did they request?</label>
+      <select class="field" id="log-req-method">
+        <option value="WhatsApp">WhatsApp</option>
+        <option value="Phone call">Phone call</option>
+        <option value="In person">In person</option>
+      </select>
+      <label>Shift Length</label>
+      <select class="field" id="log-shift-length">
+        <option value="1">1 hour</option>
+        <option value="1.5">1.5 hours</option>
+        <option value="2">2 hours</option>
+        <option value="2.5">2.5 hours</option>
+        <option value="3" selected>3 hours</option>
+        <option value="3.5">3.5 hours</option>
+        <option value="4">4 hours</option>
+      </select>
+      <label>Hourly Wage (£)</label>
+      <input class="field" type="number" id="log-wage" value="12.21" step="0.01" />
+    </div>
     <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeOv('clockin')">Cancel</button>
-      <button class="confirm-btn" onclick="confirmClockIn()">Confirm</button>
+      <button class="cancel-btn" onclick="closeOv('dispatch-code')">Skip Log</button>
+      <button class="confirm-btn" onclick="saveShiftLog()">Save Log</button>
     </div>
   </div>
 </div>
 
-<!-- Complete -->
+<!-- OVERLAY: COMPLETE SHIFT -->
 <div class="overlay" id="ov-complete">
   <div class="modal">
     <div class="modal-title">Complete Shift</div>
+    <div class="modal-sub" id="complete-worker-info"></div>
     <label>Clock Out Time</label>
     <input class="field" type="time" id="co-time" />
     <label>Bar Rating</label>
@@ -301,193 +408,498 @@ const SB = "https://hweytbyrqvjsviydmacv.supabase.co";
 const KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
 const H = { 'Content-Type':'application/json', 'apikey':KEY, 'Authorization':`Bearer ${KEY}` };
 
-const ZONES = [
-  { id:'southampton-city-centre', name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc', postcodes:['SO14','SO15'] },
-  { id:'southampton-north', name:'Southampton North', meta:'SO16 · Bassett, Shirley area', postcodes:['SO16','SO17'] },
-  { id:'southampton-east', name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area', postcodes:['SO17','SO18','SO19'] },
-  { id:'portsmouth-city-centre', name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area', postcodes:['PO1','PO2','PO3','PO4','PO5'] }
+const USERS = [
+  { email:'sam@glasi.co.uk', pass:'Sponger64112!', name:'Sam' },
 ];
 
-let zone = null, allW = [], sessW = [], shifts = [], activeSid = null, starRating = 0, log = [];
+const ZONES = [
+  { id:'southampton-city-centre', name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc', postcodes:['SO14','SO15'], bars:['Dancing Man Brewery','Smokin Barrels','The Audit House'] },
+  { id:'southampton-north', name:'Southampton North', meta:'SO16 · Bassett, Shirley area', postcodes:['SO16','SO17'], bars:['TBC'] },
+  { id:'southampton-east', name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area', postcodes:['SO17','SO18','SO19'], bars:['TBC'] },
+  { id:'portsmouth-city-centre', name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area', postcodes:['PO1','PO2','PO3','PO4','PO5'], bars:['TBC'] }
+];
+
+let currentUser = null;
+let activeZone = null;
+let allWorkers = [];
+let setupWorkers = []; // workers added to room in setup
+let sessionWorkers = []; // workers in live session with status
+let shifts = []; // shift log
+let dispatchingWorkerId = null;
+let dispatchingBar = null;
+let dispatchCode = null;
+let dispatchedAt = null;
+let completingShiftId = null;
+let starRating = 0;
+let sessionStartTime = null;
+let sessionTimerInterval = null;
 
 const gen4 = () => String(Math.floor(1000 + Math.random() * 9000));
 const nowT = () => { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; };
-const fmtT = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+const fmtT = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
 const today = () => new Date().toISOString().split('T')[0];
-const toISO = t => new Date(`${today()}T${t}`).toISOString();
+const toISO = t => t ? new Date(`${today()}T${t}`).toISOString() : null;
+const uid = () => Date.now() + Math.random().toString(36).slice(2);
 
-async function sbGet(t,q='') { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{headers:H}); return r.json(); }
-async function sbPost(t,b) { const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); }
-async function sbPatch(t,q,b) { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); }
+async function sbGet(t,q='') { try { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{headers:H}); const d=await r.json(); return Array.isArray(d)?d:[]; } catch { return []; } }
+async function sbPost(t,b) { try { const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); } catch { return null; } }
+async function sbPatch(t,q,b) { try { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); } catch { return null; } }
+async function sbDelete(t,q) { try { await fetch(`${SB}/rest/v1/${t}${q}`,{method:'DELETE',headers:H}); } catch {} }
 
+// AUTH
 function doLogin() {
-  const e=document.getElementById('l-email').value.trim();
+  const e=document.getElementById('l-email').value.trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
-  if(e==='sam@glasi.co.uk' && p==='Sponger64112!') {
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('dashboard').style.display='block';
+  const user=USERS.find(u=>u.email===e && u.pass===p);
+  if(user) {
+    currentUser=user;
+    document.getElementById('screen-login').style.display='none';
+    document.getElementById('header').style.display='flex';
     document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    loadAllWorkers();
+    showScreen('zones');
     renderZones();
-    sbGet('applications','?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email').then(d=>allW=Array.isArray(d)?d:[]);
-  } else { document.getElementById('l-err').textContent='Incorrect email or password.'; }
+  } else {
+    document.getElementById('l-err').textContent='Incorrect email or password.';
+  }
 }
 document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-function doLogout() { document.getElementById('login-screen').style.display='flex'; document.getElementById('dashboard').style.display='none'; zone=null; }
+function doLogout() {
+  document.getElementById('screen-login').style.display='flex';
+  document.getElementById('header').style.display='none';
+  clearInterval(sessionTimerInterval);
+  showScreen(null);
+  activeZone=null; setupWorkers=[]; sessionWorkers=[]; shifts=[];
+}
 
+// SCREENS
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  if(name) { const s=document.getElementById(`screen-${name}`); if(s) s.classList.add('active'); }
+}
+
+// ZONES
 function renderZones() {
-  document.getElementById('zone-select').style.display='block';
-  document.getElementById('dispatch-view').style.display='none';
-  document.getElementById('zones-grid').innerHTML = ZONES.map(z=>`
-    <button class="zone-card" onclick="selectZone('${z.id}','${z.name}')">
+  document.getElementById('zones-grid').innerHTML=ZONES.map(z=>`
+    <button class="zone-card" onclick="selectZone('${z.id}')">
       <div class="zone-card-name">${z.name}</div>
       <div class="zone-card-meta">${z.meta}</div>
     </button>`).join('');
 }
 
-async function selectZone(id,name) {
-  zone={id,name};
-  document.getElementById('zone-select').style.display='none';
-  document.getElementById('dispatch-view').style.display='block';
-  document.getElementById('zone-name-display').textContent=name;
-  document.getElementById('zone-date-display').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-  await loadSessW(); await loadShifts();
-}
-function backToZones() { renderZones(); }
-
-async function loadSessW() {
-  const result=await sbGet('session_workers',`?zone_id=eq.${zone.id}&session_date=eq.${today()}&order=created_at.asc`);
-  sessW=Array.isArray(result)?result:[];
-  renderWorkers();
+async function selectZone(id) {
+  activeZone=ZONES.find(z=>z.id===id);
+  document.getElementById('hdr-zone').textContent=activeZone.name;
+  document.getElementById('setup-zone-name').textContent=activeZone.name;
+  setupWorkers=[];
+  await loadAllWorkers();
+  renderSetupWorkerSelect();
+  renderSetupWorkerList();
+  showScreen('setup');
 }
 
-function renderWorkers() {
-  const el=document.getElementById('workers-list');
-  if(!sessW.length){el.innerHTML='<div class="empty">No workers added.<br>Click + Add to build your room.</div>';return;}
-  el.innerHTML=sessW.map(w=>{
-    const c=w.status==='on-shift'?'on-shift':w.status==='completed'?'completed':'';
-    const t=w.status==='on-shift'?'On Shift':w.status==='completed'?'Done':'Available';
-    return `<div class="worker-row ${c}"><div class="dot"></div><div class="wi"><div class="wn">${w.worker_name}</div><div class="wm">${w.worker_phone||''}</div></div><div class="wtag">${t}</div></div>`;
+function goToZones() { showScreen('zones'); }
+
+// LOAD WORKERS
+async function loadAllWorkers() {
+  allWorkers=await sbGet('applications','?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email');
+}
+
+// SETUP
+function renderSetupWorkerSelect() {
+  const added=setupWorkers.map(w=>w.email);
+  const zonePostcodes=activeZone?.postcodes||[];
+  const available=allWorkers.filter(w=>{
+    if(added.includes(w.email)) return false;
+    if(!w.postcode_full) return false;
+    const pc=w.postcode_full.trim().toUpperCase();
+    return zonePostcodes.some(p=>pc.startsWith(p));
+  });
+  document.getElementById('worker-select').innerHTML=
+    available.length
+      ? available.map(w=>`<option value="${w.email}">${w.name} (${w.postcode_full})</option>`).join('')
+      : '<option value="">No more workers available in this zone</option>';
+}
+
+function addWorkerToSetup() {
+  const sel=document.getElementById('worker-select');
+  const email=sel.value;
+  if(!email) return;
+  const worker=allWorkers.find(w=>w.email===email);
+  if(!worker || setupWorkers.find(w=>w.email===email)) return;
+  setupWorkers.push(worker);
+  renderSetupWorkerSelect();
+  renderSetupWorkerList();
+}
+
+function removeWorkerFromSetup(email) {
+  setupWorkers=setupWorkers.filter(w=>w.email!==email);
+  renderSetupWorkerSelect();
+  renderSetupWorkerList();
+}
+
+function renderSetupWorkerList() {
+  document.getElementById('worker-count').textContent=setupWorkers.length;
+  const list=document.getElementById('worker-setup-list');
+  if(!setupWorkers.length) { list.innerHTML='<div style="color:var(--grey);font-size:13px;grid-column:1/-1;">No workers added yet.</div>'; return; }
+  list.innerHTML=setupWorkers.map(w=>`
+    <div class="worker-setup-card">
+      <div class="worker-setup-info">
+        <div class="worker-setup-name">${w.name}</div>
+        <div class="worker-setup-meta">${w.phone||''} · ${w.postcode_full||''}</div>
+      </div>
+      <button class="remove-btn" onclick="removeWorkerFromSetup('${w.email}')" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function startSession() {
+  if(!setupWorkers.length) { alert('Add at least one worker before starting the session.'); return; }
+  sessionWorkers=setupWorkers.map(w=>({
+    ...w,
+    id: uid(),
+    status: 'available',
+    code: gen4(),
+    bar: null,
+    dispatchedAt: null,
+    clockInAt: null,
+    clockInCode: null,
+    shiftLength: null,
+    wage: null,
+    clockOutAt: null,
+    rating: null,
+    notes: null,
+    requestTime: null,
+    requestMethod: null,
+    shiftId: uid()
+  }));
+  shifts=[];
+  sessionStartTime=new Date();
+  startTimer();
+  document.getElementById('session-zone-name').textContent=activeZone.name;
+  showScreen('session');
+  renderRoom();
+  updateCounts();
+}
+
+function startTimer() {
+  clearInterval(sessionTimerInterval);
+  sessionTimerInterval=setInterval(()=>{
+    const diff=Math.floor((new Date()-sessionStartTime)/1000);
+    const h=Math.floor(diff/3600);
+    const m=Math.floor((diff%3600)/60);
+    const s=diff%60;
+    document.getElementById('session-timer').textContent=
+      `Session: ${h>0?h+'h ':''}`+
+      `${String(m).padStart(2,'0')}m `+
+      `${String(s).padStart(2,'0')}s`;
+  },1000);
+}
+
+// TABS
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  document.querySelectorAll('[id^=tab-content-]').forEach(c=>c.style.display='none');
+  document.getElementById(`tab-content-${name}`).style.display='block';
+  if(name==='log') renderLog();
+  if(name==='onshift') renderOnShift();
+}
+
+function updateCounts() {
+  const avail=sessionWorkers.filter(w=>w.status==='available'||w.status==='left').length;
+  const onshift=sessionWorkers.filter(w=>w.status==='dispatched'||w.status==='onshift').length;
+  const done=shifts.length;
+  document.getElementById('count-onshift').textContent=onshift;
+  document.getElementById('count-log').textContent=done||'';
+  document.getElementById('count-log').className='tab-count'+(done?' show':'');
+}
+
+// ROOM
+function renderRoom() {
+  const grid=document.getElementById('worker-grid');
+  const roomWorkers=sessionWorkers.filter(w=>w.status==='available'||w.status==='left');
+  if(!roomWorkers.length){ grid.innerHTML='<div class="empty">No workers in room.<br>All workers have been dispatched or have left.</div>'; return; }
+  grid.innerHTML=roomWorkers.map(w=>{
+    const isLeft=w.status==='left';
+    return `<div class="worker-card ${w.status}" id="wc-${w.id}">
+      <div class="wc-status-dot"></div>
+      <div class="wc-name">${w.name}</div>
+      <div class="wc-phone">${w.phone||''}</div>
+      <div class="wc-postcode">${w.postcode_full||''}</div>
+      <div class="wc-status-label">${isLeft?'Left Session':'Available'}</div>
+      <div class="wc-actions">
+        ${!isLeft?`<button class="wc-btn wc-btn-dispatch" onclick="openDispatch('${w.id}')">Dispatch</button>`:''}
+        ${!isLeft?`<button class="wc-btn wc-btn-left" onclick="markLeft('${w.id}')">Left</button>`:''}
+        ${isLeft?`<button class="wc-btn wc-btn-restore" onclick="restoreWorker('${w.id}')">Restore</button>`:''}
+      </div>
+    </div>`;
   }).join('');
 }
 
-function openOv(name) {
-  if(name==='add-workers') {
-    const ex=Array.isArray(sessW)?sessW.map(w=>w.worker_name):[];
-    const zoneData=ZONES.find(z=>z.id===zone.id);
-    const prefixes=zoneData?.postcodes||[];
-    const av=allW.filter(w=>{
-      if(ex.includes(w.name)) return false;
-      if(!w.postcode_full) return false;
-      const pc=w.postcode_full.trim().toUpperCase();
-      return prefixes.some(p=>pc.startsWith(p));
+function markLeft(wid) {
+  const w=sessionWorkers.find(x=>x.id===wid);
+  if(w) { w.status='left'; renderRoom(); updateCounts(); }
+}
+
+function restoreWorker(wid) {
+  const w=sessionWorkers.find(x=>x.id===wid);
+  if(w) { w.status='available'; renderRoom(); updateCounts(); }
+}
+
+// DISPATCH
+function openDispatch(wid) {
+  dispatchingWorkerId=wid;
+  const w=sessionWorkers.find(x=>x.id===wid);
+  document.getElementById('dispatch-worker-name').textContent=w.name;
+  document.getElementById('dispatch-worker-details').textContent=`${w.phone||''} · ${w.postcode_full||''}`;
+  const bars=activeZone.bars||[];
+  document.getElementById('dispatch-bar-select').innerHTML=bars.map(b=>`<option value="${b}">${b}</option>`).join('');
+  openOv('dispatch-bar');
+}
+
+function confirmDispatchBar() {
+  const bar=document.getElementById('dispatch-bar-select').value;
+  const w=sessionWorkers.find(x=>x.id===dispatchingWorkerId);
+  if(!w||!bar) return;
+  dispatchingBar=bar;
+  dispatchCode=w.code;
+  dispatchedAt=new Date().toISOString();
+  w.status='dispatched';
+  w.bar=bar;
+  w.dispatchedAt=dispatchedAt;
+  closeOv('dispatch-bar');
+  document.getElementById('code-value').textContent=dispatchCode;
+  document.getElementById('code-worker-bar').textContent=`${w.name} dispatched to ${bar}`;
+  const zone=activeZone;
+  document.getElementById('code-bar-contact').textContent=`Send to bar manager at ${bar}`;
+  document.getElementById('log-req-time').value=nowT();
+  document.getElementById('log-wage').value='12.21';
+  document.getElementById('code-copy-btn').textContent='Copy Code';
+  openOv('dispatch-code');
+  renderRoom();
+  renderOnShift();
+  updateCounts();
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(dispatchCode).then(()=>{
+    document.getElementById('code-copy-btn').textContent='Copied!';
+    setTimeout(()=>document.getElementById('code-copy-btn').textContent='Copy Code',1500);
+  });
+}
+
+function saveShiftLog() {
+  const w=sessionWorkers.find(x=>x.id===dispatchingWorkerId);
+  if(!w) { closeOv('dispatch-code'); return; }
+  w.requestTime=document.getElementById('log-req-time').value;
+  w.requestMethod=document.getElementById('log-req-method').value;
+  w.shiftLength=document.getElementById('log-shift-length').value;
+  w.wage=document.getElementById('log-wage').value;
+  closeOv('dispatch-code');
+  renderOnShift();
+  updateCounts();
+}
+
+// ON SHIFT
+function renderOnShift() {
+  const dispatched=sessionWorkers.filter(w=>w.status==='dispatched');
+  const onshift=sessionWorkers.filter(w=>w.status==='onshift');
+  const completed=shifts;
+  const list=document.getElementById('onshift-list');
+
+  const allActive=[...dispatched,...onshift];
+  if(!allActive.length) { list.innerHTML='<div class="empty">No workers on shift yet.</div>'; }
+  else {
+    list.innerHTML=allActive.map(w=>{
+      const isOnShift=w.status==='onshift';
+      return `<div class="shift-active-card">
+        <div class="sac-top">
+          <div>
+            <div class="sac-name">${w.name}</div>
+            <div class="sac-bar">${w.bar}</div>
+          </div>
+          <div class="sac-details">
+            Code: <strong style="color:var(--ice);font-size:16px;letter-spacing:2px;">${w.code}</strong><br>
+            ${w.dispatchedAt?'Dispatched: '+fmtT(w.dispatchedAt):''}
+            ${isOnShift?'<br>Clocked in: '+fmtT(w.clockInAt):''}
+          </div>
+        </div>
+        ${!isOnShift?`
+          <div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Worker sends you their clock in code from the manager</div>
+          <div class="code-confirm-row">
+            <input class="code-confirm-input" type="text" placeholder="Enter code" maxlength="4" id="ci-${w.id}" />
+            <button class="code-confirm-btn" onclick="confirmClockIn('${w.id}')">Confirm Arrival</button>
+          </div>`:
+          `<div style="margin-top:10px;display:flex;gap:8px;">
+            <button class="complete-btn" onclick="openComplete('${w.id}')">Complete Shift</button>
+            <button class="edit-btn" onclick="undoClockIn('${w.id}')">Undo Clock In</button>
+          </div>`
+        }
+      </div>`;
+    }).join('');
+  }
+
+  const compList=document.getElementById('completed-list');
+  if(!completed.length) { compList.innerHTML='<div style="color:var(--grey);font-size:13px;">None yet.</div>'; }
+  else {
+    compList.innerHTML=completed.map(s=>`
+      <div class="shift-complete-card">
+        <div class="complete-top">
+          <div>
+            <div class="complete-name">${s.workerName}</div>
+            <div class="complete-bar">${s.bar}</div>
+          </div>
+          <div style="font-size:11px;color:var(--grey);font-family:'JetBrains Mono',monospace;text-align:right;">
+            ${s.shiftLength}hr · £${s.wage}/hr<br>
+            ${s.rating?'★'.repeat(s.rating)+'☆'.repeat(5-s.rating):'No rating'}
+          </div>
+        </div>
+        <div class="complete-meta">
+          In: ${fmtT(s.clockInAt)} · Out: ${fmtT(s.clockOutAt)}
+          ${s.notes?'<br>'+s.notes:''}
+        </div>
+      </div>`).join('');
+  }
+}
+
+function confirmClockIn(wid) {
+  const w=sessionWorkers.find(x=>x.id===wid);
+  const input=document.getElementById(`ci-${wid}`);
+  if(!w||!input) return;
+  const entered=input.value.trim();
+  if(entered!==w.code) { input.style.borderColor='var(--red)'; input.placeholder='Wrong code'; setTimeout(()=>{input.style.borderColor='';input.placeholder='Enter code';},1500); return; }
+  w.status='onshift';
+  w.clockInAt=new Date().toISOString();
+  w.clockInCode=entered;
+  renderOnShift();
+  updateCounts();
+}
+
+function undoClockIn(wid) {
+  const w=sessionWorkers.find(x=>x.id===wid);
+  if(w) { w.status='dispatched'; w.clockInAt=null; w.clockInCode=null; renderOnShift(); }
+}
+
+function openComplete(wid) {
+  completingShiftId=wid;
+  const w=sessionWorkers.find(x=>x.id===wid);
+  document.getElementById('complete-worker-info').textContent=`${w.name} · ${w.bar}`;
+  document.getElementById('co-time').value=nowT();
+  document.getElementById('co-notes').value='';
+  starRating=0;
+  document.querySelectorAll('.star').forEach(s=>s.classList.remove('on'));
+  openOv('complete');
+}
+
+function confirmComplete() {
+  const w=sessionWorkers.find(x=>x.id===completingShiftId);
+  if(!w) { closeOv('complete'); return; }
+  w.clockOutAt=toISO(document.getElementById('co-time').value);
+  w.rating=starRating||null;
+  w.notes=document.getElementById('co-notes').value.trim()||null;
+  w.status='completed';
+  shifts.push({
+    id: w.shiftId,
+    workerName: w.name,
+    workerPhone: w.phone||'',
+    workerPostcode: w.postcode_full||'',
+    bar: w.bar,
+    zone: activeZone.name,
+    requestTime: w.requestTime,
+    requestMethod: w.requestMethod||'',
+    dispatchedAt: w.dispatchedAt,
+    clockInAt: w.clockInAt,
+    clockOutAt: w.clockOutAt,
+    shiftLength: w.shiftLength||'',
+    wage: w.wage||'',
+    code: w.code,
+    rating: w.rating,
+    notes: w.notes||''
+  });
+  saveShiftToSupabase(w);
+  closeOv('complete');
+  renderOnShift();
+  updateCounts();
+}
+
+async function saveShiftToSupabase(w) {
+  try {
+    await sbPost('shifts',{
+      bar_name: w.bar,
+      worker_name: w.name,
+      worker_phone: w.phone||null,
+      zoom_room: activeZone.id,
+      shift_length_hours: parseFloat(w.shiftLength)||null,
+      requested_at: toISO(w.requestTime),
+      accepted_at: w.dispatchedAt,
+      clock_in_confirmed_at: w.clockInAt,
+      clock_out_confirmed_at: w.clockOutAt,
+      clock_in_code: w.code,
+      request_method: w.requestMethod||null,
+      bar_rating: w.rating||null,
+      notes: w.notes||null,
+      status:'completed'
     });
-    document.getElementById('worker-pick-list').innerHTML=av.length?av.map(w=>`
-      <label class="pick-item">
-        <input type="checkbox" value="${w.email}" data-name="${w.name}" data-phone="${w.phone||''}" />
-        <span class="pick-name">${w.name}</span>
-        <span class="pick-post">${w.postcode_full||''}</span>
-      </label>`).join(''):'<div style="padding:14px;color:var(--grey);font-size:13px;">No workers found in this zone.</div>';
-  }
-  if(name==='new-request') {
-    document.getElementById('req-time').value=nowT();
-    document.getElementById('req-accepted').value=nowT();
-    const av=sessW.filter(w=>w.status==='available');
-    document.getElementById('req-worker').innerHTML=av.length?av.map(w=>`<option value="${w.id}">${w.worker_name}</option>`).join(''):'<option>No available workers</option>';
-  }
-  if(name==='clockin'){document.getElementById('ci-time').value=nowT();}
-  if(name==='complete'){document.getElementById('co-time').value=nowT();starRating=0;document.querySelectorAll('.star').forEach(s=>s.classList.remove('on'));}
-  document.getElementById(`ov-${name}`).classList.add('open');
+  } catch(e) { console.log('Supabase save failed',e); }
 }
-function closeOv(name){document.getElementById(`ov-${name}`).classList.remove('open');}
+
+function setStar(n) { starRating=n; document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n)); }
+
+// LOG
+function renderLog() {
+  const tbody=document.getElementById('log-tbody');
+  const empty=document.getElementById('log-empty');
+  if(!shifts.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=shifts.map(s=>`
+    <tr>
+      <td>${s.workerName}<br><span class="mono">${s.workerPhone}</span></td>
+      <td>${s.bar}</td>
+      <td><span class="mono">${s.requestTime||''}</span><br><span class="mono">${s.requestMethod||''}</span></td>
+      <td><span class="mono">${fmtT(s.dispatchedAt)}</span></td>
+      <td><span class="mono">${fmtT(s.clockInAt)}</span></td>
+      <td><span class="mono">${fmtT(s.clockOutAt)}</span></td>
+      <td><span class="mono">${s.shiftLength}hr</span></td>
+      <td><span class="mono">£${s.wage}/hr</span></td>
+      <td><span class="mono" style="color:var(--ice);letter-spacing:2px;">${s.code}</span></td>
+      <td>${s.rating?'★'.repeat(s.rating)+'☆'.repeat(5-s.rating):''}</td>
+    </tr>`).join('');
+}
+
+// CSV EXPORT
+function exportCSV() {
+  if(!shifts.length) { alert('No shifts to export.'); return; }
+  const headers=['Worker Name','Phone','Postcode','Bar','Zone','Request Time','Request Method','Dispatched At','Clock In','Clock Out','Shift Length (hrs)','Hourly Wage','Total Earned','Clock In Code','Rating','Notes'];
+  const rows=shifts.map(s=>[
+    s.workerName, s.workerPhone, s.workerPostcode, s.bar, s.zone,
+    s.requestTime||'', s.requestMethod||'',
+    fmtT(s.dispatchedAt), fmtT(s.clockInAt), fmtT(s.clockOutAt),
+    s.shiftLength, s.wage,
+    s.shiftLength&&s.wage?(parseFloat(s.shiftLength)*parseFloat(s.wage)).toFixed(2):'',
+    s.code, s.rating||'', s.notes||''
+  ]);
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`glasi-timesheet-${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// CLOSE SESSION
+function confirmCloseSession() {
+  if(!confirm('Close this session? Make sure all shifts are completed first.')) return;
+  clearInterval(sessionTimerInterval);
+  setupWorkers=[]; sessionWorkers=[]; shifts=[];
+  showScreen('zones');
+}
+
+// OVERLAYS
+function openOv(name) { document.getElementById(`ov-${name}`).classList.add('open'); }
+function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove('open'); }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
-
-async function confirmAddWorkers() {
-  const cbs=document.querySelectorAll('#worker-pick-list input:checked');
-  for(const cb of cbs){
-    await sbPost('session_workers',{zone_id:zone.id,worker_name:cb.dataset.name,worker_phone:cb.dataset.phone,session_date:today(),status:'available'});
-    addLog('worker',`${cb.dataset.name} added to room`);
-  }
-  closeOv('add-workers'); loadSessW();
-}
-
-async function loadShifts() {
-  const result=await sbGet('shifts',`?zoom_room=eq.${encodeURIComponent(zone.id)}&order=created_at.desc`);
-  shifts=Array.isArray(result)?result:[];
-  renderShifts(); renderLog();
-}
-
-function renderShifts() {
-  const active=shifts.filter(s=>s.status==='active');
-  const done=shifts.filter(s=>s.status==='completed');
-  document.getElementById('active-shifts').innerHTML=active.length?active.map(shiftCard).join(''):'<div class="empty">No active shifts.<br>Click Log Request when a bar gets in touch.</div>';
-  document.getElementById('completed-shifts').innerHTML=done.length?done.map(shiftCard).join(''):'<div style="color:var(--grey);font-size:13px;padding:8px 0;">None yet.</div>';
-}
-
-function shiftCard(s) {
-  const isActive=s.status==='active';
-  const badge=isActive?'<span class="badge b-active">On Shift</span>':'<span class="badge b-done">Completed</span>';
-  const timeline=`<div class="timeline">
-    <div class="ts ${s.requested_at?'done':''}"><div class="tl">Requested</div><div class="tv">${fmtT(s.requested_at)}</div></div>
-    <div class="ts ${s.accepted_at?'done':''}"><div class="tl">Accepted</div><div class="tv">${fmtT(s.accepted_at)}</div></div>
-    <div class="ts ${s.clock_in_confirmed_at?'done':''}"><div class="tl">Clock In</div><div class="tv">${fmtT(s.clock_in_confirmed_at)}</div></div>
-    <div class="ts ${s.clock_out_confirmed_at?'done':''}"><div class="tl">Clock Out</div><div class="tv">${fmtT(s.clock_out_confirmed_at)}</div></div>
-  </div>`;
-  const codeBlock=isActive?`<div class="code-block"><div><div class="cl">Clock In Code</div><div class="cv">${s.clock_in_code}</div></div><button class="copy-btn" onclick="navigator.clipboard.writeText('${s.clock_in_code}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button></div>`:'';
-  const actions=isActive?`<div class="actions">
-    ${!s.clock_in_confirmed_at?`<button class="act-btn hi" onclick="activeSid='${s.id}';openOv('clockin')">Confirm Clock In</button>`:''}
-    <button class="act-btn hi" onclick="activeSid='${s.id}';openOv('complete')">Complete Shift</button>
-  </div>`:`<div style="font-size:12px;color:var(--grey);">${s.bar_rating?'★'.repeat(s.bar_rating)+'☆'.repeat(5-s.bar_rating)+' · ':''} ${s.shift_length_hours}hr · ${s.request_method||''}${s.notes?'<br>'+s.notes:''}</div>`;
-  return `<div class="shift-card ${isActive?'active':'completed'}">
-    <div class="sc-top"><div><div class="sc-bar">${s.bar_name}</div><div class="sc-worker">${s.worker_name} · ${s.shift_length_hours}hr · asked for ${s.contact_name||'N/A'}</div></div>${badge}</div>
-    ${timeline}${codeBlock}${actions}
-  </div>`;
-}
-
-async function confirmRequest() {
-  const bar=document.getElementById('req-bar').value.trim();
-  const contact=document.getElementById('req-contact').value.trim();
-  const phone=document.getElementById('req-phone').value.trim();
-  const method=document.getElementById('req-method').value;
-  const rt=document.getElementById('req-time').value;
-  const length=document.getElementById('req-length').value;
-  const wid=document.getElementById('req-worker').value;
-  const at=document.getElementById('req-accepted').value;
-  if(!bar||!wid)return;
-  const w=sessW.find(x=>x.id==wid);
-  const code=gen4();
-  await sbPost('shifts',{bar_name:bar,contact_name:contact||null,worker_name:w?.worker_name,worker_phone:w?.worker_phone,zoom_room:zone.id,shift_length_hours:parseFloat(length),requested_at:rt?toISO(rt):null,accepted_at:at?toISO(at):null,clock_in_code:code,request_method:method,status:'active'});
-  await sbPatch('session_workers',`?id=eq.${wid}`,{status:'on-shift'});
-  addLog('dispatch',`${w?.worker_name} dispatched to ${bar} · Code: ${code}`);
-  closeOv('new-request'); loadSessW(); loadShifts();
-}
-
-async function confirmClockIn() {
-  const t=document.getElementById('ci-time').value;
-  await sbPatch('shifts',`?id=eq.${activeSid}`,{clock_in_confirmed_at:t?toISO(t):null});
-  const s=shifts.find(x=>x.id==activeSid);
-  addLog('clockin',`${s?.worker_name} clocked in at ${t}`);
-  closeOv('clockin'); loadShifts();
-}
-
-async function confirmComplete() {
-  const t=document.getElementById('co-time').value;
-  const notes=document.getElementById('co-notes').value.trim();
-  const s=shifts.find(x=>x.id==activeSid);
-  await sbPatch('shifts',`?id=eq.${activeSid}`,{clock_out_confirmed_at:t?toISO(t):null,bar_rating:starRating||null,notes:notes||null,status:'completed'});
-  const w=sessW.find(x=>x.worker_name===s?.worker_name);
-  if(w) await sbPatch('session_workers',`?id=eq.${w.id}`,{status:'completed'});
-  addLog('complete',`Shift complete · ${s?.worker_name} · ${s?.bar_name}${starRating?' · '+'★'.repeat(starRating):''}`);
-  closeOv('complete'); loadSessW(); loadShifts();
-}
-
-function setStar(n){starRating=n;document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));}
-
-function addLog(type,text){log.unshift({type,text,time:new Date()});renderLog();}
-function renderLog(){
-  const el=document.getElementById('event-log');
-  if(!log.length){el.innerHTML='<div style="color:var(--grey);font-size:12px;">Events will appear here.</div>';return;}
-  el.innerHTML=log.map(e=>`<div class="log-item t-${e.type}"><div class="lt">${e.time.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div><div class="lx">${e.text}</div></div>`).join('');
-}
 </script>
 </body>
 </html>
