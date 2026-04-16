@@ -9,9 +9,8 @@
     :root {
       --navy: #0F1F3D;
       --navy-mid: #162842;
-      --navy-light: #1e3a5f;
       --ice: #A8D8EA;
-      --ice-dim: rgba(168,216,234,0.15);
+      --ice-dim: rgba(168,216,234,0.12);
       --white: #FAFAFA;
       --green: #22c55e;
       --amber: #f59e0b;
@@ -19,765 +18,229 @@
       --grey: #64748b;
       --border: rgba(168,216,234,0.15);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Raleway', sans-serif; background: var(--navy); color: var(--white); min-height: 100vh; }
 
-    body {
-      font-family: 'Raleway', sans-serif;
-      background: var(--navy);
-      color: var(--white);
-      min-height: 100vh;
-    }
-
-    /* LOGIN */
-    #login-screen {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--navy);
-    }
-
-    .login-card {
-      background: var(--navy-mid);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 48px 40px;
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
-
-    .login-wordmark {
-      font-family: 'Raleway', sans-serif;
-      font-weight: 400;
-      font-size: 28px;
-      letter-spacing: 8px;
-      color: var(--white);
-      border: 1.5px solid var(--white);
-      border-radius: 6px;
-      padding: 8px 20px;
-      display: inline-block;
-      margin-bottom: 8px;
-    }
-
-    .login-sub {
-      font-size: 10px;
-      letter-spacing: 3px;
-      color: var(--ice);
-      text-transform: uppercase;
-      margin-bottom: 36px;
-    }
-
-    .login-card input {
-      width: 100%;
-      background: var(--navy);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      color: var(--white);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      margin-bottom: 12px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .login-card input:focus {
-      border-color: var(--ice);
-    }
-
-    .login-btn {
-      width: 100%;
-      background: var(--ice);
-      color: var(--navy);
-      border: none;
-      border-radius: 10px;
-      padding: 13px;
-      font-family: 'Raleway', sans-serif;
-      font-weight: 600;
-      font-size: 14px;
-      letter-spacing: 1px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-
+    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 380px; text-align: center; }
+    .wordmark { font-family: 'Raleway', sans-serif; font-weight: 400; font-size: 26px; letter-spacing: 8px; color: var(--white); border: 1.5px solid var(--white); border-radius: 6px; padding: 8px 20px; display: inline-block; margin-bottom: 8px; }
+    .login-sub { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 32px; }
+    .field { width: 100%; background: var(--navy); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--white); font-family: 'JetBrains Mono', monospace; font-size: 13px; margin-bottom: 10px; outline: none; transition: border-color 0.2s; }
+    .field:focus { border-color: var(--ice); }
+    .field option { background: var(--navy-mid); }
+    .login-btn { width: 100%; background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 13px; font-family: 'Raleway', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; margin-top: 4px; }
     .login-btn:hover { opacity: 0.85; }
+    .err { color: var(--red); font-size: 12px; margin-top: 8px; }
 
-    .login-error {
-      color: var(--red);
-      font-size: 12px;
-      margin-top: 10px;
-    }
+    #dashboard { display: none; }
+    .header { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .header-title { font-size: 10px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .date-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--grey); }
+    .ghost-btn { background: transparent; border: 1px solid var(--border); color: var(--grey); border-radius: 8px; padding: 6px 14px; font-family: 'Raleway', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .ghost-btn:hover { border-color: var(--ice); color: var(--ice); }
 
-    /* DASHBOARD */
-    #dashboard { display: none; min-height: 100vh; }
+    #zone-select { padding: 48px 24px; max-width: 680px; margin: 0 auto; }
+    .zone-select-title { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+    .zone-select-sub { font-size: 12px; color: var(--grey); margin-bottom: 32px; font-family: 'JetBrains Mono', monospace; }
+    .zones-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .zone-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: left; width: 100%; font-family: 'Raleway', sans-serif; color: var(--white); }
+    .zone-card:hover { border-color: var(--ice); background: var(--ice-dim); }
+    .zone-card-name { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+    .zone-card-meta { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
 
-    /* HEADER */
-    .header {
-      background: var(--navy-mid);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    #dispatch-view { display: none; }
+    .main { display: grid; grid-template-columns: 280px 1fr 320px; height: calc(100vh - 57px); overflow: hidden; }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+    .left-panel { background: var(--navy-mid); border-right: 1px solid var(--border); overflow-y: auto; padding: 20px; }
+    .panel-heading { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .small-btn { background: var(--ice-dim); border: 1px solid rgba(168,216,234,0.25); color: var(--ice); border-radius: 6px; padding: 4px 10px; font-family: 'Raleway', sans-serif; font-size: 10px; cursor: pointer; transition: all 0.2s; }
+    .small-btn:hover { background: rgba(168,216,234,0.2); }
+    .worker-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 6px; }
+    .worker-row.on-shift { border-color: var(--amber); opacity: 0.75; }
+    .worker-row.completed { border-color: rgba(34,197,94,0.3); opacity: 0.5; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--green); }
+    .worker-row.on-shift .dot { background: var(--amber); }
+    .worker-row.completed .dot { background: var(--grey); }
+    .wi { flex: 1; min-width: 0; }
+    .wn { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wm { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
+    .wtag { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; color: var(--green); }
+    .worker-row.on-shift .wtag { color: var(--amber); }
+    .worker-row.completed .wtag { color: var(--grey); }
 
-    .header-wordmark {
-      font-family: 'Raleway', sans-serif;
-      font-weight: 400;
-      font-size: 18px;
-      letter-spacing: 6px;
-      color: var(--white);
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 4px;
-      padding: 4px 12px;
-    }
-
-    .header-title {
-      font-size: 11px;
-      letter-spacing: 3px;
-      color: var(--ice);
-      text-transform: uppercase;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .session-date {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      color: var(--ice);
-    }
-
-    .logout-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--grey);
-      border-radius: 8px;
-      padding: 6px 14px;
-      font-family: 'Raleway', sans-serif;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .logout-btn:hover {
-      border-color: var(--ice);
-      color: var(--ice);
-    }
-
-    /* MAIN LAYOUT */
-    .main {
-      display: grid;
-      grid-template-columns: 280px 1fr 320px;
-      height: calc(100vh - 57px);
-      overflow: hidden;
-    }
-
-    /* SIDEBAR */
-    .sidebar {
-      background: var(--navy-mid);
-      border-right: 1px solid var(--border);
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    .sidebar-section {
-      margin-bottom: 28px;
-    }
-
-    .sidebar-heading {
-      font-size: 9px;
-      letter-spacing: 3px;
-      color: var(--ice);
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .add-btn {
-      width: 100%;
-      background: var(--ice-dim);
-      border: 1px dashed rgba(168,216,234,0.3);
-      color: var(--ice);
-      border-radius: 10px;
-      padding: 9px;
-      font-family: 'Raleway', sans-serif;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 8px;
-    }
-
-    .add-btn:hover {
-      background: rgba(168,216,234,0.2);
-      border-color: var(--ice);
-    }
-
-    .zone-tab {
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      margin-bottom: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-      width: 100%;
-      text-align: left;
-      color: var(--white);
-      font-family: 'Raleway', sans-serif;
-      font-size: 13px;
-    }
-
-    .zone-tab:hover, .zone-tab.active {
-      background: var(--ice-dim);
-      border-color: var(--ice);
-      color: var(--ice);
-    }
-
-    .zone-tab-name {
-      font-weight: 500;
-      margin-bottom: 2px;
-    }
-
-    .zone-tab-meta {
-      font-size: 10px;
-      color: var(--grey);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* CENTRE PANEL */
-    .centre {
-      overflow-y: auto;
-      padding: 24px;
-      background: var(--navy);
-    }
-
-    .centre-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .centre-title {
-      font-size: 18px;
-      font-weight: 500;
-      color: var(--white);
-    }
-
-    .centre-sub {
-      font-size: 11px;
-      color: var(--grey);
-      font-family: 'JetBrains Mono', monospace;
-      margin-top: 2px;
-    }
-
-    .primary-btn {
-      background: var(--ice);
-      color: var(--navy);
-      border: none;
-      border-radius: 10px;
-      padding: 9px 18px;
-      font-family: 'Raleway', sans-serif;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-
+    .centre { overflow-y: auto; padding: 24px; }
+    .centre-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+    .centre-zone { font-size: 20px; font-weight: 500; }
+    .centre-sub { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .primary-btn { background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 10px 20px; font-family: 'Raleway', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.2s; }
     .primary-btn:hover { opacity: 0.85; }
+    .section-label { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 12px; margin-top: 8px; }
 
-    /* BARS SECTION */
-    .section-label {
-      font-size: 9px;
-      letter-spacing: 3px;
-      color: var(--ice);
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      margin-top: 24px;
-    }
+    .shift-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; }
+    .shift-card.active { border-color: var(--amber); }
+    .shift-card.completed { border-color: rgba(34,197,94,0.3); opacity: 0.75; }
+    .sc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+    .sc-bar { font-size: 15px; font-weight: 500; }
+    .sc-worker { font-size: 12px; color: var(--ice); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+    .badge { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; }
+    .b-active { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .b-done { background: rgba(34,197,94,0.15); color: var(--green); }
 
-    .bar-card {
-      background: var(--navy-mid);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px 20px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    .timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+    .ts { background: var(--navy); border-radius: 10px; padding: 10px; text-align: center; border: 1px solid transparent; }
+    .ts.done { border-color: rgba(34,197,94,0.3); }
+    .tl { font-size: 9px; letter-spacing: 1px; color: var(--grey); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
+    .tv { font-size: 13px; font-family: 'JetBrains Mono', monospace; color: var(--white); }
+    .ts.done .tv { color: var(--green); }
 
-    .bar-name {
-      font-weight: 500;
-      font-size: 14px;
-      margin-bottom: 3px;
-    }
+    .code-block { background: var(--navy); border: 1px solid var(--ice); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cl { font-size: 9px; letter-spacing: 2px; color: var(--ice); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 3px; }
+    .cv { font-size: 26px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: var(--ice); letter-spacing: 6px; }
+    .copy-btn { background: var(--ice-dim); border: 1px solid rgba(168,216,234,0.3); color: var(--ice); border-radius: 6px; padding: 6px 14px; font-size: 11px; cursor: pointer; font-family: 'Raleway', sans-serif; transition: all 0.2s; }
+    .copy-btn:hover { background: rgba(168,216,234,0.2); }
 
-    .bar-contact {
-      font-size: 11px;
-      color: var(--grey);
-      font-family: 'JetBrains Mono', monospace;
-    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .act-btn { background: var(--navy); border: 1px solid var(--border); color: var(--white); border-radius: 8px; padding: 8px 14px; font-family: 'Raleway', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .act-btn:hover { border-color: var(--ice); color: var(--ice); }
+    .act-btn.hi { background: var(--ice); color: var(--navy); border-color: var(--ice); font-weight: 600; }
+    .act-btn.hi:hover { opacity: 0.85; }
 
-    .dispatch-btn {
-      background: var(--navy);
-      border: 1px solid var(--ice);
-      color: var(--ice);
-      border-radius: 8px;
-      padding: 7px 14px;
-      font-family: 'Raleway', sans-serif;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
+    .right-panel { background: var(--navy-mid); border-left: 1px solid var(--border); overflow-y: auto; padding: 20px; }
+    .log-item { background: var(--navy); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border-left: 3px solid var(--border); }
+    .log-item.t-dispatch { border-left-color: var(--ice); }
+    .log-item.t-clockin { border-left-color: var(--amber); }
+    .log-item.t-complete { border-left-color: var(--green); }
+    .log-item.t-worker { border-left-color: var(--grey); }
+    .lt { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-bottom: 3px; }
+    .lx { font-size: 12px; line-height: 1.5; }
 
-    .dispatch-btn:hover {
-      background: var(--ice);
-      color: var(--navy);
-    }
-
-    /* WORKERS GRID */
-    .workers-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .worker-card {
-      background: var(--navy-mid);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-    }
-
-    .worker-card:hover {
-      border-color: var(--ice);
-    }
-
-    .worker-card.on-shift {
-      border-color: var(--amber);
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .worker-card.completed {
-      border-color: var(--green);
-      opacity: 0.5;
-    }
-
-    .worker-status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      position: absolute;
-      top: 14px;
-      right: 14px;
-    }
-
-    .worker-card.on-shift .worker-status-dot { background: var(--amber); }
-    .worker-card.completed .worker-status-dot { background: var(--grey); }
-
-    .worker-name {
-      font-weight: 500;
-      font-size: 13px;
-      margin-bottom: 3px;
-      padding-right: 16px;
-    }
-
-    .worker-postcode {
-      font-size: 10px;
-      color: var(--grey);
-      font-family: 'JetBrains Mono', monospace;
-      margin-bottom: 6px;
-    }
-
-    .worker-status-label {
-      font-size: 10px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--green);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .worker-card.on-shift .worker-status-label { color: var(--amber); }
-    .worker-card.completed .worker-status-label { color: var(--grey); }
-
-    /* RIGHT PANEL */
-    .right-panel {
-      background: var(--navy-mid);
-      border-left: 1px solid var(--border);
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    .right-heading {
-      font-size: 9px;
-      letter-spacing: 3px;
-      color: var(--ice);
-      text-transform: uppercase;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .shift-log-item {
-      background: var(--navy);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-    }
-
-    .shift-log-bar {
-      font-weight: 500;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-
-    .shift-log-worker {
-      font-size: 11px;
-      color: var(--ice);
-      font-family: 'JetBrains Mono', monospace;
-      margin-bottom: 4px;
-    }
-
-    .shift-log-time {
-      font-size: 10px;
-      color: var(--grey);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .shift-log-status {
-      display: inline-block;
-      font-size: 9px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 2px 8px;
-      border-radius: 20px;
-      margin-top: 6px;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .status-active { background: rgba(245,158,11,0.15); color: var(--amber); }
-    .status-complete { background: rgba(34,197,94,0.15); color: var(--green); }
-
-    /* EMPTY STATE */
-    .empty-state {
-      text-align: center;
-      padding: 48px 20px;
-      color: var(--grey);
-    }
-
-    .empty-state-icon {
-      font-size: 32px;
-      margin-bottom: 12px;
-    }
-
-    .empty-state-text {
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    /* MODAL */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      display: none;
-    }
-
-    .modal-overlay.open { display: flex; }
-
-    .modal {
-      background: var(--navy-mid);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 32px;
-      width: 100%;
-      max-width: 480px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: var(--white);
-    }
-
-    .modal label {
-      display: block;
-      font-size: 11px;
-      letter-spacing: 1px;
-      color: var(--ice);
-      text-transform: uppercase;
-      margin-bottom: 6px;
-      margin-top: 14px;
-    }
-
-    .modal input, .modal select, .modal textarea {
-      width: 100%;
-      background: var(--navy);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      color: var(--white);
-      font-family: 'Raleway', sans-serif;
-      font-size: 13px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .modal input:focus, .modal select:focus, .modal textarea:focus {
-      border-color: var(--ice);
-    }
-
-    .modal select option { background: var(--navy-mid); }
-
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 24px;
-    }
-
-    .cancel-btn {
-      flex: 1;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--grey);
-      border-radius: 10px;
-      padding: 11px;
-      font-family: 'Raleway', sans-serif;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 20px; padding: 32px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+    .modal label { display: block; font-size: 10px; letter-spacing: 1px; color: var(--ice); text-transform: uppercase; margin-bottom: 6px; margin-top: 16px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+    .cancel-btn { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--grey); border-radius: 10px; padding: 11px; font-family: 'Raleway', sans-serif; font-size: 13px; cursor: pointer; }
     .cancel-btn:hover { border-color: var(--ice); color: var(--ice); }
-
-    .confirm-btn {
-      flex: 2;
-      background: var(--ice);
-      color: var(--navy);
-      border: none;
-      border-radius: 10px;
-      padding: 11px;
-      font-family: 'Raleway', sans-serif;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-
+    .confirm-btn { flex: 2; background: var(--ice); color: var(--navy); border: none; border-radius: 10px; padding: 11px; font-family: 'Raleway', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; }
     .confirm-btn:hover { opacity: 0.85; }
 
-    .worker-checkbox-list {
-      max-height: 200px;
-      overflow-y: auto;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px;
-    }
+    .pick-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+    .pick-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
+    .pick-item:last-child { border-bottom: none; }
+    .pick-item:hover { background: var(--ice-dim); }
+    .pick-item input[type=checkbox] { width: auto; accent-color: var(--ice); }
+    .pick-name { font-size: 13px; flex: 1; }
+    .pick-post { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
 
-    .worker-checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
+    .star-row { display: flex; gap: 8px; margin-top: 6px; }
+    .star { font-size: 28px; cursor: pointer; color: var(--grey); transition: color 0.15s; line-height: 1; }
+    .star.on { color: var(--amber); }
 
-    .worker-checkbox-item:hover { background: var(--ice-dim); }
-
-    .worker-checkbox-item input { width: auto; }
-
-    .worker-checkbox-name { font-size: 13px; }
-    .worker-checkbox-postcode {
-      font-size: 10px;
-      color: var(--grey);
-      font-family: 'JetBrains Mono', monospace;
-      margin-left: auto;
-    }
-
-    .star-rating {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .star {
-      font-size: 24px;
-      cursor: pointer;
-      color: var(--grey);
-      transition: color 0.15s;
-    }
-
-    .star.selected { color: var(--amber); }
-
-    /* SCROLLBAR */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
+    .empty { text-align: center; padding: 40px 16px; color: var(--grey); font-size: 13px; line-height: 1.7; }
+    ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-wordmark">GLASI</div>
+    <div class="wordmark">GLASI</div>
     <p class="login-sub">Dispatch Portal</p>
-    <input type="email" id="login-email" placeholder="Email" autocomplete="email" />
-    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" />
-    <button class="login-btn" onclick="handleLogin()">Sign In</button>
-    <p class="login-error" id="login-error"></p>
+    <input class="field" type="email" id="l-email" placeholder="Email" />
+    <input class="field" type="password" id="l-pass" placeholder="Password" />
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <p class="err" id="l-err"></p>
   </div>
 </div>
 
-<!-- DASHBOARD -->
 <div id="dashboard">
-
   <div class="header">
     <div class="header-left">
-      <div class="header-wordmark">GLASI</div>
+      <div class="wordmark" style="font-size:16px;letter-spacing:5px;padding:4px 12px;">GLASI</div>
       <div class="header-title">Dispatch</div>
     </div>
     <div class="header-right">
-      <div class="session-date" id="session-date"></div>
-      <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
+      <div class="date-tag" id="hdr-date"></div>
+      <button class="ghost-btn" onclick="backToZones()">Change Zone</button>
+      <button class="ghost-btn" onclick="doLogout()">Sign Out</button>
     </div>
   </div>
 
-  <div class="main">
+  <div id="zone-select">
+    <div class="zone-select-title">Select your zone</div>
+    <div class="zone-select-sub">Choose the zone you are dispatching for this session</div>
+    <div class="zones-grid" id="zones-grid"></div>
+  </div>
 
-    <!-- SIDEBAR: ZONES -->
-    <div class="sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-heading">Zones</div>
-        <button class="add-btn" onclick="openModal('add-zone')">+ Add Zone</button>
-        <div id="zones-list"></div>
-      </div>
-    </div>
-
-    <!-- CENTRE: ACTIVE ZONE -->
-    <div class="centre">
-      <div id="zone-empty" class="empty-state">
-        <div class="empty-state-icon">📍</div>
-        <div class="empty-state-text">Select a zone or create one to get started</div>
-      </div>
-
-      <div id="zone-view" style="display:none;">
-        <div class="centre-header">
-          <div>
-            <div class="centre-title" id="zone-title"></div>
-            <div class="centre-sub" id="zone-sub"></div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="primary-btn" onclick="openModal('add-bar')" style="background:var(--navy-mid);color:var(--ice);border:1px solid var(--ice);">+ Add Bar</button>
-            <button class="primary-btn" onclick="openModal('add-workers')">+ Add Workers</button>
-          </div>
+  <div id="dispatch-view">
+    <div class="main">
+      <div class="left-panel">
+        <div class="panel-heading">
+          <span>Workers in Room</span>
+          <button class="small-btn" onclick="openOv('add-workers')">+ Add</button>
         </div>
-
-        <div class="section-label">Active Bars This Session</div>
-        <div id="bars-list"></div>
-
-        <div class="section-label">Workers In Room</div>
-        <div class="workers-grid" id="workers-grid"></div>
+        <div id="workers-list"></div>
       </div>
-    </div>
 
-    <!-- RIGHT: SHIFT LOG -->
-    <div class="right-panel">
-      <div class="right-heading">Shift Log</div>
-      <div id="shift-log"></div>
-    </div>
+      <div class="centre">
+        <div class="centre-top">
+          <div>
+            <div class="centre-zone" id="zone-name-display"></div>
+            <div class="centre-sub" id="zone-date-display"></div>
+          </div>
+          <button class="primary-btn" onclick="openOv('new-request')">+ Log Request</button>
+        </div>
+        <div class="section-label">Active Shifts</div>
+        <div id="active-shifts"></div>
+        <div class="section-label" style="margin-top:20px;">Completed Shifts</div>
+        <div id="completed-shifts"></div>
+      </div>
 
-  </div>
-</div>
-
-<!-- MODALS -->
-
-<!-- Add Zone -->
-<div class="modal-overlay" id="modal-add-zone">
-  <div class="modal">
-    <div class="modal-title">Add Zone</div>
-    <label>Zone Name</label>
-    <input type="text" id="new-zone-name" placeholder="e.g. Southampton City Centre" />
-    <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeModal('add-zone')">Cancel</button>
-      <button class="confirm-btn" onclick="addZone()">Add Zone</button>
-    </div>
-  </div>
-</div>
-
-<!-- Add Bar -->
-<div class="modal-overlay" id="modal-add-bar">
-  <div class="modal">
-    <div class="modal-title">Add Bar to Zone</div>
-    <label>Bar Name</label>
-    <input type="text" id="new-bar-name" placeholder="e.g. Dancing Man Brewery" />
-    <label>Contact Name</label>
-    <input type="text" id="new-bar-contact" placeholder="e.g. Aidan" />
-    <label>Contact Phone</label>
-    <input type="text" id="new-bar-phone" placeholder="07..." />
-    <label>Address</label>
-    <input type="text" id="new-bar-address" placeholder="e.g. King Street, Southampton" />
-    <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeModal('add-bar')">Cancel</button>
-      <button class="confirm-btn" onclick="addBar()">Add Bar</button>
+      <div class="right-panel">
+        <div class="panel-heading">Event Log</div>
+        <div id="event-log"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- Add Workers -->
-<div class="modal-overlay" id="modal-add-workers">
+<div class="overlay" id="ov-add-workers">
   <div class="modal">
-    <div class="modal-title">Add Workers to Zone</div>
-    <label>Select Workers</label>
-    <div class="worker-checkbox-list" id="worker-checkbox-list"></div>
+    <div class="modal-title">Add Workers to Room</div>
+    <label>Select from vetted workers</label>
+    <div class="pick-list" id="worker-pick-list"></div>
     <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeModal('add-workers')">Cancel</button>
-      <button class="confirm-btn" onclick="addWorkersToZone()">Add to Zone</button>
+      <button class="cancel-btn" onclick="closeOv('add-workers')">Cancel</button>
+      <button class="confirm-btn" onclick="confirmAddWorkers()">Add to Room</button>
     </div>
   </div>
 </div>
 
-<!-- Dispatch Shift -->
-<div class="modal-overlay" id="modal-dispatch">
+<!-- New Request -->
+<div class="overlay" id="ov-new-request">
   <div class="modal">
-    <div class="modal-title">Log Shift</div>
-    <label>Bar</label>
-    <select id="dispatch-bar"></select>
-    <label>Worker</label>
-    <select id="dispatch-worker"></select>
-    <label>Shift Length (hours)</label>
-    <select id="dispatch-length">
+    <div class="modal-title">Log Shift Request</div>
+    <label>Bar Name</label>
+    <input class="field" type="text" id="req-bar" placeholder="e.g. Dancing Man Brewery" />
+    <label>Contact Name</label>
+    <input class="field" type="text" id="req-contact" placeholder="e.g. Aidan" />
+    <label>Contact Phone</label>
+    <input class="field" type="text" id="req-phone" placeholder="07..." />
+    <label>How did they request?</label>
+    <select class="field" id="req-method">
+      <option value="WhatsApp">WhatsApp</option>
+      <option value="Phone call">Phone call</option>
+      <option value="In person">In person</option>
+    </select>
+    <label>Request Time</label>
+    <input class="field" type="time" id="req-time" />
+    <label>Shift Length</label>
+    <select class="field" id="req-length">
       <option value="1">1 hour</option>
       <option value="1.5">1.5 hours</option>
       <option value="2">2 hours</option>
@@ -786,391 +249,236 @@
       <option value="3.5">3.5 hours</option>
       <option value="4">4 hours</option>
     </select>
+    <label>Worker Assigned</label>
+    <select class="field" id="req-worker"></select>
     <label>Accepted Time</label>
-    <input type="time" id="dispatch-accepted" />
-    <label>Clock In Code</label>
-    <input type="text" id="dispatch-clockin-code" placeholder="e.g. GLASI47" />
-    <label>Clock In Time</label>
-    <input type="time" id="dispatch-clockin-time" />
+    <input class="field" type="time" id="req-accepted" />
     <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeModal('dispatch')">Cancel</button>
-      <button class="confirm-btn" onclick="logShift()">Log Shift</button>
+      <button class="cancel-btn" onclick="closeOv('new-request')">Cancel</button>
+      <button class="confirm-btn" onclick="confirmRequest()">Log Shift</button>
     </div>
   </div>
 </div>
 
-<!-- Complete Shift -->
-<div class="modal-overlay" id="modal-complete">
+<!-- Clock In -->
+<div class="overlay" id="ov-clockin">
+  <div class="modal">
+    <div class="modal-title">Confirm Clock In</div>
+    <label>Clock In Time</label>
+    <input class="field" type="time" id="ci-time" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('clockin')">Cancel</button>
+      <button class="confirm-btn" onclick="confirmClockIn()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Complete -->
+<div class="overlay" id="ov-complete">
   <div class="modal">
     <div class="modal-title">Complete Shift</div>
-    <label>Clock Out Code</label>
-    <input type="text" id="complete-clockout-code" placeholder="e.g. DONE47" />
     <label>Clock Out Time</label>
-    <input type="time" id="complete-clockout-time" />
+    <input class="field" type="time" id="co-time" />
     <label>Bar Rating</label>
-    <div class="star-rating" id="star-rating">
-      <span class="star" onclick="setRating(1)">★</span>
-      <span class="star" onclick="setRating(2)">★</span>
-      <span class="star" onclick="setRating(3)">★</span>
-      <span class="star" onclick="setRating(4)">★</span>
-      <span class="star" onclick="setRating(5)">★</span>
+    <div class="star-row" id="star-row">
+      <span class="star" onclick="setStar(1)">★</span>
+      <span class="star" onclick="setStar(2)">★</span>
+      <span class="star" onclick="setStar(3)">★</span>
+      <span class="star" onclick="setStar(4)">★</span>
+      <span class="star" onclick="setStar(5)">★</span>
     </div>
     <label>Notes</label>
-    <textarea id="complete-notes" rows="3" placeholder="Any feedback from the bar..."></textarea>
+    <textarea class="field" id="co-notes" rows="3" placeholder="Any feedback from the bar..."></textarea>
     <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeModal('complete')">Cancel</button>
-      <button class="confirm-btn" onclick="completeShift()">Complete Shift</button>
+      <button class="cancel-btn" onclick="closeOv('complete')">Cancel</button>
+      <button class="confirm-btn" onclick="confirmComplete()">Complete Shift</button>
     </div>
   </div>
 </div>
 
 <script>
-const SUPABASE_URL = "https://hweytbyrqvjsviydmacv.supabase.co";
-const SUPABASE_KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
-const VALID_EMAIL = "sam@glasi.co.uk";
-const VALID_PASSWORD = "Sponger64112!";
+const SB = "https://hweytbyrqvjsviydmacv.supabase.co";
+const KEY = "sb_publishable_Qt-BL3-Qyb1cEBJ1ScDYSw_kNdxfYXs";
+const H = { 'Content-Type':'application/json', 'apikey':KEY, 'Authorization':`Bearer ${KEY}` };
 
-const headers = {
-  'Content-Type': 'application/json',
-  'apikey': SUPABASE_KEY,
-  'Authorization': `Bearer ${SUPABASE_KEY}`
-};
+const ZONES = [
+  { id:'southampton-city-centre', name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc' },
+  { id:'southampton-north', name:'Southampton North', meta:'SO16 · Bassett, Shirley area' },
+  { id:'southampton-east', name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area' },
+  { id:'portsmouth-city-centre', name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area' }
+];
 
-let activeZoneId = null;
-let activeZoneName = null;
-let allWorkers = [];
-let sessionWorkers = [];
-let activeBars = [];
-let shiftLog = [];
-let activeShiftId = null;
-let selectedRating = 0;
-let completeWorkerId = null;
+let zone = null, allW = [], sessW = [], shifts = [], activeSid = null, starRating = 0, log = [];
 
-// AUTH
-function handleLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  if (email === VALID_EMAIL && password === VALID_PASSWORD) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('session-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
-    loadZones();
-    loadAllWorkers();
-  } else {
-    document.getElementById('login-error').textContent = 'Incorrect email or password.';
-  }
+const gen4 = () => String(Math.floor(1000 + Math.random() * 9000));
+const nowT = () => { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; };
+const fmtT = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+const today = () => new Date().toISOString().split('T')[0];
+const toISO = t => new Date(`${today()}T${t}`).toISOString();
+
+async function sbGet(t,q='') { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{headers:H}); return r.json(); }
+async function sbPost(t,b) { const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); }
+async function sbPatch(t,q,b) { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); }
+
+function doLogin() {
+  const e=document.getElementById('l-email').value.trim();
+  const p=document.getElementById('l-pass').value;
+  if(e==='sam@glasi.co.uk' && p==='Sponger64112!') {
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    renderZones();
+    sbGet('applications','?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email').then(d=>allW=d);
+  } else { document.getElementById('l-err').textContent='Incorrect email or password.'; }
+}
+document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function doLogout() { document.getElementById('login-screen').style.display='flex'; document.getElementById('dashboard').style.display='none'; zone=null; }
+
+function renderZones() {
+  document.getElementById('zone-select').style.display='block';
+  document.getElementById('dispatch-view').style.display='none';
+  document.getElementById('zones-grid').innerHTML = ZONES.map(z=>`
+    <button class="zone-card" onclick="selectZone('${z.id}','${z.name}')">
+      <div class="zone-card-name">${z.name}</div>
+      <div class="zone-card-meta">${z.meta}</div>
+    </button>`).join('');
 }
 
-function handleLogout() {
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('dashboard').style.display = 'none';
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-password').value = '';
+async function selectZone(id,name) {
+  zone={id,name};
+  document.getElementById('zone-select').style.display='none';
+  document.getElementById('dispatch-view').style.display='block';
+  document.getElementById('zone-name-display').textContent=name;
+  document.getElementById('zone-date-display').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  await loadSessW(); await loadShifts();
 }
+function backToZones() { renderZones(); }
 
-document.getElementById('login-password').addEventListener('keydown', e => {
-  if (e.key === 'Enter') handleLogin();
-});
-
-// SUPABASE HELPERS
-async function sbGet(table, query = '') {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, { headers });
-  return res.json();
-}
-
-async function sbPost(table, body) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: { ...headers, 'Prefer': 'return=representation' },
-    body: JSON.stringify(body)
-  });
-  return res.json();
-}
-
-async function sbPatch(table, query, body) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
-    method: 'PATCH',
-    headers: { ...headers, 'Prefer': 'return=representation' },
-    body: JSON.stringify(body)
-  });
-  return res.json();
-}
-
-// ZONES
-async function loadZones() {
-  const zones = await sbGet('zones', '?order=created_at.asc');
-  const list = document.getElementById('zones-list');
-  list.innerHTML = '';
-  zones.forEach(z => {
-    const btn = document.createElement('button');
-    btn.className = 'zone-tab' + (z.id === activeZoneId ? ' active' : '');
-    btn.innerHTML = `<div class="zone-tab-name">${z.name}</div><div class="zone-tab-meta">tap to open</div>`;
-    btn.onclick = () => selectZone(z.id, z.name);
-    list.appendChild(btn);
-  });
-}
-
-async function addZone() {
-  const name = document.getElementById('new-zone-name').value.trim();
-  if (!name) return;
-  await sbPost('zones', { name });
-  document.getElementById('new-zone-name').value = '';
-  closeModal('add-zone');
-  loadZones();
-}
-
-async function selectZone(id, name) {
-  activeZoneId = id;
-  activeZoneName = name;
-  document.getElementById('zone-empty').style.display = 'none';
-  document.getElementById('zone-view').style.display = 'block';
-  document.getElementById('zone-title').textContent = name;
-  document.getElementById('zone-sub').textContent = 'Active session';
-  document.querySelectorAll('.zone-tab').forEach(t => t.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  await loadBars();
-  await loadSessionWorkers();
-  await loadShiftLog();
-}
-
-// BARS
-async function loadBars() {
-  const bars = await sbGet('bars', `?zone_id=eq.${activeZoneId}&order=created_at.asc`);
-  activeBars = bars;
-  const list = document.getElementById('bars-list');
-  list.innerHTML = '';
-  if (!bars.length) {
-    list.innerHTML = '<div style="color:var(--grey);font-size:13px;padding:12px 0;">No bars added yet. Add a bar to get started.</div>';
-    return;
-  }
-  bars.forEach(b => {
-    const card = document.createElement('div');
-    card.className = 'bar-card';
-    card.innerHTML = `
-      <div>
-        <div class="bar-name">${b.name}</div>
-        <div class="bar-contact">Contact: ${b.contact_name || 'N/A'} ${b.contact_phone ? '· ' + b.contact_phone : ''}</div>
-      </div>
-      <button class="dispatch-btn" onclick="openDispatchForBar(${b.id}, '${b.name}')">Log Shift</button>
-    `;
-    list.appendChild(card);
-  });
-}
-
-async function addBar() {
-  const name = document.getElementById('new-bar-name').value.trim();
-  const contact_name = document.getElementById('new-bar-contact').value.trim();
-  const contact_phone = document.getElementById('new-bar-phone').value.trim();
-  const address = document.getElementById('new-bar-address').value.trim();
-  if (!name) return;
-  await sbPost('bars', { zone_id: activeZoneId, name, contact_name, contact_phone, address });
-  ['new-bar-name','new-bar-contact','new-bar-phone','new-bar-address'].forEach(id => document.getElementById(id).value = '');
-  closeModal('add-bar');
-  loadBars();
-}
-
-// WORKERS
-async function loadAllWorkers() {
-  allWorkers = await sbGet('applications', '?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email');
-}
-
-async function loadSessionWorkers() {
-  const today = new Date().toISOString().split('T')[0];
-  sessionWorkers = await sbGet('session_workers', `?zone_id=eq.${activeZoneId}&session_date=eq.${today}&order=created_at.asc`);
+async function loadSessW() {
+  sessW=await sbGet('session_workers',`?zone_id=eq.${zone.id}&session_date=eq.${today()}&order=created_at.asc`);
   renderWorkers();
 }
 
 function renderWorkers() {
-  const grid = document.getElementById('workers-grid');
-  grid.innerHTML = '';
-  if (!sessionWorkers.length) {
-    grid.innerHTML = '<div style="color:var(--grey);font-size:13px;padding:12px 0;grid-column:1/-1;">No workers added to this zone yet.</div>';
-    return;
+  const el=document.getElementById('workers-list');
+  if(!sessW.length){el.innerHTML='<div class="empty">No workers added.<br>Click + Add to build your room.</div>';return;}
+  el.innerHTML=sessW.map(w=>{
+    const c=w.status==='on-shift'?'on-shift':w.status==='completed'?'completed':'';
+    const t=w.status==='on-shift'?'On Shift':w.status==='completed'?'Done':'Available';
+    return `<div class="worker-row ${c}"><div class="dot"></div><div class="wi"><div class="wn">${w.worker_name}</div><div class="wm">${w.worker_phone||''}</div></div><div class="wtag">${t}</div></div>`;
+  }).join('');
+}
+
+function openOv(name) {
+  if(name==='add-workers') {
+    const ex=sessW.map(w=>w.worker_name);
+    const av=allW.filter(w=>!ex.includes(w.name));
+    document.getElementById('worker-pick-list').innerHTML=av.length?av.map(w=>`
+      <label class="pick-item">
+        <input type="checkbox" value="${w.email}" data-name="${w.name}" data-phone="${w.phone||''}" />
+        <span class="pick-name">${w.name}</span>
+        <span class="pick-post">${w.postcode_full||''}</span>
+      </label>`).join(''):'<div style="padding:14px;color:var(--grey);font-size:13px;">All workers already added.</div>';
   }
-  sessionWorkers.forEach(w => {
-    const card = document.createElement('div');
-    const statusClass = w.status === 'on-shift' ? 'on-shift' : w.status === 'completed' ? 'completed' : '';
-    const statusLabel = w.status === 'on-shift' ? 'On Shift' : w.status === 'completed' ? 'Completed' : 'Available';
-    card.className = `worker-card ${statusClass}`;
-    card.innerHTML = `
-      <div class="worker-status-dot"></div>
-      <div class="worker-name">${w.worker_name}</div>
-      <div class="worker-postcode">${w.worker_phone || ''}</div>
-      <div class="worker-status-label">${statusLabel}</div>
-    `;
-    if (w.status === 'on-shift') {
-      card.onclick = () => openCompleteShift(w.id);
-    }
-    grid.appendChild(card);
-  });
-}
-
-async function addWorkersToZone() {
-  const checked = document.querySelectorAll('#worker-checkbox-list input:checked');
-  const today = new Date().toISOString().split('T')[0];
-  for (const cb of checked) {
-    const worker = allWorkers.find(w => w.email === cb.value);
-    if (worker) {
-      await sbPost('session_workers', {
-        zone_id: activeZoneId,
-        worker_name: worker.name,
-        worker_phone: worker.phone,
-        session_date: today,
-        status: 'available'
-      });
-    }
+  if(name==='new-request') {
+    document.getElementById('req-time').value=nowT();
+    document.getElementById('req-accepted').value=nowT();
+    const av=sessW.filter(w=>w.status==='available');
+    document.getElementById('req-worker').innerHTML=av.length?av.map(w=>`<option value="${w.id}">${w.worker_name}</option>`).join(''):'<option>No available workers</option>';
   }
-  closeModal('add-workers');
-  loadSessionWorkers();
+  if(name==='clockin'){document.getElementById('ci-time').value=nowT();}
+  if(name==='complete'){document.getElementById('co-time').value=nowT();starRating=0;document.querySelectorAll('.star').forEach(s=>s.classList.remove('on'));}
+  document.getElementById(`ov-${name}`).classList.add('open');
 }
+function closeOv(name){document.getElementById(`ov-${name}`).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
-// DISPATCH
-function openDispatchForBar(barId, barName) {
-  const barSelect = document.getElementById('dispatch-bar');
-  barSelect.innerHTML = activeBars.map(b => `<option value="${b.id}" ${b.id === barId ? 'selected' : ''}>${b.name}</option>`).join('');
-  const workerSelect = document.getElementById('dispatch-worker');
-  workerSelect.innerHTML = sessionWorkers.filter(w => w.status === 'available').map(w => `<option value="${w.id}">${w.worker_name}</option>`).join('');
-  const now = new Date();
-  document.getElementById('dispatch-accepted').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  openModal('dispatch');
-}
-
-async function logShift() {
-  const barId = document.getElementById('dispatch-bar').value;
-  const workerId = document.getElementById('dispatch-worker').value;
-  const shiftLength = document.getElementById('dispatch-length').value;
-  const acceptedTime = document.getElementById('dispatch-accepted').value;
-  const clockInCode = document.getElementById('dispatch-clockin-code').value;
-  const clockInTime = document.getElementById('dispatch-clockin-time').value;
-
-  const bar = activeBars.find(b => b.id == barId);
-  const worker = sessionWorkers.find(w => w.id == workerId);
-
-  const today = new Date().toISOString().split('T')[0];
-  const acceptedAt = acceptedTime ? new Date(`${today}T${acceptedTime}`).toISOString() : null;
-  const clockInAt = clockInTime ? new Date(`${today}T${clockInTime}`).toISOString() : null;
-
-  const shift = await sbPost('shifts', {
-    bar_name: bar?.name,
-    contact_name: bar?.contact_name,
-    worker_name: worker?.worker_name,
-    worker_phone: worker?.worker_phone,
-    zoom_room: activeZoneName,
-    shift_length_hours: parseFloat(shiftLength),
-    accepted_at: acceptedAt,
-    clock_in_code: clockInCode || null,
-    clock_in_confirmed_at: clockInAt,
-    status: 'active'
-  });
-
-  await sbPatch('session_workers', `?id=eq.${workerId}`, { status: 'on-shift' });
-  activeShiftId = shift[0]?.id;
-  completeWorkerId = workerId;
-
-  closeModal('dispatch');
-  loadSessionWorkers();
-  loadShiftLog();
-}
-
-// COMPLETE
-function openCompleteShift(workerId) {
-  completeWorkerId = workerId;
-  selectedRating = 0;
-  document.querySelectorAll('.star').forEach(s => s.classList.remove('selected'));
-  const now = new Date();
-  document.getElementById('complete-clockout-time').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  openModal('complete');
-}
-
-function setRating(n) {
-  selectedRating = n;
-  document.querySelectorAll('.star').forEach((s, i) => {
-    s.classList.toggle('selected', i < n);
-  });
-}
-
-async function completeShift() {
-  const clockOutCode = document.getElementById('complete-clockout-code').value;
-  const clockOutTime = document.getElementById('complete-clockout-time').value;
-  const notes = document.getElementById('complete-notes').value;
-  const today = new Date().toISOString().split('T')[0];
-  const clockOutAt = clockOutTime ? new Date(`${today}T${clockOutTime}`).toISOString() : null;
-
-  const worker = sessionWorkers.find(w => w.id == completeWorkerId);
-  const activeShifts = await sbGet('shifts', `?worker_name=eq.${encodeURIComponent(worker?.worker_name)}&status=eq.active&order=created_at.desc&limit=1`);
-  if (activeShifts.length) {
-    await sbPatch('shifts', `?id=eq.${activeShifts[0].id}`, {
-      clock_out_code: clockOutCode || null,
-      clock_out_confirmed_at: clockOutAt,
-      bar_rating: selectedRating || null,
-      notes: notes || null,
-      status: 'completed'
-    });
+async function confirmAddWorkers() {
+  const cbs=document.querySelectorAll('#worker-pick-list input:checked');
+  for(const cb of cbs){
+    await sbPost('session_workers',{zone_id:zone.id,worker_name:cb.dataset.name,worker_phone:cb.dataset.phone,session_date:today(),status:'available'});
+    addLog('worker',`${cb.dataset.name} added to room`);
   }
-
-  await sbPatch('session_workers', `?id=eq.${completeWorkerId}`, { status: 'completed' });
-  closeModal('complete');
-  loadSessionWorkers();
-  loadShiftLog();
+  closeOv('add-workers'); loadSessW();
 }
 
-// SHIFT LOG
-async function loadShiftLog() {
-  const log = document.getElementById('shift-log');
-  const shifts = await sbGet('shifts', `?zoom_room=eq.${encodeURIComponent(activeZoneName)}&order=created_at.desc&limit=20`);
-  shiftLog = shifts;
-  log.innerHTML = '';
-  if (!shifts.length) {
-    log.innerHTML = '<div style="color:var(--grey);font-size:12px;">No shifts logged yet.</div>';
-    return;
-  }
-  shifts.forEach(s => {
-    const item = document.createElement('div');
-    item.className = 'shift-log-item';
-    const statusClass = s.status === 'active' ? 'status-active' : 'status-complete';
-    const statusLabel = s.status === 'active' ? 'On Shift' : 'Completed';
-    const clockIn = s.clock_in_confirmed_at ? new Date(s.clock_in_confirmed_at).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '--:--';
-    const clockOut = s.clock_out_confirmed_at ? new Date(s.clock_out_confirmed_at).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '--:--';
-    const stars = s.bar_rating ? '★'.repeat(s.bar_rating) + '☆'.repeat(5 - s.bar_rating) : '';
-    item.innerHTML = `
-      <div class="shift-log-bar">${s.bar_name}</div>
-      <div class="shift-log-worker">${s.worker_name}</div>
-      <div class="shift-log-time">In: ${clockIn} · Out: ${clockOut} · ${s.shift_length_hours}hr</div>
-      ${stars ? `<div style="color:var(--amber);font-size:12px;margin-top:4px;">${stars}</div>` : ''}
-      <span class="shift-log-status ${statusClass}">${statusLabel}</span>
-    `;
-    log.appendChild(item);
-  });
+async function loadShifts() {
+  shifts=await sbGet('shifts',`?zoom_room=eq.${encodeURIComponent(zone.id)}&order=created_at.desc`);
+  renderShifts(); renderLog();
 }
 
-// MODALS
-function openModal(name) {
-  if (name === 'add-workers') {
-    const list = document.getElementById('worker-checkbox-list');
-    const existing = sessionWorkers.map(w => w.worker_name);
-    list.innerHTML = allWorkers.filter(w => !existing.includes(w.name)).map(w => `
-      <label class="worker-checkbox-item">
-        <input type="checkbox" value="${w.email}" />
-        <span class="worker-checkbox-name">${w.name}</span>
-        <span class="worker-checkbox-postcode">${w.postcode_full || ''}</span>
-      </label>
-    `).join('');
-  }
-  document.getElementById(`modal-${name}`).classList.add('open');
+function renderShifts() {
+  const active=shifts.filter(s=>s.status==='active');
+  const done=shifts.filter(s=>s.status==='completed');
+  document.getElementById('active-shifts').innerHTML=active.length?active.map(shiftCard).join(''):'<div class="empty">No active shifts.<br>Click Log Request when a bar gets in touch.</div>';
+  document.getElementById('completed-shifts').innerHTML=done.length?done.map(shiftCard).join(''):'<div style="color:var(--grey);font-size:13px;padding:8px 0;">None yet.</div>';
 }
 
-function closeModal(name) {
-  document.getElementById(`modal-${name}`).classList.remove('open');
+function shiftCard(s) {
+  const isActive=s.status==='active';
+  const badge=isActive?'<span class="badge b-active">On Shift</span>':'<span class="badge b-done">Completed</span>';
+  const timeline=`<div class="timeline">
+    <div class="ts ${s.requested_at?'done':''}"><div class="tl">Requested</div><div class="tv">${fmtT(s.requested_at)}</div></div>
+    <div class="ts ${s.accepted_at?'done':''}"><div class="tl">Accepted</div><div class="tv">${fmtT(s.accepted_at)}</div></div>
+    <div class="ts ${s.clock_in_confirmed_at?'done':''}"><div class="tl">Clock In</div><div class="tv">${fmtT(s.clock_in_confirmed_at)}</div></div>
+    <div class="ts ${s.clock_out_confirmed_at?'done':''}"><div class="tl">Clock Out</div><div class="tv">${fmtT(s.clock_out_confirmed_at)}</div></div>
+  </div>`;
+  const codeBlock=isActive?`<div class="code-block"><div><div class="cl">Clock In Code</div><div class="cv">${s.clock_in_code}</div></div><button class="copy-btn" onclick="navigator.clipboard.writeText('${s.clock_in_code}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button></div>`:'';
+  const actions=isActive?`<div class="actions">
+    ${!s.clock_in_confirmed_at?`<button class="act-btn hi" onclick="activeSid='${s.id}';openOv('clockin')">Confirm Clock In</button>`:''}
+    <button class="act-btn hi" onclick="activeSid='${s.id}';openOv('complete')">Complete Shift</button>
+  </div>`:`<div style="font-size:12px;color:var(--grey);">${s.bar_rating?'★'.repeat(s.bar_rating)+'☆'.repeat(5-s.bar_rating)+' · ':''} ${s.shift_length_hours}hr · ${s.request_method||''}${s.notes?'<br>'+s.notes:''}</div>`;
+  return `<div class="shift-card ${isActive?'active':'completed'}">
+    <div class="sc-top"><div><div class="sc-bar">${s.bar_name}</div><div class="sc-worker">${s.worker_name} · ${s.shift_length_hours}hr · asked for ${s.contact_name||'N/A'}</div></div>${badge}</div>
+    ${timeline}${codeBlock}${actions}
+  </div>`;
 }
 
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) {
-      overlay.classList.remove('open');
-    }
-  });
-});
+async function confirmRequest() {
+  const bar=document.getElementById('req-bar').value.trim();
+  const contact=document.getElementById('req-contact').value.trim();
+  const phone=document.getElementById('req-phone').value.trim();
+  const method=document.getElementById('req-method').value;
+  const rt=document.getElementById('req-time').value;
+  const length=document.getElementById('req-length').value;
+  const wid=document.getElementById('req-worker').value;
+  const at=document.getElementById('req-accepted').value;
+  if(!bar||!wid)return;
+  const w=sessW.find(x=>x.id==wid);
+  const code=gen4();
+  await sbPost('shifts',{bar_name:bar,contact_name:contact||null,worker_name:w?.worker_name,worker_phone:w?.worker_phone,zoom_room:zone.id,shift_length_hours:parseFloat(length),requested_at:rt?toISO(rt):null,accepted_at:at?toISO(at):null,clock_in_code:code,request_method:method,status:'active'});
+  await sbPatch('session_workers',`?id=eq.${wid}`,{status:'on-shift'});
+  addLog('dispatch',`${w?.worker_name} dispatched to ${bar} · Code: ${code}`);
+  closeOv('new-request'); loadSessW(); loadShifts();
+}
+
+async function confirmClockIn() {
+  const t=document.getElementById('ci-time').value;
+  await sbPatch('shifts',`?id=eq.${activeSid}`,{clock_in_confirmed_at:t?toISO(t):null});
+  const s=shifts.find(x=>x.id==activeSid);
+  addLog('clockin',`${s?.worker_name} clocked in at ${t}`);
+  closeOv('clockin'); loadShifts();
+}
+
+async function confirmComplete() {
+  const t=document.getElementById('co-time').value;
+  const notes=document.getElementById('co-notes').value.trim();
+  const s=shifts.find(x=>x.id==activeSid);
+  await sbPatch('shifts',`?id=eq.${activeSid}`,{clock_out_confirmed_at:t?toISO(t):null,bar_rating:starRating||null,notes:notes||null,status:'completed'});
+  const w=sessW.find(x=>x.worker_name===s?.worker_name);
+  if(w) await sbPatch('session_workers',`?id=eq.${w.id}`,{status:'completed'});
+  addLog('complete',`Shift complete · ${s?.worker_name} · ${s?.bar_name}${starRating?' · '+'★'.repeat(starRating):''}`);
+  closeOv('complete'); loadSessW(); loadShifts();
+}
+
+function setStar(n){starRating=n;document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));}
+
+function addLog(type,text){log.unshift({type,text,time:new Date()});renderLog();}
+function renderLog(){
+  const el=document.getElementById('event-log');
+  if(!log.length){el.innerHTML='<div style="color:var(--grey);font-size:12px;">Events will appear here.</div>';return;}
+  el.innerHTML=log.map(e=>`<div class="log-item t-${e.type}"><div class="lt">${e.time.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div><div class="lx">${e.text}</div></div>`).join('');
+}
 </script>
-
 </body>
 </html>
