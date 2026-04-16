@@ -297,7 +297,7 @@
           <p>These are big, well known venues so they will not be hard to find. We will also give you the name of who to ask for when you arrive.</p>
 
           <p class="section-heading">Arriving</p>
-          <p>Walk straight to the entrance and tell them you are from Glasi. The manager will give you a clock in code which you send straight to us. That is your shift started.</p>
+          <p>Head to the glass collection point if there is one, or to the pass at the bar — the gap where staff enter and exit. Let them know you are from Glasi. Your WhatsApp confirmation will include the name of who to ask for. They will give you a clock in code which you send straight to us. That is your shift started.</p>
 
           <p class="section-heading">The shift</p>
           <p>Your shift is a fixed length agreed before you go. When your time is up, you are done. You do not need permission to leave, you have completed what was agreed.</p>
@@ -463,11 +463,11 @@
             </div>
 
             <div class="question-block">
-              <label class="question-title">What do you do when you arrive at the venue?</label>
+              <label class="question-title">When you arrive at the venue, what do you do?</label>
               <div class="answers-list">
-                <label class="radio-option"><input type="radio" name="q5" value="start"><span class="radio-option-text">Find a member of staff and start working</span></label>
-                <label class="radio-option"><input type="radio" name="q5" value="entrance"><span class="radio-option-text">Go to the entrance and tell them you are from Glasi</span></label>
-                <label class="radio-option"><input type="radio" name="q5" value="wait"><span class="radio-option-text">Wait outside until contacted</span></label>
+                <label class="radio-option"><input type="radio" name="q5" value="wait"><span class="radio-option-text">Wait outside until someone comes to find you</span></label>
+                <label class="radio-option"><input type="radio" name="q5" value="manager"><span class="radio-option-text">Head to the glass collection point or the pass at the bar, tell them you are from Glasi and ask for the person named in your WhatsApp</span></label>
+                <label class="radio-option"><input type="radio" name="q5" value="start"><span class="radio-option-text">Start collecting glasses straight away so they can see you are keen</span></label>
               </div>
             </div>
           </div>
@@ -544,7 +544,7 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  if (q1 !== 'zoom' || q2 !== 'whatsapp' || q3 !== 'floor' || q4 !== 'keyword' || q5 !== 'entrance') {
+  if (q1 !== 'zoom' || q2 !== 'whatsapp' || q3 !== 'floor' || q4 !== 'keyword' || q5 !== 'manager') {
     feedback.innerHTML = `<div class="text-red-500 text-sm">One or more answers are not quite right. Please check the section above and try again.</div>`;
     return;
   }
