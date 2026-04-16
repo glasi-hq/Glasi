@@ -328,7 +328,7 @@ function doLogin() {
     document.getElementById('dashboard').style.display='block';
     document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     renderZones();
-    sbGet('applications','?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email').then(d=>allW=d);
+    sbGet('applications','?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email').then(d=>allW=Array.isArray(d)?d:[]);
   } else { document.getElementById('l-err').textContent='Incorrect email or password.'; }
 }
 document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -355,7 +355,8 @@ async function selectZone(id,name) {
 function backToZones() { renderZones(); }
 
 async function loadSessW() {
-  sessW=await sbGet('session_workers',`?zone_id=eq.${zone.id}&session_date=eq.${today()}&order=created_at.asc`);
+  const result=await sbGet('session_workers',`?zone_id=eq.${zone.id}&session_date=eq.${today()}&order=created_at.asc`);
+  sessW=Array.isArray(result)?result:[];
   renderWorkers();
 }
 
@@ -403,7 +404,8 @@ async function confirmAddWorkers() {
 }
 
 async function loadShifts() {
-  shifts=await sbGet('shifts',`?zoom_room=eq.${encodeURIComponent(zone.id)}&order=created_at.desc`);
+  const result=await sbGet('shifts',`?zoom_room=eq.${encodeURIComponent(zone.id)}&order=created_at.desc`);
+  shifts=Array.isArray(result)?result:[];
   renderShifts(); renderLog();
 }
 
