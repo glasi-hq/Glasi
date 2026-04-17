@@ -196,6 +196,29 @@
 
     .editable { cursor: text; border-bottom: 1px dashed var(--border); display: inline-block; min-width: 60px; padding: 1px 2px; transition: border-color 0.2s; }
     .editable:focus { outline: none; border-bottom-color: var(--ice); }
+
+    /* BAR CARDS */
+    .bar-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 12px; }
+    .bar-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+    .bar-card-name { font-size: 16px; font-weight: 500; margin-bottom: 3px; }
+    .bar-card-address { font-size: 12px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
+    .bar-status-badge { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+    .status-prospect { background: rgba(100,116,139,0.2); color: var(--grey); }
+    .status-trial { background: rgba(168,216,234,0.15); color: var(--ice); }
+    .status-active { background: rgba(34,197,94,0.15); color: var(--green); }
+    .status-paused { background: rgba(239,68,68,0.12); color: var(--red); }
+    .bar-card-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .bar-card-section-label { font-size: 9px; letter-spacing: 2px; color: var(--ice); text-transform: uppercase; margin-bottom: 10px; }
+    .bar-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .bar-action-btn { background: var(--navy); border: 1px solid var(--border); color: var(--white); border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .bar-action-btn:hover { border-color: var(--ice); color: var(--ice); }
+    .copy-address-btn { background: var(--ice-dim); border: 1px solid rgba(168,216,234,0.3); color: var(--ice); border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+    .contact-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--navy); border-radius: 10px; margin-bottom: 6px; }
+    .contact-info { flex: 1; }
+    .contact-name { font-size: 13px; font-weight: 500; }
+    .contact-meta { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
+    .contact-phone { font-size: 11px; color: var(--ice); font-family: 'JetBrains Mono', monospace; cursor: pointer; }
+    .contact-phone:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -266,6 +289,9 @@
     <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
       Shift Log <span class="tab-count" id="count-log"></span>
     </button>
+    <button class="tab-btn" onclick="switchTab('bars')" id="tab-bars">
+      Bars
+    </button>
     <div style="flex:1;"></div>
     <div class="session-time" id="session-timer"></div>
     <button class="close-session-btn" style="margin-left:16px;" onclick="confirmCloseSession()">Close Session</button>
@@ -319,6 +345,67 @@
         <tbody id="log-tbody"></tbody>
       </table>
       <div id="log-empty" class="empty">No shifts logged yet.</div>
+    </div>
+
+    <!-- BARS TAB -->
+    <div id="tab-content-bars" class="log-view" style="display:none;">
+      <div class="export-row">
+        <button class="small-ice-btn" onclick="openOv('add-bar')">+ Add Bar</button>
+      </div>
+      <div id="bars-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: ADD BAR -->
+<div class="overlay" id="ov-add-bar">
+  <div class="modal">
+    <div class="modal-title">Add Bar</div>
+    <label>Bar Name</label>
+    <input class="field" type="text" id="bar-name" placeholder="e.g. Dancing Man Brewery" />
+    <label>Full Address</label>
+    <input class="field" type="text" id="bar-address" placeholder="e.g. 7 King Street, Southampton, SO14 1JS" />
+    <label>Google Maps Link</label>
+    <input class="field" type="text" id="bar-maps" placeholder="Paste Google Maps link here" />
+    <label>Zone</label>
+    <select class="field" id="bar-zone">
+      <option value="southampton-city-centre">Southampton City Centre</option>
+      <option value="southampton-north">Southampton North</option>
+      <option value="southampton-east">Southampton East</option>
+      <option value="portsmouth-city-centre">Portsmouth City Centre</option>
+    </select>
+    <label>Status</label>
+    <select class="field" id="bar-status">
+      <option value="prospect">Prospect</option>
+      <option value="trial">Trial</option>
+      <option value="active">Active</option>
+      <option value="paused">Paused</option>
+    </select>
+    <label>Notes</label>
+    <textarea class="field" id="bar-notes" rows="3" placeholder="Entrance details, parking, anything useful..."></textarea>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('add-bar')">Cancel</button>
+      <button class="confirm-btn" onclick="saveBar()">Add Bar</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: ADD CONTACT -->
+<div class="overlay" id="ov-add-contact">
+  <div class="modal">
+    <div class="modal-title">Add Contact</div>
+    <div class="modal-sub" id="add-contact-bar-name"></div>
+    <label>Name</label>
+    <input class="field" type="text" id="contact-name" placeholder="e.g. Aidan" />
+    <label>Role</label>
+    <input class="field" type="text" id="contact-role" placeholder="e.g. Bar Manager, Duty Manager" />
+    <label>Phone</label>
+    <input class="field" type="text" id="contact-phone" placeholder="07..." />
+    <label>Nights Working</label>
+    <input class="field" type="text" id="contact-nights" placeholder="e.g. Fri, Sat or Mon-Wed" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('add-contact')">Cancel</button>
+      <button class="confirm-btn" onclick="saveContact()">Add Contact</button>
     </div>
   </div>
 </div>
@@ -603,6 +690,109 @@ function switchTab(name) {
   document.getElementById(`tab-content-${name}`).style.display='block';
   if(name==='log') renderLog();
   if(name==='onshift') renderOnShift();
+  if(name==='bars') loadBars();
+}
+
+// BARS
+let bars = [];
+let addingContactBarId = null;
+
+async function loadBars() {
+  const result = await sbGet('bars','?order=name.asc');
+  bars = Array.isArray(result) ? result : [];
+  const contacts = await sbGet('bar_contacts','?order=name.asc');
+  renderBars(bars, Array.isArray(contacts) ? contacts : []);
+}
+
+function renderBars(bars, contacts) {
+  const list = document.getElementById('bars-list');
+  if(!bars.length) { list.innerHTML='<div class="empty">No bars added yet.<br>Click + Add Bar to get started.</div>'; return; }
+  const statusClass = s => s==='active'?'status-active':s==='trial'?'status-trial':s==='paused'?'status-paused':'status-prospect';
+  list.innerHTML = bars.map(b => {
+    const barContacts = contacts.filter(c => c.bar_id === b.id);
+    return `<div class="bar-card">
+      <div class="bar-card-top">
+        <div>
+          <div class="bar-card-name">${b.name}</div>
+          <div class="bar-card-address">${b.address||'No address added'}</div>
+        </div>
+        <span class="bar-status-badge ${statusClass(b.status)}">${b.status||'prospect'}</span>
+      </div>
+      ${b.notes?`<div style="font-size:12px;color:var(--grey);margin-bottom:10px;">${b.notes}</div>`:''}
+      <div class="bar-actions">
+        ${b.address?`<button class="copy-address-btn" onclick="copyText('${b.address.replace(/'/g,"\\'")}', this)">Copy Address</button>`:''}
+        ${b.google_maps_link?`<button class="copy-address-btn" onclick="copyText('${b.google_maps_link.replace(/'/g,"\\'")}', this)">Copy Maps Link</button>`:''}
+        <select class="field" style="width:auto;padding:6px 10px;margin:0;font-size:12px;" onchange="updateBarStatus(${b.id}, this.value)">
+          <option value="prospect" ${b.status==='prospect'?'selected':''}>Prospect</option>
+          <option value="trial" ${b.status==='trial'?'selected':''}>Trial</option>
+          <option value="active" ${b.status==='active'?'selected':''}>Active</option>
+          <option value="paused" ${b.status==='paused'?'selected':''}>Paused</option>
+        </select>
+        <button class="bar-action-btn" onclick="openAddContact(${b.id}, '${b.name.replace(/'/g,"\\'")}')">+ Contact</button>
+      </div>
+      ${barContacts.length?`
+        <div class="bar-card-section">
+          <div class="bar-card-section-label">Contacts</div>
+          ${barContacts.map(c=>`
+            <div class="contact-row">
+              <div class="contact-info">
+                <div class="contact-name">${c.name} <span style="color:var(--grey);font-size:11px;">${c.role||''}</span></div>
+                <div class="contact-meta">${c.nights_working||''}</div>
+              </div>
+              <div class="contact-phone" onclick="copyText('${c.phone||''}', this)">${c.phone||''}</div>
+            </div>`).join('')}
+        </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(()=>btn.textContent=orig, 1500);
+  });
+}
+
+async function saveBar() {
+  const name = document.getElementById('bar-name').value.trim();
+  if(!name) return;
+  await sbPost('bars', {
+    name,
+    address: document.getElementById('bar-address').value.trim()||null,
+    google_maps_link: document.getElementById('bar-maps').value.trim()||null,
+    zone_id: document.getElementById('bar-zone').value,
+    status: document.getElementById('bar-status').value,
+    notes: document.getElementById('bar-notes').value.trim()||null
+  });
+  ['bar-name','bar-address','bar-maps','bar-notes'].forEach(id=>document.getElementById(id).value='');
+  closeOv('add-bar');
+  loadBars();
+}
+
+async function updateBarStatus(barId, status) {
+  await sbPatch('bars', `?id=eq.${barId}`, { status });
+}
+
+function openAddContact(barId, barName) {
+  addingContactBarId = barId;
+  document.getElementById('add-contact-bar-name').textContent = barName;
+  ['contact-name','contact-role','contact-phone','contact-nights'].forEach(id=>document.getElementById(id).value='');
+  openOv('add-contact');
+}
+
+async function saveContact() {
+  const name = document.getElementById('contact-name').value.trim();
+  if(!name || !addingContactBarId) return;
+  await sbPost('bar_contacts', {
+    bar_id: addingContactBarId,
+    name,
+    role: document.getElementById('contact-role').value.trim()||null,
+    phone: document.getElementById('contact-phone').value.trim()||null,
+    nights_working: document.getElementById('contact-nights').value.trim()||null
+  });
+  closeOv('add-contact');
+  loadBars();
 }
 
 function updateCounts() {
