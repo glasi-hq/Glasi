@@ -1215,7 +1215,6 @@ function confirmCloseSession() {
 // OVERLAYS
 function openOv(name) { document.getElementById(`ov-${name}`).classList.add('open'); }
 function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove('open'); }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 </script>
 </body>
 </html>
