@@ -243,16 +243,58 @@
   </div>
   <div class="hdr-right">
     <div class="hdr-date" id="hdr-date"></div>
-    <button class="ghost-btn" onclick="goToZones()">Change Zone</button>
+    <button class="ghost-btn" onclick="showScreen('home')">Home</button>
     <button class="ghost-btn" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen">
+  <div style="padding:48px 24px;max-width:680px;margin:0 auto;">
+    <div class="page-title">Good to see you, Sam</div>
+    <div class="page-sub" id="home-date"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px;">
+      <button class="zone-card" onclick="goToBars()" style="text-align:left;">
+        <div style="font-size:28px;margin-bottom:12px;">🍺</div>
+        <div class="zone-card-name">Bars</div>
+        <div class="zone-card-meta">Manage your bar pipeline, contacts and status</div>
+      </button>
+      <button class="zone-card" onclick="showScreen('zones');renderZones();" style="text-align:left;">
+        <div style="font-size:28px;margin-bottom:12px;">⚡</div>
+        <div class="zone-card-name">Dispatch</div>
+        <div class="zone-card-meta">Start a session and manage live shifts</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- BARS SCREEN -->
+<div id="screen-bars" class="screen">
+  <div style="padding:32px 24px;max-width:900px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title">Bars</div>
+        <div class="page-sub">Your pipeline, contacts and active venues</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="small-ice-btn" onclick="openOv('add-bar')">+ Add Bar</button>
+        <button class="ghost-btn" onclick="showScreen('home')">Back</button>
+      </div>
+    </div>
+    <div id="bars-screen-list"></div>
   </div>
 </div>
 
 <!-- ZONE SELECT -->
 <div id="screen-zones" class="screen">
-  <div class="page-title">Select your zone</div>
-  <div class="page-sub">Choose the zone you are dispatching for this session</div>
-  <div class="zones-grid" id="zones-grid"></div>
+  <div style="padding:48px 24px;max-width:680px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="page-title">Select your zone</div>
+      <button class="ghost-btn" onclick="showScreen('home')">Back</button>
+    </div>
+    <div class="page-sub">Choose the zone you are dispatching for this session</div>
+    <div class="zones-grid" id="zones-grid" style="margin-top:24px;"></div>
+  </div>
 </div>
 
 <!-- SETUP -->
@@ -288,9 +330,6 @@
     </button>
     <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
       Shift Log <span class="tab-count" id="count-log"></span>
-    </button>
-    <button class="tab-btn" onclick="switchTab('bars')" id="tab-bars">
-      Bars
     </button>
     <div style="flex:1;"></div>
     <div class="session-time" id="session-timer"></div>
@@ -345,14 +384,6 @@
         <tbody id="log-tbody"></tbody>
       </table>
       <div id="log-empty" class="empty">No shifts logged yet.</div>
-    </div>
-
-    <!-- BARS TAB -->
-    <div id="tab-content-bars" class="log-view" style="display:none;">
-      <div class="export-row">
-        <button class="small-ice-btn" onclick="openOv('add-bar')">+ Add Bar</button>
-      </div>
-      <div id="bars-list"></div>
     </div>
   </div>
 </div>
@@ -429,15 +460,29 @@
   <div class="modal">
     <div class="modal-title">Worker Dispatched</div>
     <div class="modal-sub" id="code-worker-bar"></div>
+
     <div class="code-display">
       <div class="code-display-label">Clock In Code</div>
       <div class="code-display-value" id="code-value"></div>
-      <button class="code-copy-btn" id="code-copy-btn" onclick="copyCode()">Copy Code</button>
     </div>
-    <p class="code-prompt">Send this code to the bar manager now</p>
-    <p class="code-prompt-sub" id="code-bar-contact"></p>
 
-    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+    <label>ETA (minutes)</label>
+    <input class="field" type="number" id="dispatch-eta" placeholder="e.g. 10" min="1" max="60" style="margin-bottom:16px;" />
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--amber);text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">Message to Bar Manager</div>
+        <div id="msg-bar-manager" style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;line-height:1.6;color:var(--white);white-space:pre-wrap;"></div>
+        <button class="copy-address-btn" style="margin-top:8px;width:100%;" onclick="copyMsg('msg-bar-manager', this)">Copy Bar Manager Message</button>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--ice);text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">Message to Worker</div>
+        <div id="msg-worker" style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;line-height:1.6;color:var(--white);white-space:pre-wrap;"></div>
+        <button class="copy-address-btn" style="margin-top:8px;width:100%;" onclick="copyMsg('msg-worker', this)">Copy Worker Message</button>
+      </div>
+    </div>
+
+    <div style="padding-top:20px;border-top:1px solid var(--border);">
       <label>Time Request Received</label>
       <input class="field" type="time" id="log-req-time" />
       <label>How did they request?</label>
@@ -544,7 +589,8 @@ function doLogin() {
     document.getElementById('header').style.display='flex';
     document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     loadAllWorkers();
-    showScreen('zones');
+    showScreen('home');
+    document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     renderZones();
   } else {
     document.getElementById('l-err').textContent='Incorrect email or password.';
@@ -585,7 +631,12 @@ async function selectZone(id) {
   showScreen('setup');
 }
 
-function goToZones() { showScreen('zones'); }
+function goToZones() { showScreen('zones'); renderZones(); }
+
+function goToBars() {
+  showScreen('bars');
+  loadBars();
+}
 
 // LOAD WORKERS
 async function loadAllWorkers() {
@@ -690,7 +741,6 @@ function switchTab(name) {
   document.getElementById(`tab-content-${name}`).style.display='block';
   if(name==='log') renderLog();
   if(name==='onshift') renderOnShift();
-  if(name==='bars') loadBars();
 }
 
 // BARS
@@ -701,11 +751,13 @@ async function loadBars() {
   const result = await sbGet('bars','?order=name.asc');
   bars = Array.isArray(result) ? result : [];
   const contacts = await sbGet('bar_contacts','?order=name.asc');
-  renderBars(bars, Array.isArray(contacts) ? contacts : []);
+  const allContacts = Array.isArray(contacts) ? contacts : [];
+  renderBars(bars, allContacts);
 }
 
 function renderBars(bars, contacts) {
-  const list = document.getElementById('bars-list');
+  const listId = document.getElementById('bars-screen-list') ? 'bars-screen-list' : 'bars-list';
+  const list = document.getElementById(listId);
   if(!bars.length) { list.innerHTML='<div class="empty">No bars added yet.<br>Click + Add Bar to get started.</div>'; return; }
   const statusClass = s => s==='active'?'status-active':s==='trial'?'status-trial':s==='paused'?'status-paused':'status-prospect';
   list.innerHTML = bars.map(b => {
@@ -739,7 +791,10 @@ function renderBars(bars, contacts) {
                 <div class="contact-name">${c.name} <span style="color:var(--grey);font-size:11px;">${c.role||''}</span></div>
                 <div class="contact-meta">${c.nights_working||''}</div>
               </div>
-              <div class="contact-phone" onclick="copyText('${c.phone||''}', this)">${c.phone||''}</div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button onclick="toggleOnDuty(${c.id}, ${c.on_duty?'false':'true'}, ${b.id})" style="background:${c.on_duty?'rgba(34,197,94,0.2)':'var(--navy)'};border:1px solid ${c.on_duty?'rgba(34,197,94,0.4)':'var(--border)'};color:${c.on_duty?'var(--green)':'var(--grey)'};border-radius:6px;padding:4px 10px;font-size:10px;cursor:pointer;">${c.on_duty?'On Duty':'Off'}</button>
+                <div class="contact-phone" onclick="copyText('${c.phone||''}', this)">${c.phone||''}</div>
+              </div>
             </div>`).join('')}
         </div>`:''}
     </div>`;
@@ -789,9 +844,24 @@ async function saveContact() {
     name,
     role: document.getElementById('contact-role').value.trim()||null,
     phone: document.getElementById('contact-phone').value.trim()||null,
-    nights_working: document.getElementById('contact-nights').value.trim()||null
+    nights_working: document.getElementById('contact-nights').value.trim()||null,
+    on_duty: false
   });
   closeOv('add-contact');
+  loadBars();
+}
+
+async function toggleOnDuty(contactId, newVal, barId) {
+  // if turning on, turn off all others for this bar first
+  if(newVal===true) {
+    const contacts = await sbGet('bar_contacts',`?bar_id=eq.${barId}`);
+    for(const c of contacts) {
+      if(c.id!==contactId && c.on_duty) {
+        await sbPatch('bar_contacts',`?id=eq.${c.id}`,{on_duty:false});
+      }
+    }
+  }
+  await sbPatch('bar_contacts',`?id=eq.${contactId}`,{on_duty:newVal});
   loadBars();
 }
 
@@ -842,33 +912,89 @@ function openDispatch(wid) {
   const w=sessionWorkers.find(x=>x.id===wid);
   document.getElementById('dispatch-worker-name').textContent=w.name;
   document.getElementById('dispatch-worker-details').textContent=`${w.phone||''} · ${w.postcode_full||''}`;
-  const bars=activeZone.bars||[];
-  document.getElementById('dispatch-bar-select').innerHTML=bars.map(b=>`<option value="${b}">${b}</option>`).join('');
+  // populate bar dropdown from loaded bars filtered by zone
+  const zoneBars=bars.filter(b=>b.zone_id===activeZone.id&&(b.status==='active'||b.status==='trial'));
+  const fallback=activeZone.bars||[];
+  if(zoneBars.length){
+    document.getElementById('dispatch-bar-select').innerHTML=zoneBars.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  } else {
+    document.getElementById('dispatch-bar-select').innerHTML=fallback.map(b=>`<option value="${b}">${b}</option>`).join('');
+  }
   openOv('dispatch-bar');
 }
 
-function confirmDispatchBar() {
-  const bar=document.getElementById('dispatch-bar-select').value;
+async function confirmDispatchBar() {
+  const barVal=document.getElementById('dispatch-bar-select').value;
   const w=sessionWorkers.find(x=>x.id===dispatchingWorkerId);
-  if(!w||!bar) return;
-  dispatchingBar=bar;
+  if(!w||!barVal) return;
+
+  // find full bar record
+  const barRecord=bars.find(b=>String(b.id)===String(barVal)) || {name:barVal, address:'', google_maps_link:'', id:null};
+  dispatchingBar=barRecord.name;
   dispatchCode=w.code;
   dispatchedAt=new Date().toISOString();
   w.status='dispatched';
-  w.bar=bar;
+  w.bar=barRecord.name;
+  w.barRecord=barRecord;
   w.dispatchedAt=dispatchedAt;
   closeOv('dispatch-bar');
+
+  // fetch on duty contact for this bar
+  let onDutyContact = null;
+  if(barRecord.id) {
+    const contacts = await sbGet('bar_contacts',`?bar_id=eq.${barRecord.id}&on_duty=eq.true`);
+    if(contacts.length) onDutyContact = contacts[0];
+    // fallback to first contact if none marked on duty
+    if(!onDutyContact) {
+      const allContacts = await sbGet('bar_contacts',`?bar_id=eq.${barRecord.id}&order=name.asc`);
+      if(allContacts.length) onDutyContact = allContacts[0];
+    }
+  }
+
+  const contactName = onDutyContact ? onDutyContact.name : 'the manager';
+  const shiftLength = document.getElementById('log-shift-length')?.value || '3';
+
   document.getElementById('code-value').textContent=dispatchCode;
-  document.getElementById('code-worker-bar').textContent=`${w.name} dispatched to ${bar}`;
-  const zone=activeZone;
-  document.getElementById('code-bar-contact').textContent=`Send to bar manager at ${bar}`;
+  document.getElementById('code-worker-bar').textContent=`${w.name} dispatched to ${barRecord.name}`;
   document.getElementById('log-req-time').value=nowT();
   document.getElementById('log-wage').value='12.21';
-  document.getElementById('code-copy-btn').textContent='Copy Code';
+  document.getElementById('dispatch-eta').value='';
+
+  // build messages — will update when ETA is typed
+  window._dispatchContext = { w, barRecord, contactName, shiftLength };
+  buildDispatchMessages();
+
+  // live update messages when ETA changes
+  document.getElementById('dispatch-eta').oninput = buildDispatchMessages;
+
   openOv('dispatch-code');
   renderRoom();
   renderOnShift();
   updateCounts();
+}
+
+function buildDispatchMessages() {
+  const ctx = window._dispatchContext;
+  if(!ctx) return;
+  const eta = document.getElementById('dispatch-eta').value || '?';
+  const { w, barRecord, contactName, shiftLength } = ctx;
+
+  const barMsg = `Hi ${contactName}, ${w.name} is on their way to you now. ETA approximately ${eta} minutes. When they arrive give them this code: ${dispatchCode}. Any issues call me on 07803 856 078.`;
+
+  const workerMsg = `Head to ${barRecord.name} — ${barRecord.address||'see address below'}. ${barRecord.google_maps_link||''}
+Ask for ${contactName} on arrival. Your shift is ${shiftLength} hours. Reply with your live location now and head straight there. When you arrive ask the bar manager for your clock in code and send it straight back to me.`;
+
+  document.getElementById('msg-bar-manager').textContent = barMsg;
+  document.getElementById('msg-worker').textContent = workerMsg;
+}
+
+function copyMsg(elId, btn) {
+  const text = document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(()=>btn.textContent=orig, 1500);
+  });
 }
 
 function copyCode() {
