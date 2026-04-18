@@ -1405,6 +1405,10 @@ function copyZoomPost(btn) {
     btn.textContent = 'Copied!';
     setTimeout(() => btn.textContent = 'Copy to Zoom', 1500);
   });
+  // log posted_at if we have a saved request id
+  if(currentRequestId) {
+    sbPatch('shift_requests', `?id=eq.${currentRequestId}`, { posted_at: new Date().toISOString() });
+  }
 }
 
 async function saveShiftRequest() {
