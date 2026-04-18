@@ -1285,7 +1285,6 @@ async function confirmDispatchBar() {
   }
 
   const contactName = onDutyContact ? onDutyContact.name : 'the manager';
-  const latestRequest = activeShiftRequests.length ? activeShiftRequests[activeShiftRequests.length-1] : null;
   const shiftLength = latestRequest?.shift_length_hours || '3';
   w.shiftLength = String(shiftLength);
   w.requestTime = latestRequest?.request_time || null;
