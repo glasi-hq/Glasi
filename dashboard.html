@@ -257,6 +257,7 @@
     <div class="hdr-wordmark" onclick="showScreen('home');setActiveNav(null)">GLASI</div>
     <nav class="hdr-nav">
       <button class="hdr-nav-btn" id="nav-bars" onclick="goToBars()">Bars</button>
+      <button class="hdr-nav-btn" id="nav-workers" onclick="goToWorkers()">Workers</button>
       <button class="hdr-nav-btn" id="nav-dispatch" onclick="showScreen('zones');renderZones();setActiveNav('dispatch')">Dispatch</button>
       <button class="hdr-nav-btn" id="nav-shifts" onclick="goToShifts()">Shifts</button>
       <button class="hdr-nav-btn" id="nav-requests" onclick="goToRequests()">Requests</button>
@@ -273,11 +274,16 @@
   <div style="padding:48px 24px;max-width:780px;margin:0 auto;">
     <div class="page-title">Good to see you, Sam</div>
     <div class="page-sub" id="home-date"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:32px;">
       <button class="zone-card" onclick="goToBars()" style="text-align:left;">
         <div style="font-size:28px;margin-bottom:12px;">🍺</div>
         <div class="zone-card-name">Bars</div>
         <div class="zone-card-meta">Manage your bar pipeline, contacts and status</div>
+      </button>
+      <button class="zone-card" onclick="goToWorkers()" style="text-align:left;">
+        <div style="font-size:28px;margin-bottom:12px;">👥</div>
+        <div class="zone-card-name">Workers</div>
+        <div class="zone-card-meta">View and manage your worker pool and tiers</div>
       </button>
       <button class="zone-card" onclick="showScreen('zones');renderZones();setActiveNav('dispatch')" style="text-align:left;">
         <div style="font-size:28px;margin-bottom:12px;">⚡</div>
@@ -315,14 +321,51 @@
   </div>
 </div>
 
+<!-- WORKERS SCREEN -->
+<div id="screen-workers" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div class="page-title">Workers</div>
+        <div class="page-sub">View and manage your worker pool</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <input class="field" type="text" id="worker-filter-name" placeholder="Search by name..." style="max-width:220px;margin-bottom:0;" oninput="renderWorkerList()">
+      <input class="field" type="text" id="worker-filter-postcode" placeholder="Search by postcode..." style="max-width:180px;margin-bottom:0;" oninput="renderWorkerList()">
+      <select class="field" id="worker-filter-tier" style="max-width:160px;margin-bottom:0;" onchange="renderWorkerList()">
+        <option value="">All tiers</option>
+        <option value="1">Tier 1</option>
+        <option value="2">Tier 2</option>
+        <option value="3">Tier 3</option>
+        <option value="4">Tier 4</option>
+        <option value="5">Tier 5</option>
+      </select>
+      <select class="field" id="worker-filter-active" style="max-width:160px;margin-bottom:0;" onchange="renderWorkerList()">
+        <option value="">All workers</option>
+        <option value="true">Active only</option>
+        <option value="false">Inactive only</option>
+      </select>
+    </div>
+    <div id="workers-list"><div class="empty">Loading workers...</div></div>
+  </div>
+</div>
+
 <!-- SHIFTS SCREEN -->
 <div id="screen-shifts" class="screen">
   <div class="history-screen">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <div>
         <div class="page-title">Shifts</div>
         <div class="page-sub">All completed shifts across every session</div>
       </div>
+      <button class="small-ice-btn" onclick="exportShiftsCSV()">Export CSV</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <input class="field" type="date" id="shift-filter-date" style="max-width:180px;margin-bottom:0;" onchange="renderShiftsList()">
+      <input class="field" type="text" id="shift-filter-worker" placeholder="Filter by worker..." style="max-width:200px;margin-bottom:0;" oninput="renderShiftsList()">
+      <input class="field" type="text" id="shift-filter-bar" placeholder="Filter by bar..." style="max-width:200px;margin-bottom:0;" oninput="renderShiftsList()">
+      <button class="ghost-btn" onclick="clearShiftFilters()">Clear filters</button>
     </div>
     <div id="shifts-list">
       <div class="empty">Loading shifts...</div>
@@ -478,6 +521,43 @@
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('request')">Cancel</button>
       <button class="confirm-btn" onclick="saveShiftRequest()">Save Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: EDIT WORKER -->
+<div class="overlay" id="ov-edit-worker">
+  <div class="modal">
+    <div class="modal-title" id="edit-worker-title">Edit Worker</div>
+    <div class="modal-sub" id="edit-worker-email"></div>
+    <label>Name</label>
+    <input class="field" type="text" id="edit-worker-name" />
+    <label>Phone</label>
+    <input class="field" type="text" id="edit-worker-phone" />
+    <label>Postcode</label>
+    <input class="field" type="text" id="edit-worker-postcode" />
+    <label>Tier</label>
+    <select class="field" id="edit-worker-tier">
+      <option value="1">Tier 1 — £12.21/hr</option>
+      <option value="2">Tier 2 — £13.21/hr</option>
+      <option value="3">Tier 3 — £14.21/hr</option>
+      <option value="4">Tier 4 — £15.21/hr</option>
+      <option value="5">Tier 5 — £16.21/hr</option>
+    </select>
+    <label>Hourly Rate (£)</label>
+    <input class="field" type="number" id="edit-worker-rate" step="0.01" />
+    <label>Availability Notes</label>
+    <input class="field" type="text" id="edit-worker-availability" placeholder="e.g. fri_20_00,sat_20_00" />
+    <label>Reliability Notes</label>
+    <textarea class="field" id="edit-worker-notes" rows="3"></textarea>
+    <label>Status</label>
+    <select class="field" id="edit-worker-active">
+      <option value="true">Active</option>
+      <option value="false">Inactive</option>
+    </select>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('edit-worker')">Cancel</button>
+      <button class="confirm-btn" onclick="saveWorkerEdit()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -747,10 +827,98 @@ function goToShifts() {
   loadShiftsHistory();
 }
 
+function goToWorkers() {
+  showScreen('workers');
+  setActiveNav('workers');
+  loadWorkers();
+}
+
 function goToRequests() {
   showScreen('requests');
   setActiveNav('requests');
   loadRequestsHistory();
+}
+
+// WORKERS
+let allWorkersData = [];
+let editingWorkerId = null;
+
+async function loadWorkers() {
+  const list = document.getElementById('workers-list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  allWorkersData = await sbGet('applications', '?order=name.asc&select=id,name,phone,email,postcode_full,tier,hourly_rate,active,age_group,reliability_notes,available_hours');
+  renderWorkerList();
+}
+
+function renderWorkerList() {
+  const list = document.getElementById('workers-list');
+  const nameFilter = document.getElementById('worker-filter-name').value.toLowerCase();
+  const postcodeFilter = document.getElementById('worker-filter-postcode').value.toLowerCase();
+  const tierFilter = document.getElementById('worker-filter-tier').value;
+  const activeFilter = document.getElementById('worker-filter-active').value;
+
+  let filtered = allWorkersData.filter(w => {
+    if(nameFilter && !w.name?.toLowerCase().includes(nameFilter)) return false;
+    if(postcodeFilter && !w.postcode_full?.toLowerCase().includes(postcodeFilter)) return false;
+    if(tierFilter && String(w.tier||1) !== tierFilter) return false;
+    if(activeFilter !== '' && String(w.active !== false) !== activeFilter) return false;
+    return true;
+  });
+
+  if(!filtered.length) { list.innerHTML = '<div class="empty">No workers match your filters.</div>'; return; }
+
+  const tierRate = t => [12.21,13.21,14.21,15.21,16.21][parseInt(t||1)-1];
+
+  list.innerHTML = `<table class="history-table">
+    <thead><tr>
+      <th>Name</th><th>Postcode</th><th>Email</th><th>Phone</th><th>Tier</th><th>Rate</th><th>Status</th><th></th>
+    </tr></thead>
+    <tbody>${filtered.map(w=>`<tr>
+      <td style="font-weight:500;">${w.name||''}</td>
+      <td><span class="mono">${w.postcode_full||''}</span></td>
+      <td><span class="mono" style="font-size:11px;">${w.email||''}</span></td>
+      <td><span class="mono">${w.phone||''}</span></td>
+      <td><span class="status-badge badge-pending">Tier ${w.tier||1}</span></td>
+      <td><span class="mono">£${(w.hourly_rate||tierRate(w.tier)).toFixed(2)}/hr</span></td>
+      <td><span class="status-badge ${w.active===false?'badge-unfilled':'badge-completed'}">${w.active===false?'Inactive':'Active'}</span></td>
+      <td><button class="ghost-btn" onclick="openEditWorker(${w.id})">Edit</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function openEditWorker(id) {
+  const w = allWorkersData.find(x => x.id === id);
+  if(!w) return;
+  editingWorkerId = id;
+  document.getElementById('edit-worker-title').textContent = w.name;
+  document.getElementById('edit-worker-email').textContent = w.email;
+  document.getElementById('edit-worker-name').value = w.name||'';
+  document.getElementById('edit-worker-phone').value = w.phone||'';
+  document.getElementById('edit-worker-postcode').value = w.postcode_full||'';
+  document.getElementById('edit-worker-tier').value = w.tier||1;
+  document.getElementById('edit-worker-rate').value = w.hourly_rate||(w.tier?[12.21,13.21,14.21,15.21,16.21][w.tier-1]:12.21);
+  document.getElementById('edit-worker-availability').value = w.available_hours||'';
+  document.getElementById('edit-worker-notes').value = w.reliability_notes||'';
+  document.getElementById('edit-worker-active').value = w.active===false?'false':'true';
+  openOv('edit-worker');
+}
+
+async function saveWorkerEdit() {
+  if(!editingWorkerId) return;
+  const tier = parseInt(document.getElementById('edit-worker-tier').value);
+  const rate = parseFloat(document.getElementById('edit-worker-rate').value);
+  await sbPatch('applications', `?id=eq.${editingWorkerId}`, {
+    name: document.getElementById('edit-worker-name').value.trim(),
+    phone: document.getElementById('edit-worker-phone').value.trim()||null,
+    postcode_full: document.getElementById('edit-worker-postcode').value.trim()||null,
+    tier: tier,
+    hourly_rate: rate,
+    available_hours: document.getElementById('edit-worker-availability').value.trim()||null,
+    reliability_notes: document.getElementById('edit-worker-notes').value.trim()||null,
+    active: document.getElementById('edit-worker-active').value === 'true'
+  });
+  closeOv('edit-worker');
+  loadWorkers();
 }
 
 // ZONES
@@ -775,7 +943,7 @@ async function selectZone(id) {
 function goToZones() { showScreen('zones'); renderZones(); setActiveNav('dispatch'); }
 
 async function loadAllWorkers() {
-  allWorkers=await sbGet('applications','?age_group=not.is.null&order=name.asc&select=id,name,phone,postcode_full,email');
+  allWorkers=await sbGet('applications','?age_group=not.is.null&active=not.eq.false&order=name.asc&select=id,name,phone,postcode_full,email,tier,hourly_rate');
 }
 
 // SETUP
@@ -870,6 +1038,7 @@ async function startSession() {
     clockInAt: null,
     clockInCode: null,
     shiftLength: null,
+    hourly_rate: w.hourly_rate||12.21,
     wage: null,
     clockOutAt: null,
     rating: null,
@@ -1320,12 +1489,17 @@ function confirmComplete() {
 
 async function saveShiftToSupabase(w) {
   try {
+    const rate = parseFloat(w.hourly_rate||w.wage||12.21);
+    const hours = parseFloat(w.shiftLength)||null;
+    const total = rate && hours ? parseFloat((rate*hours).toFixed(2)) : null;
     await sbPost('shifts',{
       session_id: activeSessionId,
       shift_request_id: w.shiftRequestId||null,
       session_worker_id: w.sessionWorkerId||null,
       bar_id: w.barRecord?.id||null,
-      shift_length_hours: parseFloat(w.shiftLength)||null,
+      shift_length_hours: hours,
+      hourly_rate: rate,
+      total_earned: total,
       requested_at: toISO(w.requestTime),
       accepted_at: w.dispatchedAt,
       clock_in_confirmed_at: w.clockInAt,
@@ -1529,25 +1703,104 @@ async function saveShiftRequest() {
 }
 
 // SHIFTS HISTORY
+let allShiftsData = [];
+
 async function loadShiftsHistory() {
   const list = document.getElementById('shifts-list');
   list.innerHTML = '<div class="empty">Loading...</div>';
-  const data = await sbGet('shifts', '?order=created_at.desc&select=*,bars(name),session_workers(worker_name)');
-  if(!data.length) { list.innerHTML = '<div class="empty">No shifts recorded yet.</div>'; return; }
+  allShiftsData = await sbGet('shifts', '?order=created_at.desc&select=*,bars(name),session_workers(worker_name)');
+  renderShiftsList();
+}
+
+function renderShiftsList() {
+  const list = document.getElementById('shifts-list');
+  const dateFilter = document.getElementById('shift-filter-date')?.value;
+  const workerFilter = document.getElementById('shift-filter-worker')?.value.toLowerCase();
+  const barFilter = document.getElementById('shift-filter-bar')?.value.toLowerCase();
+
+  let filtered = allShiftsData.filter(s => {
+    if(dateFilter && !s.created_at?.startsWith(dateFilter)) return false;
+    if(workerFilter && !s.session_workers?.worker_name?.toLowerCase().includes(workerFilter)) return false;
+    if(barFilter && !s.bars?.name?.toLowerCase().includes(barFilter)) return false;
+    return true;
+  });
+
+  if(!filtered.length) { list.innerHTML = '<div class="empty">No shifts match your filters.</div>'; return; }
+
   list.innerHTML = `<table class="history-table">
     <thead><tr>
-      <th>Worker</th><th>Bar</th><th>Clock In</th><th>Clock Out</th><th>Length</th><th>Rating</th><th>Status</th>
+      <th>Worker</th><th>Bar</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Length</th><th>Rate</th><th>Total</th><th>Rating</th><th>Status</th>
     </tr></thead>
-    <tbody>${data.map(s=>`<tr>
-      <td>${s.session_workers?.worker_name||'Unknown'}</td>
-      <td>${s.bars?.name||'Unknown'}</td>
-      <td><span class="mono">${fmtT(s.clock_in_confirmed_at)}</span></td>
-      <td><span class="mono">${fmtT(s.clock_out_confirmed_at)}</span></td>
-      <td><span class="mono">${s.shift_length_hours||''}hr</span></td>
-      <td>${s.bar_rating?'★'.repeat(s.bar_rating):'—'}</td>
-      <td><span class="status-badge badge-${s.status||'completed'}">${s.status||'completed'}</span></td>
-    </tr>`).join('')}</tbody>
+    <tbody>${filtered.map(s=>{
+      const rate = s.hourly_rate||0;
+      const hours = parseFloat(s.shift_length_hours)||0;
+      const total = rate && hours ? (rate*hours).toFixed(2) : '';
+      return `<tr>
+        <td style="font-weight:500;">${s.session_workers?.worker_name||'Unknown'}</td>
+        <td>${s.bars?.name||'Unknown'}</td>
+        <td><span class="mono">${s.created_at?s.created_at.split('T')[0]:''}</span></td>
+        <td><span class="mono">${fmtT(s.clock_in_confirmed_at)}</span></td>
+        <td><span class="mono">${fmtT(s.clock_out_confirmed_at)}</span></td>
+        <td><span class="mono">${hours||''}hr</span></td>
+        <td><span class="mono">${rate?'£'+rate.toFixed(2)+'/hr':''}</span></td>
+        <td><span class="mono">${total?'£'+total:''}</span></td>
+        <td>${s.bar_rating?'★'.repeat(s.bar_rating):'—'}</td>
+        <td><span class="status-badge badge-${s.status||'completed'}">${s.status||'completed'}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
   </table>`;
+}
+
+function clearShiftFilters() {
+  document.getElementById('shift-filter-date').value = '';
+  document.getElementById('shift-filter-worker').value = '';
+  document.getElementById('shift-filter-bar').value = '';
+  renderShiftsList();
+}
+
+function exportShiftsCSV() {
+  const dateFilter = document.getElementById('shift-filter-date')?.value;
+  const workerFilter = document.getElementById('shift-filter-worker')?.value.toLowerCase();
+  const barFilter = document.getElementById('shift-filter-bar')?.value.toLowerCase();
+
+  let filtered = allShiftsData.filter(s => {
+    if(dateFilter && !s.created_at?.startsWith(dateFilter)) return false;
+    if(workerFilter && !s.session_workers?.worker_name?.toLowerCase().includes(workerFilter)) return false;
+    if(barFilter && !s.bars?.name?.toLowerCase().includes(barFilter)) return false;
+    return true;
+  });
+
+  if(!filtered.length) { alert('No shifts to export.'); return; }
+
+  const headers = ['Worker','Bar','Date','Clock In','Clock Out','Shift Length (hrs)','Hourly Rate','Total Earned','Clock In Code','Rating','Notes','Status'];
+  const rows = filtered.map(s => {
+    const rate = s.hourly_rate||'';
+    const hours = parseFloat(s.shift_length_hours)||'';
+    const total = rate && hours ? (rate*hours).toFixed(2) : '';
+    return [
+      s.session_workers?.worker_name||'',
+      s.bars?.name||'',
+      s.created_at?s.created_at.split('T')[0]:'',
+      fmtT(s.clock_in_confirmed_at),
+      fmtT(s.clock_out_confirmed_at),
+      hours,
+      rate?'£'+parseFloat(rate).toFixed(2):'',
+      total?'£'+total:'',
+      s.clock_in_code||'',
+      s.bar_rating||'',
+      s.notes||'',
+      s.status||''
+    ];
+  });
+
+  const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `glasi-shifts-${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // REQUESTS HISTORY
