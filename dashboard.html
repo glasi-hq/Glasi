@@ -1357,60 +1357,49 @@ function renderOnShift() {
   const allActive=[...dispatched,...onshift];
   const list=document.getElementById('onshift-list');
   if(!allActive.length) { list.innerHTML='<div class="empty">No workers on shift yet.</div>'; }
-  else {
-    list.innerHTML=allActive.map(w=>{
-      const isOnShift=w.status==='onshift';
-      const shiftMins = parseFloat(w.shiftLength||0) * 60;
-      const elapsedMins = w.clockInAt ? (Date.now() - new Date(w.clockInAt).getTime()) / 60000 : 0;
-      const remainingMins = Math.max(0, shiftMins - elapsedMins);
-      const endingSoon = isOnShift && remainingMins <= 3 && remainingMins > 0;
-      const shiftEnded = isOnShift && remainingMins <= 0 && shiftMins > 0;
-      const remainH = Math.floor(remainingMins/60);
-      const remainM = Math.floor(remainingMins%60);
-      const remainS = Math.floor((remainingMins*60)%60);
-      const countdownStr = `${remainH>0?remainH+'h ':''}`+`${String(remainM).padStart(2,'0')}m `+`${String(remainS).padStart(2,'0')}s remaining`;
+  else { list.innerHTML=allActive.map(w=>renderShiftCard(w)).join(''); }
+}
 
-      const clockOutMsg = w.barRecord ? `Hi ${w.barContact||'Wolf'}, ${w.name}'s shift ends in 3 minutes. Please give them this clock out code when their shift ends: ${w.clockOutCode}. Thank you.` : '';
+function renderShiftCard(w) {
+  const isOnShift=w.status==='onshift';
+  const shiftMins = parseFloat(w.shiftLength||0) * 60;
+  const elapsedMins = w.clockInAt ? (Date.now() - new Date(w.clockInAt).getTime()) / 60000 : 0;
+  const remainingMins = Math.max(0, shiftMins - elapsedMins);
+  const endingSoon = isOnShift && remainingMins <= 3 && remainingMins > 0;
+  const shiftEnded = isOnShift && remainingMins <= 0 && shiftMins > 0;
+  const remainH = Math.floor(remainingMins/60);
+  const remainM = Math.floor(remainingMins%60);
+  const remainS = Math.floor((remainingMins*60)%60);
+  const countdownStr = (remainH>0?remainH+'h ':'')+String(remainM).padStart(2,'0')+'m '+String(remainS).padStart(2,'0')+'s remaining';
+  const clockOutMsg = w.barRecord ? 'Hi '+(w.barContact||'the manager')+', '+w.name+"'s shift ends in 3 minutes. Please give them this clock out code when their shift ends: "+w.clockOutCode+'. Thank you.' : '';
+  const endingClass = (endingSoon||shiftEnded) ? ' ending-soon' : '';
+  const cdHtml = (isOnShift&&shiftMins>0) ? '<div class="countdown-timer'+(endingSoon||shiftEnded?' warning':'')+'" id="cd-'+w.id+'">'+(shiftEnded?'Shift ended':countdownStr)+'</div>' : '';
+  const clockOutSection = (endingSoon||shiftEnded) ? '<div style="font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600;">Shift ending — send clock out code to bar manager</div><div class="clockout-msg-box" id="com-'+w.id+'">'+clockOutMsg+'</div><button class="code-confirm-btn" style="width:100%;margin-bottom:10px;" onclick="copyClockOutMsg(\''+w.id+'\', this)">Copy Message to Bar Manager</button>' : '';
 
-      return `<div class="shift-active-card${endingSoon||shiftEnded?' ending-soon':''}" id="sac-${w.id}">
-        <div class="sac-top">
-          <div>
-            <div class="sac-name">${w.name}</div>
-            <div class="sac-bar">${w.bar}</div>
-            ${isOnShift&&shiftMins>0?`<div class="countdown-timer${endingSoon||shiftEnded?' warning':''}" id="cd-${w.id}">${shiftEnded?'Shift ended':countdownStr}</div>`:''}
-          </div>
-          <div class="sac-details">
-            Clock in code: <strong style="color:var(--ice);font-size:14px;letter-spacing:2px;">${w.code}</strong><br>
-            ${w.dispatchedAt?'Dispatched: '+fmtT(w.dispatchedAt):''}
-            ${isOnShift?'<br>Clocked in: '+fmtT(w.clockInAt):''}
-          </div>
-        </div>
-        ${!isOnShift?`
-          <div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Worker sends you their clock in code from the manager</div>
-          <div class="code-confirm-row">
-            <input class="code-confirm-input" type="text" placeholder="Enter code" maxlength="4" id="ci-${w.id}" />
-            <button class="code-confirm-btn" onclick="confirmClockIn('${w.id}')">Confirm Arrival</button>
-          </div>`:
-          `<div>
-            ${endingSoon||shiftEnded?`
-              <div style="font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600;">Shift ending — send clock out code to bar manager</div>
-              <div class="clockout-msg-box" id="com-${w.id}">${clockOutMsg}</div>
-              <button class="code-confirm-btn" style="width:100%;margin-bottom:10px;" onclick="copyClockOutMsg('${w.id}', this)">Copy Message to Bar Manager</button>
-            `:''}
-            <div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Enter clock out code from worker</div>
-            <div class="code-confirm-row">
-              <input class="code-confirm-input" type="text" placeholder="Enter code" maxlength="4" id="co-${w.id}" />
-              <button class="code-confirm-btn" onclick="confirmClockOut('${w.id}')">Confirm Clock Out</button>
-            </div>
-            <div style="margin-top:8px;display:flex;gap:8px;">
-              <button class="edit-btn" onclick="showClockOutCode('${w.id}', '${w.clockOutCode}')">Show Clock Out Code</button>
-              <button class="edit-btn" onclick="undoClockIn('${w.id}')">Undo Clock In</button>
-            </div>
-          </div>`
-        }
-      </div>`;
-    }).join('');
+  if(!isOnShift) {
+    return '<div class="shift-active-card" id="sac-'+w.id+'">'
+      +'<div class="sac-top"><div><div class="sac-name">'+w.name+'</div><div class="sac-bar">'+w.bar+'</div></div>'
+      +'<div class="sac-details">Clock in code: <strong style="color:var(--ice);font-size:14px;letter-spacing:2px;">'+w.code+'</strong><br>'
+      +(w.dispatchedAt?'Dispatched: '+fmtT(w.dispatchedAt):'')+'</div></div>'
+      +'<div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Worker sends you their clock in code from the manager</div>'
+      +'<div class="code-confirm-row"><input class="code-confirm-input" type="text" placeholder="Enter code" maxlength="4" id="ci-'+w.id+'" />'
+      +'<button class="code-confirm-btn" onclick="confirmClockIn(\''+w.id+'\')">Confirm Arrival</button></div></div>';
   }
+
+  return '<div class="shift-active-card'+endingClass+'" id="sac-'+w.id+'">'
+    +'<div class="sac-top"><div><div class="sac-name">'+w.name+'</div><div class="sac-bar">'+w.bar+'</div>'+cdHtml+'</div>'
+    +'<div class="sac-details">Clock in code: <strong style="color:var(--ice);font-size:14px;letter-spacing:2px;">'+w.code+'</strong><br>'
+    +(w.dispatchedAt?'Dispatched: '+fmtT(w.dispatchedAt):'')
+    +'<br>Clocked in: '+fmtT(w.clockInAt)+'</div></div>'
+    +clockOutSection
+    +'<div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Enter clock out code from worker</div>'
+    +'<div class="code-confirm-row"><input class="code-confirm-input" type="text" placeholder="Enter code" maxlength="4" id="co-'+w.id+'" />'
+    +'<button class="code-confirm-btn" onclick="confirmClockOut(\''+w.id+'\')">Confirm Clock Out</button></div>'
+    +'<div style="margin-top:8px;display:flex;gap:8px;">'
+    +'<button class="edit-btn" onclick="showClockOutCode(\''+w.id+'\', \''+w.clockOutCode+'\')">Show Clock Out Code</button>'
+    +'<button class="edit-btn" onclick="undoClockIn(\''+w.id+'\')">Undo Clock In</button>'
+    +'</div></div>';
+}
 
 function confirmClockIn(wid) {
   const w=sessionWorkers.find(x=>x.id===wid);
