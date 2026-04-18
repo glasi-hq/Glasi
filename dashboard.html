@@ -43,10 +43,13 @@
     .err { color: var(--red); font-size: 12px; margin-top: 8px; }
 
     /* HEADER */
-    #header { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; display: none; }
-    .hdr-left { display: flex; align-items: center; gap: 14px; }
-    .hdr-wordmark { font-weight: 400; font-size: 16px; letter-spacing: 5px; color: var(--white); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 12px; }
-    .hdr-title { font-size: 10px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; }
+    #header { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; display: none; height: 49px; }
+    .hdr-left { display: flex; align-items: center; gap: 0; }
+    .hdr-wordmark { font-weight: 400; font-size: 14px; letter-spacing: 5px; color: var(--white); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 10px; margin-right: 16px; cursor: pointer; }
+    .hdr-nav { display: flex; align-items: center; height: 49px; }
+    .hdr-nav-btn { background: transparent; border: none; color: var(--grey); padding: 0 16px; font-size: 13px; cursor: pointer; height: 100%; border-bottom: 2px solid transparent; transition: all 0.2s; font-family: 'Raleway', sans-serif; }
+    .hdr-nav-btn:hover { color: var(--white); }
+    .hdr-nav-btn.active { color: var(--ice); border-bottom-color: var(--ice); }
     .hdr-right { display: flex; align-items: center; gap: 10px; }
     .hdr-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--grey); }
     .ghost-btn { background: transparent; border: 1px solid var(--border); color: var(--grey); border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
@@ -219,6 +222,19 @@
     .contact-meta { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
     .contact-phone { font-size: 11px; color: var(--ice); font-family: 'JetBrains Mono', monospace; cursor: pointer; }
     .contact-phone:hover { text-decoration: underline; }
+
+    /* SHIFTS + REQUESTS SCREENS */
+    .history-screen { padding: 32px 24px; max-width: 1100px; margin: 0 auto; }
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table th { text-align: left; font-size: 9px; letter-spacing: 2px; color: var(--ice); text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 500; }
+    .history-table td { padding: 12px 12px; font-size: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .history-table tr:hover td { background: var(--ice-dim); cursor: pointer; }
+    .link-cell { color: var(--ice); text-decoration: underline; cursor: pointer; }
+    .status-badge { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; font-family: 'JetBrains Mono', monospace; }
+    .badge-dispatched { background: var(--amber-dim); color: var(--amber); }
+    .badge-unfilled { background: var(--red-dim); color: var(--red); }
+    .badge-pending { background: var(--ice-dim); color: var(--ice); }
+    .badge-completed { background: var(--green-dim); color: var(--green); }
   </style>
 </head>
 <body>
@@ -238,19 +254,23 @@
 <!-- HEADER -->
 <div id="header">
   <div class="hdr-left">
-    <div class="hdr-wordmark">GLASI</div>
-    <div class="hdr-title" id="hdr-zone">Dispatch</div>
+    <div class="hdr-wordmark" onclick="showScreen('home');setActiveNav(null)">GLASI</div>
+    <nav class="hdr-nav">
+      <button class="hdr-nav-btn" id="nav-bars" onclick="goToBars()">Bars</button>
+      <button class="hdr-nav-btn" id="nav-dispatch" onclick="showScreen('zones');renderZones();setActiveNav('dispatch')">Dispatch</button>
+      <button class="hdr-nav-btn" id="nav-shifts" onclick="goToShifts()">Shifts</button>
+      <button class="hdr-nav-btn" id="nav-requests" onclick="goToRequests()">Requests</button>
+    </nav>
   </div>
   <div class="hdr-right">
     <div class="hdr-date" id="hdr-date"></div>
-    <button class="ghost-btn" onclick="showScreen('home')">Home</button>
     <button class="ghost-btn" onclick="doLogout()">Sign Out</button>
   </div>
 </div>
 
 <!-- HOME -->
 <div id="screen-home" class="screen">
-  <div style="padding:48px 24px;max-width:680px;margin:0 auto;">
+  <div style="padding:48px 24px;max-width:780px;margin:0 auto;">
     <div class="page-title">Good to see you, Sam</div>
     <div class="page-sub" id="home-date"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px;">
@@ -259,10 +279,20 @@
         <div class="zone-card-name">Bars</div>
         <div class="zone-card-meta">Manage your bar pipeline, contacts and status</div>
       </button>
-      <button class="zone-card" onclick="showScreen('zones');renderZones();" style="text-align:left;">
+      <button class="zone-card" onclick="showScreen('zones');renderZones();setActiveNav('dispatch')" style="text-align:left;">
         <div style="font-size:28px;margin-bottom:12px;">⚡</div>
         <div class="zone-card-name">Dispatch</div>
         <div class="zone-card-meta">Start a session and manage live shifts</div>
+      </button>
+      <button class="zone-card" onclick="goToShifts()" style="text-align:left;">
+        <div style="font-size:28px;margin-bottom:12px;">📋</div>
+        <div class="zone-card-name">Shifts</div>
+        <div class="zone-card-meta">View all completed shifts across every session</div>
+      </button>
+      <button class="zone-card" onclick="goToRequests()" style="text-align:left;">
+        <div style="font-size:28px;margin-bottom:12px;">📥</div>
+        <div class="zone-card-name">Requests</div>
+        <div class="zone-card-meta">View all shift requests and their outcomes</div>
       </button>
     </div>
   </div>
@@ -282,6 +312,36 @@
       </div>
     </div>
     <div id="bars-screen-list"></div>
+  </div>
+</div>
+
+<!-- SHIFTS SCREEN -->
+<div id="screen-shifts" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title">Shifts</div>
+        <div class="page-sub">All completed shifts across every session</div>
+      </div>
+    </div>
+    <div id="shifts-list">
+      <div class="empty">Loading shifts...</div>
+    </div>
+  </div>
+</div>
+
+<!-- REQUESTS SCREEN -->
+<div id="screen-requests" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title">Requests</div>
+        <div class="page-sub">All shift requests and their outcomes</div>
+      </div>
+    </div>
+    <div id="requests-list">
+      <div class="empty">Loading requests...</div>
+    </div>
   </div>
 </div>
 
@@ -342,8 +402,9 @@
       <div class="room-header">
         <div>
           <div class="room-title" id="session-zone-name"></div>
-          <div class="room-meta">Click a worker to dispatch them</div>
+          <div class="room-meta">Active session — manage workers and incoming requests</div>
         </div>
+        <button class="small-ice-btn" onclick="openRequestReceived()" style="background:var(--green);color:var(--navy);">+ Request Received</button>
       </div>
       <div class="worker-grid" id="worker-grid"></div>
     </div>
@@ -388,6 +449,39 @@
   </div>
 </div>
 
+<!-- OVERLAY: REQUEST RECEIVED -->
+<div class="overlay" id="ov-request">
+  <div class="modal">
+    <div class="modal-title">Request Received</div>
+    <div class="modal-sub" id="req-timestamp"></div>
+    <label>Paste Message from Bar Manager</label>
+    <textarea class="field" id="req-raw-message" rows="4" placeholder="Paste the raw message here exactly as received..."></textarea>
+    <label>Confirm Venue</label>
+    <select class="field" id="req-venue"></select>
+    <label>Time of Request</label>
+    <input class="field" type="time" id="req-time" />
+    <label>Shift Length</label>
+    <select class="field" id="req-shift-length">
+      <option value="1">1 hour</option>
+      <option value="1.5">1.5 hours</option>
+      <option value="2">2 hours</option>
+      <option value="2.5">2.5 hours</option>
+      <option value="3" selected>3 hours</option>
+      <option value="3.5">3.5 hours</option>
+      <option value="4">4 hours</option>
+    </select>
+    <div style="margin-top:16px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--green);text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Zoom Chat Post</div>
+      <div id="req-zoom-post" style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--white);font-family:'JetBrains Mono',monospace;min-height:48px;"></div>
+      <button class="copy-address-btn" style="margin-top:8px;width:100%;" onclick="copyZoomPost(this)" id="req-copy-btn">Copy to Zoom</button>
+    </div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('request')">Cancel</button>
+      <button class="confirm-btn" onclick="saveShiftRequest()">Save Request</button>
+    </div>
+  </div>
+</div>
+
 <!-- OVERLAY: ADD BAR -->
 <div class="overlay" id="ov-add-bar">
   <div class="modal">
@@ -400,10 +494,10 @@
     <input class="field" type="text" id="bar-maps" placeholder="Paste Google Maps link here" />
     <label>Zone</label>
     <select class="field" id="bar-zone">
-      <option value="southampton-city-centre">Southampton City Centre</option>
-      <option value="southampton-north">Southampton North</option>
-      <option value="southampton-east">Southampton East</option>
-      <option value="portsmouth-city-centre">Portsmouth City Centre</option>
+      <option value="1">Southampton City Centre</option>
+      <option value="2">Southampton North</option>
+      <option value="3">Southampton East</option>
+      <option value="4">Portsmouth City Centre</option>
     </select>
     <label>Status</label>
     <select class="field" id="bar-status">
@@ -591,6 +685,7 @@ function doLogin() {
     document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     loadAllWorkers();
     showScreen('home');
+    setActiveNav(null);
     document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     renderZones();
   } else {
@@ -603,6 +698,7 @@ function doLogout() {
   document.getElementById('header').style.display='none';
   clearInterval(sessionTimerInterval);
   showScreen(null);
+  setActiveNav(null);
   activeZone=null; setupWorkers=[]; sessionWorkers=[]; shifts=[];
 }
 
@@ -610,6 +706,29 @@ function doLogout() {
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   if(name) { const s=document.getElementById(`screen-${name}`); if(s) s.classList.add('active'); }
+}
+
+function setActiveNav(name) {
+  document.querySelectorAll('.hdr-nav-btn').forEach(b=>b.classList.remove('active'));
+  if(name) { const b=document.getElementById(`nav-${name}`); if(b) b.classList.add('active'); }
+}
+
+function goToBars() {
+  showScreen('bars');
+  setActiveNav('bars');
+  loadBars();
+}
+
+function goToShifts() {
+  showScreen('shifts');
+  setActiveNav('shifts');
+  loadShiftsHistory();
+}
+
+function goToRequests() {
+  showScreen('requests');
+  setActiveNav('requests');
+  loadRequestsHistory();
 }
 
 // ZONES
@@ -632,12 +751,7 @@ async function selectZone(id) {
   showScreen('setup');
 }
 
-function goToZones() { showScreen('zones'); renderZones(); }
-
-function goToBars() {
-  showScreen('bars');
-  loadBars();
-}
+function goToZones() { showScreen('zones'); renderZones(); setActiveNav('dispatch'); }
 
 async function loadAllWorkers() {
   allWorkers=await sbGet('applications','?age_group=not.is.null&order=name.asc&select=id,name,phone,postcode_full,email');
@@ -845,7 +959,7 @@ async function saveBar() {
     name,
     address: document.getElementById('bar-address').value.trim()||null,
     google_maps_link: document.getElementById('bar-maps').value.trim()||null,
-    zone_id: document.getElementById('bar-zone').value,
+    zone_id: parseInt(document.getElementById('bar-zone').value),
     status: document.getElementById('bar-status').value,
     notes: document.getElementById('bar-notes').value.trim()||null
   });
@@ -942,7 +1056,7 @@ function openDispatch(wid) {
   document.getElementById('dispatch-worker-name').textContent=w.name;
   document.getElementById('dispatch-worker-details').textContent=`${w.phone||''} · ${w.postcode_full||''}`;
   // populate bar dropdown from loaded bars filtered by zone
-  const zoneBars=bars.filter(b=>b.zone_id===activeZone.id&&(b.status==='active'||b.status==='trial'));
+  const zoneBars=bars.filter(b=>String(b.zone_id)===String(activeZone.dbId)&&(b.status==='active'||b.status==='trial'));
   const fallback=activeZone.bars||[];
   if(zoneBars.length){
     document.getElementById('dispatch-bar-select').innerHTML=zoneBars.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
@@ -1170,17 +1284,16 @@ function confirmComplete() {
 async function saveShiftToSupabase(w) {
   try {
     await sbPost('shifts',{
-      bar_name: w.bar,
-      worker_name: w.name,
-      worker_phone: w.phone||null,
-      zoom_room: activeZone.id,
+      session_id: activeSessionId,
+      shift_request_id: w.shiftRequestId||null,
+      session_worker_id: w.sessionWorkerId||null,
+      bar_id: w.barRecord?.id||null,
       shift_length_hours: parseFloat(w.shiftLength)||null,
       requested_at: toISO(w.requestTime),
       accepted_at: w.dispatchedAt,
       clock_in_confirmed_at: w.clockInAt,
       clock_out_confirmed_at: w.clockOutAt,
       clock_in_code: w.code,
-      request_method: w.requestMethod||null,
       bar_rating: w.rating||null,
       notes: w.notes||null,
       status:'completed'
@@ -1237,8 +1350,130 @@ function exportCSV() {
 function confirmCloseSession() {
   if(!confirm('Close this session? Make sure all shifts are completed first.')) return;
   clearInterval(sessionTimerInterval);
+  activeSessionId = null;
   setupWorkers=[]; sessionWorkers=[]; shifts=[];
   showScreen('zones');
+  setActiveNav('dispatch');
+  renderZones();
+}
+
+// REQUEST RECEIVED
+let activeShiftRequests = [];
+let currentRequestId = null;
+
+function openRequestReceived() {
+  currentRequestId = null;
+  document.getElementById('req-raw-message').value = '';
+  document.getElementById('req-time').value = nowT();
+  document.getElementById('req-zoom-post').textContent = '';
+  document.getElementById('req-timestamp').textContent = `Received at ${nowT()}`;
+
+  // populate venue dropdown from bars in this zone
+  const zoneBars = bars.filter(b => String(b.zone_id) === String(activeZone.dbId) && (b.status === 'active' || b.status === 'trial'));
+  const venueSelect = document.getElementById('req-venue');
+  if(zoneBars.length) {
+    venueSelect.innerHTML = zoneBars.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+  } else {
+    venueSelect.innerHTML = '<option value="">No active bars in this zone</option>';
+  }
+
+  // auto-build zoom post when fields change
+  ['req-venue','req-shift-length'].forEach(id => {
+    document.getElementById(id).oninput = buildZoomPost;
+  });
+
+  buildZoomPost();
+  openOv('request');
+}
+
+function buildZoomPost() {
+  const venueEl = document.getElementById('req-venue');
+  const venueName = venueEl.options[venueEl.selectedIndex]?.text || '';
+  const length = document.getElementById('req-shift-length').value;
+  const keyword = venueName.split(' ')[0].toUpperCase();
+  const post = venueName ? `SHIFT AVAILABLE — ${venueName}\nLength: ${length}hr\nReply ${keyword} to accept` : '';
+  document.getElementById('req-zoom-post').textContent = post;
+}
+
+function copyZoomPost(btn) {
+  const text = document.getElementById('req-zoom-post').textContent;
+  if(!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy to Zoom', 1500);
+  });
+}
+
+async function saveShiftRequest() {
+  const venueEl = document.getElementById('req-venue');
+  const barId = venueEl.value;
+  const rawMessage = document.getElementById('req-raw-message').value.trim();
+  const requestTime = document.getElementById('req-time').value;
+  const shiftLength = document.getElementById('req-shift-length').value;
+
+  if(!rawMessage || !barId || !requestTime) {
+    alert('Please fill in the message, venue and request time.');
+    return;
+  }
+
+  const result = await sbPost('shift_requests', {
+    session_id: activeSessionId,
+    bar_id: parseInt(barId),
+    raw_message: rawMessage,
+    request_time: toISO(requestTime),
+    shift_length_hours: parseFloat(shiftLength),
+    status: 'pending'
+  });
+
+  if(result && result[0]?.id) {
+    currentRequestId = result[0].id;
+    activeShiftRequests.push(result[0]);
+  }
+
+  closeOv('request');
+}
+
+// SHIFTS HISTORY
+async function loadShiftsHistory() {
+  const list = document.getElementById('shifts-list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  const data = await sbGet('shifts', '?order=created_at.desc&select=*');
+  if(!data.length) { list.innerHTML = '<div class="empty">No shifts recorded yet.</div>'; return; }
+  list.innerHTML = `<table class="history-table">
+    <thead><tr>
+      <th>Worker</th><th>Bar</th><th>Clock In</th><th>Clock Out</th><th>Length</th><th>Rating</th><th>Status</th>
+    </tr></thead>
+    <tbody>${data.map(s=>`<tr>
+      <td>${s.session_worker_id||''}</td>
+      <td>${s.bar_id||''}</td>
+      <td><span class="mono">${fmtT(s.clock_in_confirmed_at)}</span></td>
+      <td><span class="mono">${fmtT(s.clock_out_confirmed_at)}</span></td>
+      <td><span class="mono">${s.shift_length_hours||''}hr</span></td>
+      <td>${s.bar_rating?'★'.repeat(s.bar_rating):'—'}</td>
+      <td><span class="status-badge badge-${s.status||'completed'}">${s.status||'completed'}</span></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// REQUESTS HISTORY
+async function loadRequestsHistory() {
+  const list = document.getElementById('requests-list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  const data = await sbGet('shift_requests', '?order=created_at.desc&select=*');
+  if(!data.length) { list.innerHTML = '<div class="empty">No requests recorded yet.</div>'; return; }
+  list.innerHTML = `<table class="history-table">
+    <thead><tr>
+      <th>Venue</th><th>Request Time</th><th>Posted</th><th>Length</th><th>Status</th><th>Message</th>
+    </tr></thead>
+    <tbody>${data.map(r=>`<tr>
+      <td>${r.bar_id||''}</td>
+      <td><span class="mono">${fmtT(r.request_time)}</span></td>
+      <td><span class="mono">${fmtT(r.posted_at)}</span></td>
+      <td><span class="mono">${r.shift_length_hours||''}hr</span></td>
+      <td><span class="status-badge badge-${r.status||'pending'}">${r.status||'pending'}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--grey);">${r.raw_message||''}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
 }
 
 // OVERLAYS
