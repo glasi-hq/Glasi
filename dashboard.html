@@ -1394,8 +1394,8 @@ function renderOnShift() {
           `<div>
             ${endingSoon||shiftEnded?`
               <div style="font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600;">Shift ending — send clock out code to bar manager</div>
-              <div class="clockout-msg-box">${clockOutMsg}</div>
-              <button class="code-confirm-btn" style="width:100%;margin-bottom:10px;" onclick="copyClockOutMsg('${w.id}', '${clockOutMsg.replace(/'/g,"\\'")}', this)">Copy Message to Bar Manager</button>
+              <div class="clockout-msg-box" id="com-${w.id}">${clockOutMsg}</div>
+              <button class="code-confirm-btn" style="width:100%;margin-bottom:10px;" onclick="copyClockOutMsg('${w.id}', this)">Copy Message to Bar Manager</button>
             `:''}
             <div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Enter clock out code from worker</div>
             <div class="code-confirm-row">
@@ -1466,8 +1466,10 @@ function showClockOutCode(wid, code) {
   alert(`Clock Out Code for this worker: ${code}\n\nSend this to the bar manager 3 minutes before shift end.`);
 }
 
-function copyClockOutMsg(wid, msg, btn) {
-  navigator.clipboard.writeText(msg).then(() => {
+function copyClockOutMsg(wid, btn) {
+  const el = document.getElementById(`com-${wid}`);
+  if(!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => {
     btn.textContent = 'Copied!';
     setTimeout(() => btn.textContent = 'Copy Message to Bar Manager', 1500);
   });
