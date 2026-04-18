@@ -904,6 +904,12 @@ document.getElementById('edit-worker-rate').value = w.hourly_rate||defaultRate;
   openOv('edit-worker');
 }
 
+function autoUpdateRate() {
+  const tier = parseInt(document.getElementById('edit-worker-tier').value);
+  const rates = [12.21, 13.21, 14.21, 15.21, 16.21];
+  document.getElementById('edit-worker-rate').value = rates[tier-1];
+}
+
 async function saveWorkerEdit() {
   if(!editingWorkerId) return;
   const tier = parseInt(document.getElementById('edit-worker-tier').value);
