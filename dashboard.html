@@ -1127,8 +1127,8 @@ function buildDispatchMessages() {
 
   const barMsg = `Hi ${contactName}, ${w.name} is on their way to you now. ETA approximately ${eta} minutes. When they arrive give them this code: ${dispatchCode}. Any issues call me on 07803 856 078.`;
 
-  const workerMsg = `Head to ${barRecord.name} — ${barRecord.address||'see address below'}. ${barRecord.google_maps_link||''}
-Ask for ${contactName} on arrival. Your shift is ${shiftLength} hours. Reply with your live location now and head straight there. When you arrive ask the bar manager for your clock in code and send it straight back to me.`;
+const workerMsg = `${shiftLength} hour shift confirmed. Head to ${barRecord.name} now — ${barRecord.address||'see address below'}. ${barRecord.google_maps_link||''}
+Reply with your live location now and head straight there. On arrival you must ask for ${contactName} for your clock in code and send it to us before you start work.`;
 
   document.getElementById('msg-bar-manager').textContent = barMsg;
   document.getElementById('msg-worker').textContent = workerMsg;
