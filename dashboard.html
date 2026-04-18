@@ -459,10 +459,6 @@
         <div class="page-sub">Enter the code the worker sends you to confirm arrival</div>
       </div>
       <div id="onshift-list"></div>
-      <div style="margin-top:32px;">
-        <div class="section-label">Completed This Session</div>
-        <div id="completed-list"></div>
-      </div>
     </div>
 
     <!-- LOG TAB -->
@@ -475,12 +471,12 @@
           <tr>
             <th>Worker</th>
             <th>Bar</th>
-            <th>Request</th>
             <th>Dispatched</th>
             <th>Clock In</th>
             <th>Clock Out</th>
             <th>Length</th>
-            <th>Wage</th>
+            <th>Rate</th>
+            <th>Total</th>
             <th>Code</th>
             <th>Rating</th>
           </tr>
@@ -742,7 +738,9 @@ let sessionTimerInterval = null;
 
 const gen4 = () => String(Math.floor(1000 + Math.random() * 9000));
 const nowT = () => { const n=new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; };
-const fmtT = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+const fmtT = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}) : '';
+const fmtDT = iso => iso ? new Date(iso).toLocaleString('en-GB',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',timeZone:'Europe/London'}) : '';
+const fmtLen = hrs => { if(!hrs) return ''; const h=Math.floor(hrs); const m=Math.round((hrs-h)*60); return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; };
 const today = () => new Date().toISOString().split('T')[0];
 const toISO = t => t ? new Date(`${today()}T${t}`).toISOString() : null;
 const uid = () => Date.now() + Math.random().toString(36).slice(2);
@@ -1349,10 +1347,8 @@ function confirmDispatch() {
 function renderOnShift() {
   const dispatched=sessionWorkers.filter(w=>w.status==='dispatched');
   const onshift=sessionWorkers.filter(w=>w.status==='onshift');
-  const completed=shifts;
-  const list=document.getElementById('onshift-list');
-
   const allActive=[...dispatched,...onshift];
+  const list=document.getElementById('onshift-list');
   if(!allActive.length) { list.innerHTML='<div class="empty">No workers on shift yet.</div>'; }
   else {
     list.innerHTML=allActive.map(w=>{
@@ -1382,28 +1378,6 @@ function renderOnShift() {
         }
       </div>`;
     }).join('');
-  }
-
-  const compList=document.getElementById('completed-list');
-  if(!completed.length) { compList.innerHTML='<div style="color:var(--grey);font-size:13px;">None yet.</div>'; }
-  else {
-    compList.innerHTML=completed.map(s=>`
-      <div class="shift-complete-card">
-        <div class="complete-top">
-          <div>
-            <div class="complete-name">${s.workerName}</div>
-            <div class="complete-bar">${s.bar}</div>
-          </div>
-          <div style="font-size:11px;color:var(--grey);font-family:'JetBrains Mono',monospace;text-align:right;">
-            ${s.shiftLength}hr · £${s.wage}/hr<br>
-            ${s.rating?'★'.repeat(s.rating)+'☆'.repeat(5-s.rating):'No rating'}
-          </div>
-        </div>
-        <div class="complete-meta">
-          In: ${fmtT(s.clockInAt)} · Out: ${fmtT(s.clockOutAt)}
-          ${s.notes?'<br>'+s.notes:''}
-        </div>
-      </div>`).join('');
   }
 }
 
@@ -1443,6 +1417,8 @@ function confirmComplete() {
   w.rating=starRating||null;
   w.notes=document.getElementById('co-notes').value.trim()||null;
   w.status='completed';
+  const rate = parseFloat(w.hourly_rate||12.21);
+  const hours = parseFloat(w.shiftLength)||0;
   shifts.push({
     id: w.shiftId,
     workerName: w.name,
@@ -1451,12 +1427,12 @@ function confirmComplete() {
     bar: w.bar,
     zone: activeZone.name,
     requestTime: w.requestTime,
-    requestMethod: w.requestMethod||'',
     dispatchedAt: w.dispatchedAt,
     clockInAt: w.clockInAt,
     clockOutAt: w.clockOutAt,
-    shiftLength: w.shiftLength||'',
-    wage: w.wage||'',
+    shiftLength: hours,
+    hourly_rate: rate,
+    total_earned: hours ? parseFloat((rate*hours).toFixed(2)) : '',
     code: w.code,
     rating: w.rating,
     notes: w.notes||''
@@ -1500,19 +1476,23 @@ function renderLog() {
   const empty=document.getElementById('log-empty');
   if(!shifts.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML=shifts.map(s=>`
-    <tr>
+  tbody.innerHTML=shifts.map(s=>{
+    const rate = s.hourly_rate||s.wage||'';
+    const hours = parseFloat(s.shiftLength)||0;
+    const total = rate && hours ? '£'+(parseFloat(rate)*hours).toFixed(2) : '';
+    return `<tr>
       <td>${s.workerName}<br><span class="mono">${s.workerPhone}</span></td>
       <td>${s.bar}</td>
-      <td><span class="mono">${s.requestTime||''}</span><br><span class="mono">${s.requestMethod||''}</span></td>
       <td><span class="mono">${fmtT(s.dispatchedAt)}</span></td>
       <td><span class="mono">${fmtT(s.clockInAt)}</span></td>
       <td><span class="mono">${fmtT(s.clockOutAt)}</span></td>
-      <td><span class="mono">${s.shiftLength}hr</span></td>
-      <td><span class="mono">£${s.wage}/hr</span></td>
+      <td><span class="mono">${fmtLen(hours)}</span></td>
+      <td><span class="mono">${rate?'£'+parseFloat(rate).toFixed(2)+'/hr':''}</span></td>
+      <td><span class="mono">${total}</span></td>
       <td><span class="mono" style="color:var(--ice);letter-spacing:2px;">${s.code}</span></td>
       <td>${s.rating?'★'.repeat(s.rating)+'☆'.repeat(5-s.rating):''}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 // CSV EXPORT
@@ -1721,7 +1701,7 @@ function renderShiftsList() {
         <td><span class="mono">${s.created_at?s.created_at.split('T')[0]:''}</span></td>
         <td><span class="mono">${fmtT(s.clock_in_confirmed_at)}</span></td>
         <td><span class="mono">${fmtT(s.clock_out_confirmed_at)}</span></td>
-        <td><span class="mono">${hours||''}hr</span></td>
+        <td><span class="mono">${fmtLen(parseFloat(s.shift_length_hours)||0)}</span></td>
         <td><span class="mono">${rate?'£'+rate.toFixed(2)+'/hr':''}</span></td>
         <td><span class="mono">${total?'£'+total:''}</span></td>
         <td>${s.bar_rating?'★'.repeat(s.bar_rating):'—'}</td>
