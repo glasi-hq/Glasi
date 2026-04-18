@@ -259,13 +259,13 @@
 <!-- HEADER -->
 <div id="header">
   <div class="hdr-left">
-    <div class="hdr-wordmark" onclick="showScreen('home');setActiveNav(null)">GLASI</div>
+    <div class="hdr-wordmark" onclick="safeNavigate(()=>{showScreen('home');setActiveNav(null);})">GLASI</div>
     <nav class="hdr-nav">
-      <button class="hdr-nav-btn" id="nav-bars" onclick="goToBars()">Bars</button>
-      <button class="hdr-nav-btn" id="nav-workers" onclick="goToWorkers()">Workers</button>
-      <button class="hdr-nav-btn" id="nav-dispatch" onclick="showScreen('zones');renderZones();setActiveNav('dispatch')">Dispatch</button>
-      <button class="hdr-nav-btn" id="nav-shifts" onclick="goToShifts()">Shifts</button>
-      <button class="hdr-nav-btn" id="nav-requests" onclick="goToRequests()">Requests</button>
+      <button class="hdr-nav-btn" id="nav-bars" onclick="safeNavigate(goToBars)">Bars</button>
+      <button class="hdr-nav-btn" id="nav-workers" onclick="safeNavigate(goToWorkers)">Workers</button>
+      <button class="hdr-nav-btn" id="nav-dispatch" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})">Dispatch</button>
+      <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
+      <button class="hdr-nav-btn" id="nav-requests" onclick="safeNavigate(goToRequests)">Requests</button>
     </nav>
   </div>
   <div class="hdr-right">
@@ -793,6 +793,17 @@ function showScreen(name) {
 function setActiveNav(name) {
   document.querySelectorAll('.hdr-nav-btn').forEach(b=>b.classList.remove('active'));
   if(name) { const b=document.getElementById(`nav-${name}`); if(b) b.classList.add('active'); }
+}
+
+function safeNavigate(fn) {
+  if(!activeSessionId) { fn(); return; }
+  if(!confirm('You have an active session in progress. Navigating away will lose all session state including dispatched workers and shift data. Are you sure?')) return;
+  if(!confirm('This cannot be undone. All unsaved session data will be lost. Continue?')) return;
+  clearInterval(sessionTimerInterval);
+  clearInterval(shiftCountdownInterval);
+  activeSessionId = null;
+  setupWorkers = []; sessionWorkers = []; shifts = [];
+  fn();
 }
 
 function goToBars() {
