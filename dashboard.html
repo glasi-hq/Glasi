@@ -1366,6 +1366,7 @@ let currentRequestId = null;
 
 function openRequestReceived() {
   currentRequestId = null;
+  zoomPostCopied = false;
   document.getElementById('req-raw-message').value = '';
   document.getElementById('req-time').value = nowT();
   document.getElementById('req-zoom-post').textContent = '';
