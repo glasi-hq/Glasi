@@ -805,7 +805,11 @@ function renderSetupWorkerList() {
 
 async function startSession() {
   if(!setupWorkers.length) { alert('Add at least one worker before starting the session.'); return; }
-
+  // ensure bars are loaded for this zone
+  if(!bars.length) {
+    const result = await sbGet('bars','?order=name.asc');
+    bars = Array.isArray(result) ? result : [];
+  }
   // create session record in supabase
   const sessionData = await sbPost('sessions', {
     zone_id: activeZone.dbId,
