@@ -545,11 +545,10 @@ const USERS = [
 ];
 
 const ZONES = [
-  { id:'southampton-city-centre', name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc', postcodes:['SO14','SO15'], bars:['Dancing Man Brewery','Smokin Barrels','The Audit House'] },
-  { id:'southampton-north', name:'Southampton North', meta:'SO16 · Bassett, Shirley area', postcodes:['SO16','SO17'], bars:['TBC'] },
-  { id:'southampton-east', name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area', postcodes:['SO17','SO18','SO19'], bars:['TBC'] },
-  { id:'portsmouth-city-centre', name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area', postcodes:['PO1','PO2','PO3','PO4','PO5'], bars:['TBC'] }
-];
+  { id:'southampton-city-centre', dbId:1, name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc', postcodes:['SO14','SO15'], bars:['Dancing Man Brewery','Smokin Barrels','The Audit House'] },
+  { id:'southampton-north', dbId:2, name:'Southampton North', meta:'SO16 · Bassett, Shirley area', postcodes:['SO16','SO17'], bars:['TBC'] },
+  { id:'southampton-east', dbId:3, name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area', postcodes:['SO17','SO18','SO19'], bars:['TBC'] },
+  { id:'portsmouth-city-centre', dbId:4, name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area', postcodes:['PO1','PO2','PO3','PO4','PO5'], bars:['TBC']
 
 let currentUser = null;
 let activeZone = null;
@@ -557,6 +556,7 @@ let allWorkers = [];
 let setupWorkers = []; // workers added to room in setup
 let sessionWorkers = []; // workers in live session with status
 let shifts = []; // shift log
+let activeSessionId = null;
 let dispatchingWorkerId = null;
 let dispatchingBar = null;
 let dispatchCode = null;
@@ -638,9 +638,8 @@ function goToBars() {
   loadBars();
 }
 
-// LOAD WORKERS
 async function loadAllWorkers() {
-  allWorkers=await sbGet('applications','?age_group=not.is.null&order=name.asc&select=name,phone,postcode_full,email');
+  allWorkers=await sbGet('applications','?age_group=not.is.null&order=name.asc&select=id,name,phone,postcode_full,email');
 }
 
 // SETUP
@@ -690,14 +689,43 @@ function renderSetupWorkerList() {
     </div>`).join('');
 }
 
-function startSession() {
+async function startSession() {
   if(!setupWorkers.length) { alert('Add at least one worker before starting the session.'); return; }
+
+  // create session record in supabase
+  const sessionData = await sbPost('sessions', {
+    zone_id: activeZone.dbId,
+    session_date: today(),
+    start_time: nowT(),
+    end_time: null
+  });
+
+  if(!sessionData || !sessionData[0]?.id) {
+    alert('Failed to create session in database. Check your connection and try again.');
+    return;
+  }
+
+  activeSessionId = sessionData[0].id;
+
+  // write each worker to session_workers
+  for(const w of setupWorkers) {
+    const sw = await sbPost('session_workers', {
+      session_id: activeSessionId,
+      application_id: w.id,
+      worker_name: w.name,
+      worker_phone: w.phone||null,
+      status: 'available'
+    });
+    w.sessionWorkerId = sw?.[0]?.id || null;
+  }
+
   sessionWorkers=setupWorkers.map(w=>({
     ...w,
     id: uid(),
     status: 'available',
     code: gen4(),
     bar: null,
+    barRecord: null,
     dispatchedAt: null,
     clockInAt: null,
     clockInCode: null,
@@ -706,10 +734,10 @@ function startSession() {
     clockOutAt: null,
     rating: null,
     notes: null,
-    requestTime: null,
-    requestMethod: null,
+    shiftRequestId: null,
     shiftId: uid()
   }));
+
   shifts=[];
   sessionStartTime=new Date();
   startTimer();
