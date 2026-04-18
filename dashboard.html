@@ -742,7 +742,6 @@ function renderZones() {
 
 async function selectZone(id) {
   activeZone=ZONES.find(z=>z.id===id);
-  document.getElementById('hdr-zone').textContent=activeZone.name;
   document.getElementById('setup-zone-name').textContent=activeZone.name;
   setupWorkers=[];
   await loadAllWorkers();
