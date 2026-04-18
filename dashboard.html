@@ -1440,15 +1440,15 @@ async function saveShiftRequest() {
 async function loadShiftsHistory() {
   const list = document.getElementById('shifts-list');
   list.innerHTML = '<div class="empty">Loading...</div>';
-  const data = await sbGet('shifts', '?order=created_at.desc&select=*');
+  const data = await sbGet('shifts', '?order=created_at.desc&select=*,bars(name),session_workers(worker_name)');
   if(!data.length) { list.innerHTML = '<div class="empty">No shifts recorded yet.</div>'; return; }
   list.innerHTML = `<table class="history-table">
     <thead><tr>
       <th>Worker</th><th>Bar</th><th>Clock In</th><th>Clock Out</th><th>Length</th><th>Rating</th><th>Status</th>
     </tr></thead>
     <tbody>${data.map(s=>`<tr>
-      <td>${s.session_worker_id||''}</td>
-      <td>${s.bar_id||''}</td>
+      <td>${s.session_workers?.worker_name||'Unknown'}</td>
+      <td>${s.bars?.name||'Unknown'}</td>
       <td><span class="mono">${fmtT(s.clock_in_confirmed_at)}</span></td>
       <td><span class="mono">${fmtT(s.clock_out_confirmed_at)}</span></td>
       <td><span class="mono">${s.shift_length_hours||''}hr</span></td>
@@ -1462,14 +1462,14 @@ async function loadShiftsHistory() {
 async function loadRequestsHistory() {
   const list = document.getElementById('requests-list');
   list.innerHTML = '<div class="empty">Loading...</div>';
-  const data = await sbGet('shift_requests', '?order=created_at.desc&select=*');
+  const data = await sbGet('shift_requests', '?order=created_at.desc&select=*,bars(name)');
   if(!data.length) { list.innerHTML = '<div class="empty">No requests recorded yet.</div>'; return; }
   list.innerHTML = `<table class="history-table">
     <thead><tr>
       <th>Venue</th><th>Request Time</th><th>Posted</th><th>Length</th><th>Status</th><th>Message</th>
     </tr></thead>
     <tbody>${data.map(r=>`<tr>
-      <td>${r.bar_id||''}</td>
+      <td>${r.bars?.name||'Unknown'}</td>
       <td><span class="mono">${fmtT(r.request_time)}</span></td>
       <td><span class="mono">${fmtT(r.posted_at)}</span></td>
       <td><span class="mono">${r.shift_length_hours||''}hr</span></td>
