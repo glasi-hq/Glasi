@@ -1398,20 +1398,26 @@ function buildZoomPost() {
   document.getElementById('req-zoom-post').textContent = post;
 }
 
+let zoomPostCopied = false;
+
 function copyZoomPost(btn) {
   const text = document.getElementById('req-zoom-post').textContent;
   if(!text) return;
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy to Zoom', 1500);
+    btn.style.background = 'rgba(34,197,94,0.2)';
+    btn.style.borderColor = 'rgba(34,197,94,0.4)';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => btn.textContent = 'Copied to Zoom', 1500);
   });
-  // log posted_at if we have a saved request id
-  if(currentRequestId) {
-    sbPatch('shift_requests', `?id=eq.${currentRequestId}`, { posted_at: new Date().toISOString() });
-  }
+  zoomPostCopied = true;
 }
 
 async function saveShiftRequest() {
+  if(!zoomPostCopied) {
+    alert('Please copy the Zoom post before saving.');
+    return;
+  }
   const venueEl = document.getElementById('req-venue');
   const barId = venueEl.value;
   const rawMessage = document.getElementById('req-raw-message').value.trim();
