@@ -605,12 +605,34 @@
   </div>
 </div>
 
+<!-- OVERLAY: LOG WORKER RESPONSE -->
+<div class="overlay" id="ov-log-response">
+  <div class="modal">
+    <div class="modal-title">Log Worker Response</div>
+    <div class="modal-sub" id="response-worker-name"></div>
+    <label>Shift Request</label>
+    <select class="field" id="response-request-select"></select>
+    <label>Response</label>
+    <select class="field" id="response-type">
+      <option value="accepted">Accepted</option>
+      <option value="declined">Declined</option>
+      <option value="ignored">Ignored</option>
+    </select>
+    <label>Response Time (from Zoom chat)</label>
+    <input class="field" type="time" id="response-time" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('log-response')">Cancel</button>
+      <button class="confirm-btn" onclick="saveWorkerResponse()">Save Response</button>
+    </div>
+  </div>
+</div>
+
 <!-- OVERLAY: COMPLETE SHIFT -->
 <div class="overlay" id="ov-complete">
   <div class="modal">
     <div class="modal-title">Complete Shift</div>
     <div class="modal-sub" id="complete-worker-info"></div>
-    <label>Clock Out Time</label>
+    <label>Clock Out Time (time received from venue)</label>
     <input class="field" type="time" id="co-time" />
     <label>Bar Rating</label>
     <div class="star-row" id="star-row">
@@ -1038,6 +1060,9 @@ function renderRoom() {
         ${!isLeft?`<button class="wc-btn wc-btn-left" onclick="markLeft('${w.id}')">Left</button>`:''}
         ${isLeft?`<button class="wc-btn wc-btn-restore" onclick="restoreWorker('${w.id}')">Restore</button>`:''}
       </div>
+      ${!isLeft&&activeShiftRequests.length?`<div style="margin-top:8px;">
+        <button style="width:100%;background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:5px;font-size:10px;cursor:pointer;" onclick="openLogResponse('${w.id}')">Log Response</button>
+      </div>`:''}
     </div>`;
   }).join('');
 }
@@ -1083,6 +1108,15 @@ async function confirmDispatchBar() {
   w.bar=barRecord.name;
   w.barRecord=barRecord;
   w.dispatchedAt=dispatchedAt;
+
+  // link to most recent shift request for this session
+  const latestRequest = activeShiftRequests.length ? activeShiftRequests[activeShiftRequests.length-1] : null;
+  if(latestRequest) {
+    w.shiftRequestId = latestRequest.id;
+    // update request status to dispatched
+    sbPatch('shift_requests', `?id=eq.${latestRequest.id}`, { status: 'dispatched' });
+  }
+
   closeOv('dispatch-bar');
 
   // fetch on duty contact for this bar
@@ -1360,6 +1394,51 @@ function confirmCloseSession() {
   renderZones();
 }
 
+// WORKER RESPONSE LOGGING
+let loggingResponseForWorkerId = null;
+
+function openLogResponse(wid) {
+  loggingResponseForWorkerId = wid;
+  const w = sessionWorkers.find(x => x.id === wid);
+  document.getElementById('response-worker-name').textContent = w.name;
+  document.getElementById('response-time').value = nowT();
+
+  // populate request dropdown from active requests
+  const reqSelect = document.getElementById('response-request-select');
+  if(activeShiftRequests.length) {
+    reqSelect.innerHTML = activeShiftRequests.map(r => {
+      const barName = bars.find(b => b.id === r.bar_id)?.name || 'Unknown';
+      return `<option value="${r.id}">${barName} — ${fmtT(r.request_time)}</option>`;
+    }).join('');
+  } else {
+    reqSelect.innerHTML = '<option value="">No active requests</option>';
+  }
+
+  openOv('log-response');
+}
+
+async function saveWorkerResponse() {
+  const w = sessionWorkers.find(x => x.id === loggingResponseForWorkerId);
+  if(!w) { closeOv('log-response'); return; }
+
+  const requestId = parseInt(document.getElementById('response-request-select').value);
+  const response = document.getElementById('response-type').value;
+  const responseTime = toISO(document.getElementById('response-time').value);
+  const wasAvailable = w.status === 'available';
+
+  if(!requestId) { alert('No shift request selected.'); return; }
+
+  await sbPost('worker_responses', {
+    shift_request_id: requestId,
+    session_worker_id: w.sessionWorkerId,
+    response: response,
+    response_time: responseTime,
+    was_available: wasAvailable
+  });
+
+  closeOv('log-response');
+}
+
 // REQUEST RECEIVED
 let activeShiftRequests = [];
 let currentRequestId = null;
@@ -1412,6 +1491,7 @@ function copyZoomPost(btn) {
     setTimeout(() => btn.textContent = 'Copied to Zoom', 1500);
   });
   zoomPostCopied = true;
+  window._zoomPostedAt = new Date().toISOString();
 }
 
 async function saveShiftRequest() {
@@ -1435,6 +1515,7 @@ async function saveShiftRequest() {
     bar_id: parseInt(barId),
     raw_message: rawMessage,
     request_time: toISO(requestTime),
+    posted_at: window._zoomPostedAt || null,
     shift_length_hours: parseFloat(shiftLength),
     status: 'pending'
   });
