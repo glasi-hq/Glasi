@@ -537,13 +537,13 @@
     <label>Postcode</label>
     <input class="field" type="text" id="edit-worker-postcode" />
     <label>Tier</label>
-    <select class="field" id="edit-worker-tier">
-      <option value="1">Tier 1 — £12.21/hr</option>
-      <option value="2">Tier 2 — £13.21/hr</option>
-      <option value="3">Tier 3 — £14.21/hr</option>
-      <option value="4">Tier 4 — £15.21/hr</option>
-      <option value="5">Tier 5 — £16.21/hr</option>
-    </select>
+<select class="field" id="edit-worker-tier" onchange="autoUpdateRate()">
+  <option value="1">Tier 1 — £12.21/hr</option>
+  <option value="2">Tier 2 — £13.21/hr</option>
+  <option value="3">Tier 3 — £14.21/hr</option>
+  <option value="4">Tier 4 — £15.21/hr</option>
+  <option value="5">Tier 5 — £16.21/hr</option>
+</select>
     <label>Hourly Rate (£)</label>
     <input class="field" type="number" id="edit-worker-rate" step="0.01" />
     <label>Availability Notes</label>
@@ -895,8 +895,9 @@ function openEditWorker(id) {
   document.getElementById('edit-worker-name').value = w.name||'';
   document.getElementById('edit-worker-phone').value = w.phone||'';
   document.getElementById('edit-worker-postcode').value = w.postcode_full||'';
-  document.getElementById('edit-worker-tier').value = w.tier||1;
-  document.getElementById('edit-worker-rate').value = w.hourly_rate||(w.tier?[12.21,13.21,14.21,15.21,16.21][w.tier-1]:12.21);
+document.getElementById('edit-worker-tier').value = String(w.tier||1);
+const defaultRate = [12.21,13.21,14.21,15.21,16.21][(parseInt(w.tier)||1)-1];
+document.getElementById('edit-worker-rate').value = w.hourly_rate||defaultRate;
   document.getElementById('edit-worker-availability').value = w.available_hours||'';
   document.getElementById('edit-worker-notes').value = w.reliability_notes||'';
   document.getElementById('edit-worker-active').value = w.active===false?'false':'true';
