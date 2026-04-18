@@ -556,6 +556,10 @@
       <option value="true">Active</option>
       <option value="false">Inactive</option>
     </select>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="section-label">Walking Distance to Bars (minutes)</div>
+      <div id="edit-worker-distances"></div>
+    </div>
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('edit-worker')">Cancel</button>
       <button class="confirm-btn" onclick="saveWorkerEdit()">Save Changes</button>
@@ -877,7 +881,7 @@ function renderWorkerList() {
   </table>`;
 }
 
-function openEditWorker(id) {
+async function openEditWorker(id) {
   const w = allWorkersData.find(x => x.id === id);
   if(!w) return;
   editingWorkerId = id;
@@ -886,12 +890,29 @@ function openEditWorker(id) {
   document.getElementById('edit-worker-name').value = w.name||'';
   document.getElementById('edit-worker-phone').value = w.phone||'';
   document.getElementById('edit-worker-postcode').value = w.postcode_full||'';
-document.getElementById('edit-worker-tier').value = String(w.tier||1);
-const defaultRate = [12.21,13.21,14.21,15.21,16.21][(parseInt(w.tier)||1)-1];
-document.getElementById('edit-worker-rate').value = w.hourly_rate||defaultRate;
+  document.getElementById('edit-worker-tier').value = String(w.tier||1);
+  const defaultRate = [12.21,13.21,14.21,15.21,16.21][(parseInt(w.tier)||1)-1];
+  document.getElementById('edit-worker-rate').value = w.hourly_rate||defaultRate;
   document.getElementById('edit-worker-availability').value = w.available_hours||'';
   document.getElementById('edit-worker-notes').value = w.reliability_notes||'';
   document.getElementById('edit-worker-active').value = w.active===false?'false':'true';
+
+  const allBars = await sbGet('bars', '?order=name.asc&select=id,name');
+  const existing = await sbGet('worker_bar_distances', '?application_id=eq.'+id+'&select=bar_id,walking_minutes');
+  const distMap = {};
+  existing.forEach(d => distMap[d.bar_id] = d.walking_minutes);
+  const distEl = document.getElementById('edit-worker-distances');
+  if(!allBars.length) {
+    distEl.innerHTML = '<div style="color:var(--grey);font-size:12px;">No bars added yet.</div>';
+  } else {
+    distEl.innerHTML = allBars.map(b =>
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+      +'<div style="flex:1;font-size:13px;">'+b.name+'</div>'
+      +'<input class="field" type="number" min="1" max="60" id="dist-'+b.id+'" value="'+(distMap[b.id]||'')+'" placeholder="mins" style="width:80px;margin-bottom:0;" />'
+      +'</div>'
+    ).join('');
+  }
+  window._editWorkerBars = allBars;
   openOv('edit-worker');
 }
 
@@ -905,7 +926,7 @@ async function saveWorkerEdit() {
   if(!editingWorkerId) return;
   const tier = parseInt(document.getElementById('edit-worker-tier').value);
   const rate = parseFloat(document.getElementById('edit-worker-rate').value);
-  await sbPatch('applications', `?id=eq.${editingWorkerId}`, {
+  await sbPatch('applications', '?id=eq.'+editingWorkerId, {
     name: document.getElementById('edit-worker-name').value.trim(),
     phone: document.getElementById('edit-worker-phone').value.trim()||null,
     postcode_full: document.getElementById('edit-worker-postcode').value.trim()||null,
@@ -915,6 +936,17 @@ async function saveWorkerEdit() {
     reliability_notes: document.getElementById('edit-worker-notes').value.trim()||null,
     active: document.getElementById('edit-worker-active').value === 'true'
   });
+
+  const bars = window._editWorkerBars||[];
+  for(const b of bars) {
+    const el = document.getElementById('dist-'+b.id);
+    const mins = el && el.value ? parseInt(el.value) : null;
+    if(mins) {
+      await sbDelete('worker_bar_distances', '?application_id=eq.'+editingWorkerId+'&bar_id=eq.'+b.id);
+      await sbPost('worker_bar_distances', { application_id: editingWorkerId, bar_id: b.id, walking_minutes: mins });
+    }
+  }
+
   closeOv('edit-worker');
   loadWorkers();
 }
