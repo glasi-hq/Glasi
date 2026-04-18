@@ -656,31 +656,8 @@
       </div>
     </div>
 
-    <div style="padding-top:20px;border-top:1px solid var(--border);">
-      <label>Time Request Received</label>
-      <input class="field" type="time" id="log-req-time" />
-      <label>How did they request?</label>
-      <select class="field" id="log-req-method">
-        <option value="WhatsApp">WhatsApp</option>
-        <option value="Phone call">Phone call</option>
-        <option value="In person">In person</option>
-      </select>
-      <label>Shift Length</label>
-      <select class="field" id="log-shift-length">
-        <option value="1">1 hour</option>
-        <option value="1.5">1.5 hours</option>
-        <option value="2">2 hours</option>
-        <option value="2.5">2.5 hours</option>
-        <option value="3" selected>3 hours</option>
-        <option value="3.5">3.5 hours</option>
-        <option value="4">4 hours</option>
-      </select>
-      <label>Hourly Wage (£)</label>
-      <input class="field" type="number" id="log-wage" value="12.21" step="0.01" />
-    </div>
     <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeOv('dispatch-code')">Skip Log</button>
-      <button class="confirm-btn" onclick="saveShiftLog()">Save Log</button>
+      <button class="confirm-btn" onclick="confirmDispatch()">Confirm Dispatch</button>
     </div>
   </div>
 </div>
@@ -1308,12 +1285,13 @@ async function confirmDispatchBar() {
   }
 
   const contactName = onDutyContact ? onDutyContact.name : 'the manager';
-  const shiftLength = document.getElementById('log-shift-length')?.value || '3';
+  const latestRequest = activeShiftRequests.length ? activeShiftRequests[activeShiftRequests.length-1] : null;
+  const shiftLength = latestRequest?.shift_length_hours || '3';
+  w.shiftLength = String(shiftLength);
+  w.requestTime = latestRequest?.request_time || null;
 
   document.getElementById('code-value').textContent=dispatchCode;
   document.getElementById('code-worker-bar').textContent=`${w.name} dispatched to ${barRecord.name}`;
-  document.getElementById('log-req-time').value=nowT();
-  document.getElementById('log-wage').value='12.21';
   document.getElementById('dispatch-eta').value='';
 
   // build messages — will update when ETA is typed
@@ -1360,13 +1338,9 @@ function copyCode() {
   });
 }
 
-function saveShiftLog() {
-  const w=sessionWorkers.find(x=>x.id===dispatchingWorkerId);
+function confirmDispatch() {
+  const w = sessionWorkers.find(x => x.id === dispatchingWorkerId);
   if(!w) { closeOv('dispatch-code'); return; }
-  w.requestTime=document.getElementById('log-req-time').value;
-  w.requestMethod=document.getElementById('log-req-method').value;
-  w.shiftLength=document.getElementById('log-shift-length').value;
-  w.wage=document.getElementById('log-wage').value;
   closeOv('dispatch-code');
   renderOnShift();
   updateCounts();
