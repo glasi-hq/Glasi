@@ -438,7 +438,7 @@
         <div class="page-sub" id="report-subtitle"></div>
       </div>
       <div style="display:flex;gap:10px;">
-        <button class="ghost-btn" onclick="dismissReport()">Skip</button>
+        <button class="ghost-btn" onclick="dismissReport()">Back</button>
         <button class="small-ice-btn" onclick="exportReportPDF()">Export PDF</button>
       </div>
     </div>
@@ -975,12 +975,16 @@ async function loadReports() {
   list.innerHTML = '<div class="empty">Loading...</div>';
   const data = await sbGet('session_reports', '?order=created_at.desc&select=*,bars(name)');
   if(!data.length) { list.innerHTML = '<div class="empty">No session reports yet.</div>'; return; }
+
+  // store for click access
+  window._allReports = data;
+
   list.innerHTML = '<table class="history-table"><thead><tr>'
     +'<th>Date</th><th>Bar</th><th>Shifts</th><th>Hours</th><th>Requests</th><th>Response</th><th>Customers/hr</th><th>Revenue Protected</th><th>Net Value</th>'
     +'</tr></thead><tbody>'
-    +data.map(r => '<tr>'
-      +'<td><span class="mono">'+( r.report_date||'')+' </span></td>'
-      +'<td>'+(r.bars?.name||'Unknown')+'</td>'
+    +data.map((r,i) => '<tr style="cursor:pointer;" onclick="openSavedReport('+i+')" title="Click to view full report">'
+      +'<td><span class="mono">'+(r.report_date||'')+'</span></td>'
+      +'<td style="font-weight:500;">'+(r.bars?.name||'Unknown')+'</td>'
       +'<td><span class="mono">'+(r.total_shifts||0)+'</span></td>'
       +'<td><span class="mono">'+(r.total_hours||0)+'hrs</span></td>'
       +'<td><span class="mono">'+(r.requests_filled||0)+'/'+(r.requests_total||0)+'</span></td>'
@@ -991,6 +995,101 @@ async function loadReports() {
       +'</tr>'
     ).join('')
     +'</tbody></table>';
+}
+
+async function openSavedReport(index) {
+  const r = (window._allReports||[])[index];
+  if(!r) return;
+
+  const reportBody = document.getElementById('report-body');
+  const reportSubtitle = document.getElementById('report-subtitle');
+
+  showScreen('report');
+  setActiveNav('reports');
+  reportBody.innerHTML = '<div class="empty">Loading report...</div>';
+
+  // load bar data
+  let barData = null;
+  if(r.bar_id) {
+    const bd = await sbGet('bars', '?id=eq.'+r.bar_id+'&select=name,bartenders,drinks_per_hour,avg_drink_value,avg_customer_spend,typical_rush_minutes,lost_minutes_per_bartender');
+    barData = bd?.[0]||null;
+  }
+
+  // load shifts for this session
+  let shiftRows = '';
+  if(r.session_id) {
+    const sw = await sbGet('session_workers', '?session_id=eq.'+r.session_id+'&select=id,worker_name,worker_phone');
+    if(sw.length) {
+      const swIds = sw.map(x=>x.id).join(',');
+      const shiftData = await sbGet('shifts', '?session_worker_id=in.('+swIds+')&select=*,session_workers(worker_name)');
+      shiftRows = shiftData.map(s => '<tr>'
+        +'<td>'+(s.session_workers?.worker_name||'')+'</td>'
+        +'<td><span class="mono">'+fmtT(s.clock_in_confirmed_at)+'</span></td>'
+        +'<td><span class="mono">'+fmtT(s.clock_out_confirmed_at)+'</span></td>'
+        +'<td><span class="mono">'+fmtLen(parseFloat(s.shift_length_hours)||0)+'</span></td>'
+        +'<td><span class="mono">£'+(parseFloat(s.total_earned)||0).toFixed(2)+'</span></td>'
+        +'</tr>'
+      ).join('');
+    }
+  }
+
+  const barName = barData?.name || r.bars?.name || 'Unknown venue';
+  const date = r.report_date ? new Date(r.report_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+  reportSubtitle.textContent = barName + ' · ' + date;
+
+  const monoStyle = 'font-family:\'JetBrains Mono\',monospace;font-variant-numeric:tabular-nums;';
+
+  // rebuild impact section from saved figures
+  let impactSection = '';
+  if(r.revenue_protected != null) {
+    const glasiCost = parseFloat(r.total_hours||0) * 25;
+    impactSection = '<div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy-mid) 100%);border:1px solid var(--ice);border-radius:16px;padding:24px;margin-bottom:20px;">'
+      +'<div style="font-size:9px;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:16px;">Customer Experience Impact</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
+      +'<div><div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Customers served per hour</div>'
+      +'<div style="font-size:28px;font-weight:700;color:var(--white);'+monoStyle+'">'+(r.customers_per_hour||'—')+'</div>'
+      +'<div style="font-size:11px;color:var(--grey);margin-top:2px;">additional per hour during support</div></div>'
+      +'<div><div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Revenue protected</div>'
+      +'<div style="font-size:28px;font-weight:700;color:var(--green);'+monoStyle+'">£'+parseFloat(r.revenue_protected).toFixed(0)+'</div>'
+      +'<div style="font-size:11px;color:var(--grey);margin-top:2px;">across '+r.total_hours+'hrs of support</div></div>'
+      +'<div><div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Glasi cost</div>'
+      +'<div style="font-size:20px;font-weight:600;color:var(--white);'+monoStyle+'">£'+glasiCost.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:var(--grey);margin-top:2px;">'+r.total_hours+'hrs × £25/hr</div></div>'
+      +'<div><div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Net value delivered</div>'
+      +'<div style="font-size:20px;font-weight:600;color:var(--green);'+monoStyle+'">£'+parseFloat(r.net_value||0).toFixed(0)+'</div></div>'
+      +'</div>'
+      +'<div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:var(--grey);line-height:1.6;">'
+      +(barData?'Based on bar figures: '+barData.bartenders+' bartenders, '+barData.drinks_per_hour+' drinks/hr, £'+parseFloat(barData.avg_drink_value).toFixed(2)+' avg drink value. Glasi floor support reduced bartender time off bar by 75%.':'Based on figures provided at onboarding.')
+      +'</div></div>';
+  }
+
+  reportBody.innerHTML = '<div id="report-content">'
+    +'<div style="text-align:center;margin-bottom:28px;">'
+    +'<div style="font-family:\'Raleway\',sans-serif;font-size:22px;letter-spacing:6px;color:var(--white);border:1px solid rgba(255,255,255,0.3);border-radius:4px;padding:6px 16px;display:inline-block;margin-bottom:12px;">GLASI</div>'
+    +'<div style="font-size:16px;font-weight:600;">'+barName+'</div>'
+    +'<div style="font-size:13px;color:var(--grey);">'+date+'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">'
+    +'<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">'
+    +'<div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Requests</div>'
+    +'<div style="font-size:24px;font-weight:700;'+monoStyle+'">'+(r.requests_filled||0)+'/'+(r.requests_total||0)+'</div>'
+    +'<div style="font-size:10px;color:var(--grey);">filled</div></div>'
+    +'<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">'
+    +'<div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Support hours</div>'
+    +'<div style="font-size:24px;font-weight:700;'+monoStyle+'">'+(r.total_hours||0)+'</div>'
+    +'<div style="font-size:10px;color:var(--grey);">hrs delivered</div></div>'
+    +'<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">'
+    +'<div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Avg response</div>'
+    +'<div style="font-size:24px;font-weight:700;'+monoStyle+'">'+(r.avg_response_minutes!=null?r.avg_response_minutes+'m':'—')+'</div>'
+    +'<div style="font-size:10px;color:var(--grey);">request to dispatch</div></div>'
+    +'</div>'
+    +impactSection
+    +(shiftRows?'<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">'
+    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Shift Breakdown</div>'
+    +'<table class="history-table" style="margin:0;"><thead><tr><th>Worker</th><th>Clock In</th><th>Clock Out</th><th>Length</th><th>Cost</th></tr></thead>'
+    +'<tbody>'+shiftRows+'</tbody></table></div>':'')
+    +'<div style="text-align:center;font-size:11px;color:var(--grey);margin-top:20px;">Tonight '+barName+' used Glasi proactive floor support. Report generated by Glasi Dispatch.</div>'
+    +'</div>';
 }
 
 function goToRequests() {
@@ -2233,9 +2332,14 @@ function confirmCloseSession() {
 }
 
 function dismissReport() {
-  showScreen('zones');
-  setActiveNav('dispatch');
-  renderZones();
+  // if we came from the reports list, go back there
+  if(document.getElementById('nav-reports')?.classList.contains('active')) {
+    goToReports();
+  } else {
+    showScreen('zones');
+    setActiveNav('dispatch');
+    renderZones();
+  }
 }
 
 async function generateSessionReport(sessionShifts, zone, requests) {
