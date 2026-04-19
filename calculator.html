@@ -368,7 +368,9 @@
 
       <div class="button-row" style="margin-top: 24px;">
         <button class="export-btn" id="exportPdfBtn">Export as PDF</button>
+        <button class="primary-btn" id="saveGlasiBtn" style="display:none;background:#166534;" onclick="saveToGlasi()">Save Figures to Glasi</button>
       </div>
+      <div id="saveStatus" style="margin-top:12px;font-size:13px;font-weight:600;display:none;"></div>
 
       <p class="footer-note">
         <strong>Important note:</strong> This calculation shows only the direct revenue protected and estimated customer impact. It does not include additional benefits such as staff wellbeing, brand reputation, or the long term value of a customer who leaves happy.
@@ -552,6 +554,78 @@
         if (event.key === "Enter") calculate();
       });
     });
+
+    // SUPABASE INTEGRATION
+    const SB = "https://hweytbyrqvjsviydmacv.supabase.co";
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3ZXl0YnlycXZqc3ZpeWRtYWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Njg1MTUsImV4cCI6MjA4OTQ0NDUxNX0.lVT4oSC10l6fX6l89lop3UseGclQmBThWPBqkAlQaSo";
+    const SBH = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const barId = urlParams.get('bar');
+    let currentCalcInputs = null;
+
+    if(barId) {
+      fetch(SB + '/rest/v1/bars?id=eq.' + barId + '&select=name', { headers: SBH })
+        .then(r => r.json())
+        .then(data => {
+          if(data && data[0]) {
+            barNameInput.value = data[0].name;
+            barNameInput.readOnly = true;
+            barNameInput.style.opacity = '0.7';
+          }
+        }).catch(() => {});
+    }
+
+    // override calculate to also store inputs and show save button
+    const originalCalculate = calculate;
+    calculateBtn.removeEventListener("click", calculate);
+    calculateBtn.addEventListener("click", function() {
+      originalCalculate();
+      const bartenders = parseFloat(bartendersInput.value) || 0;
+      const drinksPerHour = parseFloat(drinksPerHourInput.value) || 0;
+      const drinkValue = parseFloat(drinkValueInput.value) || 0;
+      const rushMinutes = parseFloat(rushMinutesInput.value) || 0;
+      const lostMinutes = parseFloat(lostMinutesInput.value) || 0;
+      const avgSpend = parseFloat(avgSpendInput.value) || 0;
+      if(bartenders && drinksPerHour && drinkValue && rushMinutes) {
+        currentCalcInputs = {
+          bartenders: bartenders,
+          drinks_per_hour: drinksPerHour,
+          avg_drink_value: drinkValue,
+          avg_customer_spend: avgSpend || null,
+          typical_rush_minutes: rushMinutes,
+          lost_minutes_per_bartender: lostMinutes || null
+        };
+        if(barId) document.getElementById('saveGlasiBtn').style.display = 'inline-block';
+      }
+    });
+
+    async function saveToGlasi() {
+      if(!barId || !currentCalcInputs) return;
+      const btn = document.getElementById('saveGlasiBtn');
+      const status = document.getElementById('saveStatus');
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+      try {
+        const res = await fetch(SB + '/rest/v1/bars?id=eq.' + barId, {
+          method: 'PATCH',
+          headers: { ...SBH, 'Prefer': 'return=minimal' },
+          body: JSON.stringify(currentCalcInputs)
+        });
+        if(res.ok) {
+          status.style.display = 'block';
+          status.style.color = '#166534';
+          status.textContent = 'Your figures have been saved to Glasi. Thank you!';
+          btn.textContent = 'Saved';
+        } else { throw new Error(); }
+      } catch(e) {
+        status.style.display = 'block';
+        status.style.color = '#991b1b';
+        status.textContent = 'Something went wrong. Please contact Glasi.';
+        btn.textContent = 'Save Figures to Glasi';
+        btn.disabled = false;
+      }
+    }
 
     clearResults();
   </script>
