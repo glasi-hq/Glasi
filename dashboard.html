@@ -381,6 +381,7 @@
         <option value="false">Inactive only</option>
       </select>
     </div>
+    <div id="promotion-banner" style="display:none;margin-bottom:20px;"></div>
     <div id="workers-list"><div class="empty">Loading workers...</div></div>
   </div>
 </div>
@@ -937,11 +938,68 @@ function goToRequests() {
 let allWorkersData = [];
 let editingWorkerId = null;
 
+const TIER_THRESHOLDS = [
+  { tier: 2, minScore: 75, minShifts: 5 },
+  { tier: 3, minScore: 82, minShifts: 15 },
+  { tier: 4, minScore: 88, minShifts: 30 },
+  { tier: 5, minScore: 94, minShifts: 50 }
+];
+
 async function loadWorkers() {
   const list = document.getElementById('workers-list');
   list.innerHTML = '<div class="empty">Loading...</div>';
+
+  // fetch all workers with reliability data
   allWorkersData = await sbGet('applications', '?order=name.asc&select=id,name,phone,email,postcode_full,tier,hourly_rate,active,age_group,reliability_notes,available_hours,reliability_score,reliability_updated_at');
+
+  // fetch shift counts per worker via session_workers join
+  const shiftCounts = await sbGet('shifts', '?status=eq.completed&select=session_worker_id,session_workers(application_id)');
+  const countMap = {};
+  shiftCounts.forEach(s => {
+    const appId = s.session_workers?.application_id;
+    if(appId) countMap[appId] = (countMap[appId]||0) + 1;
+  });
+
+  // attach shift count to each worker
+  allWorkersData.forEach(w => { w._shiftsCompleted = countMap[w.id]||0; });
+
+  // check for promotion suggestions
+  renderPromotionBanner();
   renderWorkerList();
+}
+
+function renderPromotionBanner() {
+  const banner = document.getElementById('promotion-banner');
+  const eligible = allWorkersData.filter(w => {
+    if(w.reliability_score == null) return false;
+    const currentTier = parseInt(w.tier||1);
+    const score = parseFloat(w.reliability_score);
+    const shifts = w._shiftsCompleted||0;
+    // find the next tier they qualify for
+    const nextThreshold = TIER_THRESHOLDS.find(t => t.tier > currentTier && score >= t.minScore && shifts >= t.minShifts);
+    if(nextThreshold) { w._suggestedTier = nextThreshold.tier; return true; }
+    return false;
+  });
+
+  if(!eligible.length) { banner.style.display='none'; return; }
+
+  banner.style.display='block';
+  banner.innerHTML = '<div style="background:var(--navy-mid);border:1px solid var(--amber);border-radius:12px;padding:16px 20px;">'
+    +'<div style="font-size:9px;letter-spacing:3px;color:var(--amber);text-transform:uppercase;margin-bottom:10px;">Tier Promotion Suggestions</div>'
+    +eligible.map(w =>
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+      +'<div>'
+      +'<div style="font-size:13px;font-weight:500;">'+w.name+'</div>'
+      +'<div style="font-size:11px;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'
+      +'Tier '+( w.tier||1)+' → Tier '+w._suggestedTier+' · '
+      +w._shiftsCompleted+' shifts · '
+      +parseFloat(w.reliability_score).toFixed(1)+'% reliability'
+      +'</div>'
+      +'</div>'
+      +'<button class="ghost-btn" onclick="openEditWorker('+w.id+')">Review</button>'
+      +'</div>'
+    ).join('')
+    +'</div>';
 }
 
 function renderWorkerList() {
@@ -965,7 +1023,7 @@ function renderWorkerList() {
 
   list.innerHTML = `<table class="history-table">
     <thead><tr>
-      <th>Name</th><th>Postcode</th><th>Email</th><th>Phone</th><th>Tier</th><th>Rate</th><th>Score</th><th>Status</th><th></th>
+      <th>Name</th><th>Postcode</th><th>Email</th><th>Phone</th><th>Tier</th><th>Rate</th><th>Shifts</th><th>Score</th><th>Status</th><th></th>
     </tr></thead>
     <tbody>${filtered.map(w=>`<tr>
       <td style="font-weight:500;">${w.name||''}</td>
@@ -974,6 +1032,7 @@ function renderWorkerList() {
       <td><span class="mono">${w.phone||''}</span></td>
       <td><span class="status-badge badge-pending">Tier ${w.tier||1}</span></td>
       <td><span class="mono">£${(w.hourly_rate||tierRate(w.tier)).toFixed(2)}/hr</span></td>
+      <td><span class="mono">${w._shiftsCompleted||0}</span></td>
       <td>${w.reliability_score!=null?scorebadge(w.reliability_score):'<span style="color:var(--grey);font-size:11px;">No data</span>'}</td>
       <td><span class="status-badge ${w.active===false?'badge-unfilled':'badge-completed'}">${w.active===false?'Inactive':'Active'}</span></td>
       <td><button class="ghost-btn" onclick="openEditWorker(${w.id})">Edit</button></td>
@@ -1001,10 +1060,10 @@ async function openEditWorker(id) {
   const scoreEl = document.getElementById('edit-worker-score');
   const scoreUpdatedEl = document.getElementById('edit-worker-score-updated');
   if(w.reliability_score != null) {
-    scoreEl.innerHTML = scorebadge(w.reliability_score);
+    scoreEl.innerHTML = scorebadge(w.reliability_score)+' <span style="font-size:11px;color:var(--grey);font-weight:400;margin-left:8px;">'+(w._shiftsCompleted||0)+' shifts completed</span>';
     scoreUpdatedEl.textContent = w.reliability_updated_at ? 'Last updated '+fmtT(w.reliability_updated_at) : '';
   } else {
-    scoreEl.textContent = 'No data yet';
+    scoreEl.textContent = 'No data yet — '+(w._shiftsCompleted||0)+' shifts completed';
     scoreEl.style.color = 'var(--grey)';
     scoreUpdatedEl.textContent = 'Score calculated on session close';
   }
