@@ -727,11 +727,27 @@
       <option value="active">Active</option>
       <option value="paused">Paused</option>
     </select>
+    <label>Zoom Keyword</label>
+    <input class="field" type="text" id="bar-keyword" placeholder="e.g. WOOL — workers reply this to accept" />
     <label>Notes</label>
     <textarea class="field" id="bar-notes" rows="3" placeholder="Entrance details, parking, anything useful..."></textarea>
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('add-bar')">Cancel</button>
       <button class="confirm-btn" onclick="saveBar()">Add Bar</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: EDIT KEYWORD -->
+<div class="overlay" id="ov-edit-keyword">
+  <div class="modal">
+    <div class="modal-title" id="edit-keyword-bar-name">Edit Zoom Keyword</div>
+    <div class="modal-sub">Workers reply this keyword in Zoom to accept a shift</div>
+    <label>Zoom Keyword</label>
+    <input class="field" type="text" id="edit-keyword-value" placeholder="e.g. WOOL" style="text-transform:uppercase;font-size:20px;letter-spacing:4px;" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('edit-keyword')">Cancel</button>
+      <button class="confirm-btn" onclick="saveKeyword()">Save Keyword</button>
     </div>
   </div>
 </div>
@@ -1370,7 +1386,7 @@ async function startSession() {
   if(!setupWorkers.length) { alert('Add at least one worker before starting the session.'); return; }
   // ensure bars are loaded for this zone
   if(!bars.length) {
-    const result = await sbGet('bars','?order=name.asc');
+    const result = await sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword');
     bars = Array.isArray(result) ? result : [];
   }
   // create session record in supabase
@@ -1460,7 +1476,7 @@ let bars = [];
 let addingContactBarId = null;
 
 async function loadBars() {
-  const result = await sbGet('bars','?order=name.asc');
+  const result = await sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword,bartenders,drinks_per_hour,avg_drink_value,avg_customer_spend,typical_rush_minutes,lost_minutes_per_bartender');
   bars = Array.isArray(result) ? result : [];
   const contacts = await sbGet('bar_contacts','?order=name.asc');
   const allContacts = Array.isArray(contacts) ? contacts : [];
@@ -1487,6 +1503,9 @@ function renderBars(bars, contacts) {
         ${b.address?`<button class="copy-address-btn" onclick="copyText('${b.address.replace(/'/g,"\\'")}', this)">Copy Address</button>`:''}
         ${b.google_maps_link?`<button class="copy-address-btn" onclick="copyText('${b.google_maps_link.replace(/'/g,"\\'")}', this)">Copy Maps Link</button>`:''}
         <button class="copy-address-btn" onclick="copyCalcLink(${b.id}, this)">Copy Calculator Link</button>
+        <button class="copy-address-btn" onclick="openEditKeyword(${b.id}, '${b.name.replace(/'/g,"\\'")}', '${(b.zoom_keyword||'').replace(/'/g,"\\'")}')">
+          ${b.zoom_keyword?'Keyword: <strong>'+b.zoom_keyword+'</strong>':'Set Keyword'}
+        </button>
         <select class="field" style="width:auto;padding:6px 10px;margin:0;font-size:12px;" onchange="updateBarStatus(${b.id}, this.value)">
           <option value="prospect" ${b.status==='prospect'?'selected':''}>Prospect</option>
           <option value="trial" ${b.status==='trial'?'selected':''}>Trial</option>
@@ -1514,6 +1533,23 @@ function renderBars(bars, contacts) {
   }).join('');
 }
 
+let editingKeywordBarId = null;
+
+function openEditKeyword(barId, barName, currentKeyword) {
+  editingKeywordBarId = barId;
+  document.getElementById('edit-keyword-bar-name').textContent = barName;
+  document.getElementById('edit-keyword-value').value = currentKeyword||'';
+  openOv('edit-keyword');
+}
+
+async function saveKeyword() {
+  if(!editingKeywordBarId) return;
+  const keyword = document.getElementById('edit-keyword-value').value.trim().toUpperCase()||null;
+  await sbPatch('bars', '?id=eq.'+editingKeywordBarId, { zoom_keyword: keyword });
+  closeOv('edit-keyword');
+  loadBars();
+}
+
 function copyCalcLink(barId, btn) {
   const link = 'https://www.glasi.co.uk/calculator?bar=' + barId;
   navigator.clipboard.writeText(link).then(() => {
@@ -1534,15 +1570,17 @@ function copyText(text, btn) {
 async function saveBar() {
   const name = document.getElementById('bar-name').value.trim();
   if(!name) return;
+  const keyword = document.getElementById('bar-keyword').value.trim().toUpperCase()||null;
   await sbPost('bars', {
     name,
     address: document.getElementById('bar-address').value.trim()||null,
     google_maps_link: document.getElementById('bar-maps').value.trim()||null,
     zone_id: parseInt(document.getElementById('bar-zone').value),
     status: document.getElementById('bar-status').value,
-    notes: document.getElementById('bar-notes').value.trim()||null
+    notes: document.getElementById('bar-notes').value.trim()||null,
+    zoom_keyword: keyword
   });
-  ['bar-name','bar-address','bar-maps','bar-notes'].forEach(id=>document.getElementById(id).value='');
+  ['bar-name','bar-address','bar-maps','bar-notes','bar-keyword'].forEach(id=>document.getElementById(id).value='');
   closeOv('add-bar');
   loadBars();
 }
@@ -2603,9 +2641,11 @@ function openRequestReceived() {
 
 function buildZoomPost() {
   const venueEl = document.getElementById('req-venue');
+  const barId = parseInt(venueEl.value);
   const venueName = venueEl.options[venueEl.selectedIndex]?.text || '';
   const length = document.getElementById('req-shift-length').value;
-  const keyword = venueName.split(' ')[0].toUpperCase();
+  const barRecord = bars.find(b => b.id === barId);
+  const keyword = barRecord?.zoom_keyword || venueName.split(' ').find(w => w.length > 2)?.toUpperCase() || venueName.split(' ')[0].toUpperCase();
   const post = venueName ? `SHIFT AVAILABLE — ${venueName}\nLength: ${length}hr\nReply ${keyword} to accept` : '';
   document.getElementById('req-zoom-post').textContent = post;
 }
