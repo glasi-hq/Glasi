@@ -292,6 +292,7 @@
       <button class="hdr-nav-btn" id="nav-dispatch" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})">Dispatch</button>
       <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
       <button class="hdr-nav-btn" id="nav-requests" onclick="safeNavigate(goToRequests)">Requests</button>
+      <button class="hdr-nav-btn" id="nav-reports" onclick="safeNavigate(goToReports)">Reports</button>
     </nav>
   </div>
   <div class="hdr-right">
@@ -324,8 +325,8 @@
           <div class="zone-card-meta" style="margin-top:6px;">Start a session and manage live shifts</div>
         </button>
       </div>
-      <!-- Bottom row: Shifts | Requests -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <!-- Bottom row: Shifts | Requests | Reports -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
         <button class="zone-card" onclick="goToShifts()" style="text-align:center;">
           <div class="zone-card-name">Shifts</div>
           <div class="zone-card-meta">All completed shifts</div>
@@ -333,6 +334,10 @@
         <button class="zone-card" onclick="goToRequests()" style="text-align:center;">
           <div class="zone-card-name">Requests</div>
           <div class="zone-card-meta">All shift requests</div>
+        </button>
+        <button class="zone-card" onclick="goToReports()" style="text-align:center;">
+          <div class="zone-card-name">Reports</div>
+          <div class="zone-card-meta">Session reports</div>
         </button>
       </div>
     </div>
@@ -438,6 +443,19 @@
       </div>
     </div>
     <div id="report-body"></div>
+  </div>
+</div>
+
+<!-- REPORTS SCREEN -->
+<div id="screen-reports" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title">Session Reports</div>
+        <div class="page-sub">All session reports across every bar</div>
+      </div>
+    </div>
+    <div id="reports-list"><div class="empty">Loading reports...</div></div>
   </div>
 </div>
 
@@ -944,6 +962,35 @@ function goToWorkers() {
   showScreen('workers');
   setActiveNav('workers');
   loadWorkers();
+}
+
+function goToReports() {
+  showScreen('reports');
+  setActiveNav('reports');
+  loadReports();
+}
+
+async function loadReports() {
+  const list = document.getElementById('reports-list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  const data = await sbGet('session_reports', '?order=created_at.desc&select=*,bars(name)');
+  if(!data.length) { list.innerHTML = '<div class="empty">No session reports yet.</div>'; return; }
+  list.innerHTML = '<table class="history-table"><thead><tr>'
+    +'<th>Date</th><th>Bar</th><th>Shifts</th><th>Hours</th><th>Requests</th><th>Response</th><th>Customers/hr</th><th>Revenue Protected</th><th>Net Value</th>'
+    +'</tr></thead><tbody>'
+    +data.map(r => '<tr>'
+      +'<td><span class="mono">'+( r.report_date||'')+' </span></td>'
+      +'<td>'+(r.bars?.name||'Unknown')+'</td>'
+      +'<td><span class="mono">'+(r.total_shifts||0)+'</span></td>'
+      +'<td><span class="mono">'+(r.total_hours||0)+'hrs</span></td>'
+      +'<td><span class="mono">'+(r.requests_filled||0)+'/'+(r.requests_total||0)+'</span></td>'
+      +'<td><span class="mono">'+(r.avg_response_minutes!=null?r.avg_response_minutes+'m':'—')+'</span></td>'
+      +'<td><span class="mono">'+(r.customers_per_hour!=null?r.customers_per_hour:'—')+'</span></td>'
+      +'<td><span class="mono">'+(r.revenue_protected!=null?'£'+parseFloat(r.revenue_protected).toFixed(0):'—')+'</span></td>'
+      +'<td><span class="mono" style="color:var(--green);">'+(r.net_value!=null?'£'+parseFloat(r.net_value).toFixed(0):'—')+'</span></td>'
+      +'</tr>'
+    ).join('')
+    +'</tbody></table>';
 }
 
 function goToRequests() {
@@ -2246,11 +2293,14 @@ async function generateSessionReport(sessionShifts, zone, requests) {
     const extraDrinksTotal = extraDrinksPerHr * totalHours;
     const revenueProtected = extraDrinksTotal * drinkVal;
     const customersPerHr = Math.round(extraDrinksPerHr / 5);
-    const netValue = revenueProtected - totalCost;
+    const glasiCostToBar = totalHours * 25;
+    const netValue = revenueProtected - glasiCostToBar;
 
     customersPerHrSave = customersPerHr;
     revenueProtectedSave = parseFloat(revenueProtected.toFixed(2));
     netValueSave = parseFloat(netValue.toFixed(2));
+
+    const monoStyle = 'font-family:\'JetBrains Mono\',monospace;font-variant-numeric:tabular-nums;';
 
     impactSection = `
       <div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy-mid) 100%);border:1px solid var(--ice);border-radius:16px;padding:24px;margin-bottom:20px;">
@@ -2258,21 +2308,22 @@ async function generateSessionReport(sessionShifts, zone, requests) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div>
             <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Customers served per hour</div>
-            <div style="font-size:28px;font-weight:700;color:var(--white);">${customersPerHr}</div>
+            <div style="font-size:28px;font-weight:700;color:var(--white);${monoStyle}">${customersPerHr}</div>
             <div style="font-size:11px;color:var(--grey);margin-top:2px;">additional per hour during support</div>
           </div>
           <div>
             <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Revenue protected</div>
-            <div style="font-size:28px;font-weight:700;color:var(--green);">£${revenueProtected.toFixed(0)}</div>
-            <div style="font-size:11px;color:var(--grey);margin-top:2px;">across ${totalHours} hours of support</div>
+            <div style="font-size:28px;font-weight:700;color:var(--green);${monoStyle}">£${revenueProtected.toFixed(0)}</div>
+            <div style="font-size:11px;color:var(--grey);margin-top:2px;">across ${totalHours}hrs of support</div>
           </div>
           <div>
             <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Glasi cost</div>
-            <div style="font-size:20px;font-weight:600;color:var(--white);">£${totalCost.toFixed(2)}</div>
+            <div style="font-size:20px;font-weight:600;color:var(--white);${monoStyle}">£${glasiCostToBar.toFixed(2)}</div>
+            <div style="font-size:10px;color:var(--grey);margin-top:2px;">${totalHours}hrs × £25/hr</div>
           </div>
           <div>
             <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Net value delivered</div>
-            <div style="font-size:20px;font-weight:600;color:var(--green);">£${netValue.toFixed(0)}</div>
+            <div style="font-size:20px;font-weight:600;color:var(--green);${monoStyle}">£${netValue.toFixed(0)}</div>
           </div>
         </div>
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:var(--grey);line-height:1.6;">
@@ -2320,17 +2371,17 @@ async function generateSessionReport(sessionShifts, zone, requests) {
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
         <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
           <div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Requests</div>
-          <div style="font-size:24px;font-weight:700;">${filledRequests}/${totalRequests}</div>
+          <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;">${filledRequests}/${totalRequests}</div>
           <div style="font-size:10px;color:var(--grey);">filled</div>
         </div>
         <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
           <div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Support hours</div>
-          <div style="font-size:24px;font-weight:700;">${totalHours.toFixed(1)}</div>
+          <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;">${totalHours.toFixed(1)}</div>
           <div style="font-size:10px;color:var(--grey);">hrs delivered</div>
         </div>
         <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
           <div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Avg response</div>
-          <div style="font-size:24px;font-weight:700;">${avgResponseMins !== null ? avgResponseMins+'m' : '—'}</div>
+          <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;">${avgResponseMins !== null ? avgResponseMins+'m' : '—'}</div>
           <div style="font-size:10px;color:var(--grey);">request to dispatch</div>
         </div>
       </div>
