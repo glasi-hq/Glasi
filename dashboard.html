@@ -110,7 +110,8 @@
     /* WORKER CARDS */
     .worker-card { background: var(--navy-mid); border: 2px solid var(--border); border-radius: 16px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
     .worker-card:hover { border-color: var(--ice); transform: translateY(-1px); }
-    .worker-card.available { border-color: rgba(34,197,94,0.4); }
+    .worker-card.available { border-color: var(--border); }
+    .worker-card.available.worker-selected { border-color: var(--green); background: var(--green-dim); }
     .worker-card.left { border-color: var(--border); opacity: 0.45; cursor: default; }
     .worker-card.left:hover { transform: none; border-color: var(--border); }
     .worker-card.dispatched { border-color: var(--amber); background: var(--amber-dim); cursor: default; }
@@ -1287,22 +1288,31 @@ function renderRoom() {
   if(!roomWorkers.length){ grid.innerHTML='<div class="empty">No workers in room.<br>All workers have been dispatched or have left.</div>'; return; }
   grid.innerHTML=roomWorkers.map(w=>{
     const isLeft=w.status==='left';
-    return `<div class="worker-card ${w.status}" id="wc-${w.id}">
-      <div class="wc-status-dot"></div>
-      <div class="wc-name">${w.name}</div>
-      <div class="wc-phone">${w.phone||''}</div>
-      <div class="wc-postcode">${w.postcode_full||''}</div>
-      <div class="wc-status-label">${isLeft?'Left Session':'Available'}</div>
-      <div class="wc-actions">
-        ${!isLeft?`<button class="wc-btn wc-btn-dispatch" onclick="openDispatch('${w.id}')">Dispatch</button>`:''}
-        ${!isLeft?`<button class="wc-btn wc-btn-left" onclick="markLeft('${w.id}')">Left</button>`:''}
-        ${isLeft?`<button class="wc-btn wc-btn-restore" onclick="restoreWorker('${w.id}')">Restore</button>`:''}
-      </div>
-      ${!isLeft&&activeShiftRequests.length?`<div style="margin-top:8px;">
-        <button style="width:100%;background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:5px;font-size:10px;cursor:pointer;" onclick="openLogResponse('${w.id}')">Log Response</button>
-      </div>`:''}
-    </div>`;
+    const isSelected = w.id === selectedWorkerId;
+    const selectedClass = (!isLeft && isSelected) ? ' worker-selected' : '';
+    return '<div class="worker-card '+w.status+selectedClass+'" id="wc-'+w.id+'" onclick="'+(isLeft?'':'selectWorker(\''+w.id+'\')')+'">'+
+      '<div class="wc-status-dot"></div>'+
+      '<div class="wc-name">'+w.name+'</div>'+
+      '<div class="wc-phone">'+(w.phone||'')+'</div>'+
+      '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
+      '<div class="wc-status-label">'+(isLeft?'Left Session':'Available')+'</div>'+
+      '<div class="wc-actions">'+
+      (!isLeft?'<button class="wc-btn wc-btn-dispatch" onclick="event.stopPropagation();openDispatch(\''+w.id+'\')">Dispatch</button>':'')+
+      (!isLeft?'<button class="wc-btn wc-btn-left" onclick="event.stopPropagation();markLeft(\''+w.id+'\')">Left</button>':'')+
+      (isLeft?'<button class="wc-btn wc-btn-restore" onclick="event.stopPropagation();restoreWorker(\''+w.id+'\')">Restore</button>':'')+
+      '</div>'+
+      (!isLeft&&activeShiftRequests.filter(r=>r.status!=='dispatched').length?'<div style="margin-top:8px;"><button style="width:100%;background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:5px;font-size:10px;cursor:pointer;" onclick="event.stopPropagation();openLogResponse(\''+w.id+'\')">Log Response</button></div>':'')+
+      '</div>';
   }).join('');
+}
+
+function selectWorker(wid) {
+  if(selectedWorkerId === wid) {
+    selectedWorkerId = null;
+  } else {
+    selectedWorkerId = wid;
+  }
+  renderRoom();
 }
 
 function markLeft(wid) {
@@ -1368,6 +1378,7 @@ async function confirmDispatchBar() {
     const idx = activeShiftRequests.findIndex(r => r.id === latestRequest.id);
     if(idx >= 0) activeShiftRequests[idx].status = 'dispatched';
     selectedRequestId = null;
+    selectedWorkerId = null;
   }
 
   closeOv('dispatch-bar');
@@ -1729,6 +1740,7 @@ function confirmCloseSession() {
   activeSessionId = null;
   activeShiftRequests = [];
   selectedRequestId = null;
+  selectedWorkerId = null;
   setupWorkers=[]; sessionWorkers=[]; shifts=[];
   showScreen('zones');
   setActiveNav('dispatch');
@@ -1784,6 +1796,7 @@ async function saveWorkerResponse() {
 let activeShiftRequests = [];
 let currentRequestId = null;
 let selectedRequestId = null;
+let selectedWorkerId = null;
 let requestTimerInterval = null;
 
 function openRequestReceived() {
@@ -1896,8 +1909,11 @@ function renderRequestCards() {
   cardsEl.innerHTML = activeShiftRequests.map(r => {
     const barName = r._barName || bars.find(b => b.id === r.bar_id)?.name || 'Unknown';
     const reqTime = r.request_time ? new Date(r.request_time) : new Date(r.created_at);
-    const minsAgo = Math.floor((Date.now() - reqTime.getTime()) / 60000);
-    const urgent = minsAgo >= 5;
+    const totalSecs = Math.floor((Date.now() - reqTime.getTime()) / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    const timerStr = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+    const urgent = mins >= 5;
     const isSelected = r.id === selectedRequestId;
     const isDispatched = r.status === 'dispatched';
     let cardClass = 'request-card';
@@ -1907,20 +1923,31 @@ function renderRequestCards() {
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
       +'<div class="req-card-top">'
       +'<div class="req-card-bar">'+barName+'</div>'
-      +'<div class="req-card-timer'+(urgent?' urgent':'')+'">'+minsAgo+'m ago</div>'
+      +'<div class="req-card-timer'+(urgent?' urgent':'')+'" id="rtimer-'+r.id+'">'+timerStr+'</div>'
       +'</div>'
       +'<div class="req-card-message">'+r.raw_message+'</div>'
       +'<div class="req-card-meta">'
       +'<span>'+parseFloat(r.shift_length_hours||0)+'hr shift</span>'
       +(r.posted_at?'<span class="req-card-posted">Posted to Zoom</span>':'<span>Not posted</span>')
-      +'<span class="status-badge badge-'+(r.status||'pending')+'">'+( r.status||'pending')+'</span>'
+      +'<span class="status-badge badge-'+(r.status||'pending')+'">'+(r.status||'pending')+'</span>'
       +'</div>'
       +'</div>';
   }).join('');
 
-  // start timer to update "X mins ago"
+  // update timer every second without full re-render
   if(requestTimerInterval) clearInterval(requestTimerInterval);
-  requestTimerInterval = setInterval(renderRequestCards, 60000);
+  requestTimerInterval = setInterval(() => {
+    activeShiftRequests.forEach(r => {
+      const el = document.getElementById('rtimer-'+r.id);
+      if(!el || r.status === 'dispatched') return;
+      const reqTime = r.request_time ? new Date(r.request_time) : new Date(r.created_at);
+      const totalSecs = Math.floor((Date.now() - reqTime.getTime()) / 1000);
+      const mins = Math.floor(totalSecs / 60);
+      const secs = totalSecs % 60;
+      el.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+      if(mins >= 5) el.className = 'req-card-timer urgent';
+    });
+  }, 1000);
 }
 
 function selectRequest(id) {
