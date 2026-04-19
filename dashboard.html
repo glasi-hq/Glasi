@@ -1052,7 +1052,42 @@ async function openSavedReport(index) {
   const date = r.report_date ? new Date(r.report_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
   reportSubtitle.textContent = barName + ' · ' + date;
 
+  // load on duty contact
+  let onDutyName = 'your manager';
+  if(r.bar_id) {
+    const contacts = await sbGet('bar_contacts', '?bar_id=eq.'+r.bar_id+'&on_duty=eq.true&select=name');
+    if(contacts.length) onDutyName = contacts[0].name;
+    else {
+      const allC = await sbGet('bar_contacts', '?bar_id=eq.'+r.bar_id+'&select=name&order=name.asc');
+      if(allC.length) onDutyName = allC[0].name;
+    }
+  }
+
+  // load requests for this session
+  let firstRequestTime = null;
+  let firstRequestMsg = null;
+  if(r.session_id) {
+    const reqs = await sbGet('shift_requests', '?session_id=eq.'+r.session_id+'&order=request_time.asc&select=raw_message,request_time');
+    if(reqs.length) {
+      firstRequestTime = reqs[0].request_time ? fmtT(reqs[0].request_time) : null;
+      firstRequestMsg = reqs[0].raw_message || null;
+    }
+  }
+
   const monoStyle = 'font-family:\'JetBrains Mono\',monospace;font-variant-numeric:tabular-nums;';
+
+  // request block
+  let requestSection = '';
+  if(firstRequestTime) {
+    requestSection = '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;">'
+      +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:14px;">The Request</div>'
+      +'<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">'
+      +'<span style="font-size:15px;font-weight:600;">'+onDutyName+'</span>'
+      +'<span style="font-size:12px;color:var(--grey);">requested a Glasi at '+firstRequestTime+'</span>'
+      +'</div>'
+      +(firstRequestMsg?'<div style="background:var(--navy);border-left:3px solid var(--amber);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:var(--white);line-height:1.6;font-style:italic;">"'+firstRequestMsg+'"</div>':'')
+      +'</div>';
+  }
 
   // narrative impact section
   let impactNarrative = '';
@@ -1060,12 +1095,13 @@ async function openSavedReport(index) {
     const glasiCost = parseFloat(r.total_hours||0) * 25;
     impactNarrative = '<div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy-mid) 100%);border:1px solid var(--ice);border-radius:16px;padding:24px;margin-bottom:20px;">'
       +'<div style="font-size:9px;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:14px;">The Impact</div>'
-      +'<p style="margin:0 0 16px;font-size:15px;line-height:1.7;">Because your manager called it early, Glasi estimate that approximately <strong style="color:var(--white);font-size:18px;">'+(r.customers_per_hour||'—')+' additional customers per hour</strong> were served without disruption during that shift. That\'s customers who got their drinks, cleared their tables, and stayed happy rather than waiting, giving up, or not coming back.</p>'
-      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.7;">Over '+r.total_hours+' hours of floor support, that translated to an estimated <strong style="color:var(--green);font-size:18px;">£'+parseFloat(r.revenue_protected).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+glasiCost.toFixed(0)+'.</p>'
+      +'<p style="margin:0 0 16px;font-size:15px;line-height:1.8;">'+onDutyName+' using Glasi at the right time meant that approximately <strong style="color:var(--white);font-size:18px;">'+(r.customers_per_hour||'—')+' additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at, getting the level of service you strive to deliver.</p>'
+      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">As a result, those customers are more likely to come back. That\'s another benefit of using Glasi at the right moment.</p>'
+      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">Over '+r.total_hours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);font-size:18px;">£'+parseFloat(r.revenue_protected).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+glasiCost.toFixed(0)+'.</p>'
       +'<div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">'
       +'<div style="font-size:12px;color:var(--grey);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Tonight in numbers</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">'
-      +'<div style="color:var(--grey);">Requests filled</div><div style="'+monoStyle+'">'+(r.requests_filled||0)+'/'+(r.requests_total||0)+'</div>'
+      +'<div style="color:var(--grey);">Request from</div><div style="'+monoStyle+'">'+onDutyName+(firstRequestTime?', '+firstRequestTime:'')+'</div>'
       +'<div style="color:var(--grey);">Response time</div><div style="'+monoStyle+'">'+(r.avg_response_minutes!=null?r.avg_response_minutes+' minutes':'—')+'</div>'
       +'<div style="color:var(--grey);">Floor support</div><div style="'+monoStyle+'">'+r.total_hours+' hours</div>'
       +'<div style="color:var(--grey);">Customers per hour</div><div style="'+monoStyle+'">'+(r.customers_per_hour||'—')+' additional</div>'
@@ -1080,6 +1116,7 @@ async function openSavedReport(index) {
     +'<div style="font-size:18px;font-weight:600;">'+barName+'</div>'
     +'<div style="font-size:13px;color:var(--grey);">'+date+'</div>'
     +'</div>'
+    +requestSection
     +impactNarrative
     +(shiftRows?'<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">'
     +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Shift Detail</div>'
@@ -2447,21 +2484,34 @@ async function generateSessionReport(sessionShifts, zone, requests) {
     +'</tr>'
   ).join('');
 
-  // get on duty contact name from first request
-  const onDutyName = requests[0]?._contactName || null;
+  // get on duty contact for the bar
+  let onDutyName = 'your manager';
+  if(barId) {
+    const contacts = await sbGet('bar_contacts', '?bar_id=eq.'+barId+'&on_duty=eq.true&select=name');
+    if(contacts.length) onDutyName = contacts[0].name;
+    else {
+      const allContacts = await sbGet('bar_contacts', '?bar_id=eq.'+barId+'&select=name&order=name.asc');
+      if(allContacts.length) onDutyName = allContacts[0].name;
+    }
+  }
 
   // narrative copy
-  const firstRequestTime = requests.length && requests[0].request_time ? fmtT(requests[0].request_time) : null;
-  const firstRequestMsg = requests[0]?.raw_message || null;
+  const firstRequest = requests.length ? requests[0] : null;
+  const firstRequestTime = firstRequest?.request_time ? fmtT(firstRequest.request_time) : null;
+  const firstRequestMsg = firstRequest?.raw_message || null;
 
   const monoStyle = 'font-family:\'JetBrains Mono\',monospace;font-variant-numeric:tabular-nums;';
 
-  let narrativeSection = '';
+  // request block — the evidence
+  let requestSection = '';
   if(firstRequestTime) {
-    narrativeSection = '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;line-height:1.8;font-size:14px;">'
-      +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:14px;">Tonight\'s Session</div>'
-      +'<p style="margin:0 0 12px;">At <strong>'+firstRequestTime+'</strong>, '+(onDutyName||'your manager')+' requested a Glasi for '+barName+'. Within <strong>'+(avgResponseMins != null ? avgResponseMins : '—')+ ' minutes</strong>, a vetted Glasi worker arrived on the floor and worked a <strong>'+totalHours+' hour shift</strong> through your busiest period.</p>'
-      +(firstRequestMsg?'<p style="margin:0;font-size:12px;color:var(--grey);font-style:italic;">"'+firstRequestMsg+'"</p>':'')
+    requestSection = '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;">'
+      +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:14px;">The Request</div>'
+      +'<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">'
+      +'<span style="font-size:15px;font-weight:600;">'+onDutyName+'</span>'
+      +'<span style="font-size:12px;color:var(--grey);">requested a Glasi at '+firstRequestTime+'</span>'
+      +'</div>'
+      +(firstRequestMsg?'<div style="background:var(--navy);border-left:3px solid var(--amber);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:var(--white);line-height:1.6;font-style:italic;">"'+firstRequestMsg+'"</div>':'')
       +'</div>';
   }
 
@@ -2470,12 +2520,13 @@ async function generateSessionReport(sessionShifts, zone, requests) {
     const glasiCostToBar = totalHours * 25;
     impactNarrative = '<div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy-mid) 100%);border:1px solid var(--ice);border-radius:16px;padding:24px;margin-bottom:20px;">'
       +'<div style="font-size:9px;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:14px;">The Impact</div>'
-      +'<p style="margin:0 0 16px;font-size:15px;line-height:1.7;">Because '+(onDutyName||'your manager')+' called it early, Glasi estimate that approximately <strong style="color:var(--white);font-size:18px;">'+customersPerHrSave+' additional customers per hour</strong> were served without disruption during that shift. That\'s customers who got their drinks, cleared their tables, and stayed happy rather than waiting, giving up, or not coming back.</p>'
-      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.7;">Over '+totalHours+' hours of floor support, that translated to an estimated <strong style="color:var(--green);font-size:18px;">£'+parseFloat(revenueProtectedSave).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+glasiCostToBar.toFixed(0)+'.</p>'
+      +'<p style="margin:0 0 16px;font-size:15px;line-height:1.8;">'+onDutyName+' using Glasi at the right time meant that approximately <strong style="color:var(--white);font-size:18px;">'+customersPerHrSave+' additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at, getting the level of service you strive to deliver.</p>'
+      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">As a result, those customers are more likely to come back. That\'s another benefit of using Glasi at the right moment.</p>'
+      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">Over '+totalHours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);font-size:18px;">£'+parseFloat(revenueProtectedSave).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+glasiCostToBar.toFixed(0)+'.</p>'
       +'<div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">'
       +'<div style="font-size:12px;color:var(--grey);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Tonight in numbers</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">'
-      +'<div style="color:var(--grey);">Requests filled</div><div style="'+monoStyle+'">'+filledRequests+'/'+totalRequests+'</div>'
+      +'<div style="color:var(--grey);">Request from</div><div style="'+monoStyle+'">'+onDutyName+', '+firstRequestTime+'</div>'
       +'<div style="color:var(--grey);">Response time</div><div style="'+monoStyle+'">'+(avgResponseMins != null ? avgResponseMins+' minutes' : '—')+'</div>'
       +'<div style="color:var(--grey);">Floor support</div><div style="'+monoStyle+'">'+totalHours+' hours</div>'
       +'<div style="color:var(--grey);">Customers per hour</div><div style="'+monoStyle+'">'+customersPerHrSave+' additional</div>'
@@ -2490,7 +2541,7 @@ async function generateSessionReport(sessionShifts, zone, requests) {
     +'<div style="font-size:18px;font-weight:600;">'+barName+'</div>'
     +'<div style="font-size:13px;color:var(--grey);">'+date+'</div>'
     +'</div>'
-    +narrativeSection
+    +requestSection
     +impactNarrative
     +(shiftRows?'<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">'
     +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Shift Detail</div>'
