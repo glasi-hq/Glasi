@@ -77,6 +77,11 @@
     .section-label { font-size: 9px; letter-spacing: 3px; color: var(--ice); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
     .worker-setup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 28px; }
     .worker-setup-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .invite-worker-card { background: var(--navy-mid); border: 2px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer; transition: all 0.2s; }
+    .invite-worker-card:hover { border-color: var(--ice); }
+    .invite-worker-card.invited { border-color: var(--amber); background: var(--amber-dim); }
+    .invite-worker-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+    .invite-worker-meta { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
     .worker-setup-info { flex: 1; min-width: 0; }
     .worker-setup-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .worker-setup-meta { font-size: 10px; color: var(--grey); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
@@ -419,36 +424,25 @@
 
 <!-- ZONE SELECT -->
 <div id="screen-zones" class="screen">
-  <div style="padding:48px 24px;max-width:680px;margin:0 auto;">
+  <div style="padding:32px 24px;max-width:900px;margin:0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div class="page-title">Select your zone</div>
-      <button class="ghost-btn" onclick="showScreen('home')">Back</button>
+      <div class="page-title" id="setup-zone-title">Select Zone</div>
+      <button class="ghost-btn" onclick="safeNavigate(()=>{showScreen('home');setActiveNav(null);})">Home</button>
     </div>
-    <div class="page-sub">Choose the zone you are dispatching for this session</div>
+    <div class="page-sub" id="setup-zone-sub">Choose the zone you are dispatching for tonight</div>
+
+    <!-- Zone cards — shown until zone selected -->
     <div class="zones-grid" id="zones-grid" style="margin-top:24px;"></div>
-  </div>
-</div>
 
-<!-- SETUP -->
-<div id="screen-setup" class="screen">
-  <div class="setup-header">
-    <div>
-      <div class="setup-title" id="setup-zone-name"></div>
-      <div class="setup-sub">Session setup. Add workers then start the session.</div>
+    <!-- Worker invite grid — shown after zone selected -->
+    <div id="invite-section" style="display:none;margin-top:24px;">
+      <div class="section-label">Workers in Zone — click to invite</div>
+      <div id="invite-worker-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:28px;"></div>
+      <div class="section-label">Invited (<span id="invite-count">0</span>)</div>
+      <div id="invited-worker-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:28px;"></div>
+      <button class="start-session-btn" onclick="startSession()">Start Session</button>
     </div>
-    <button class="ghost-btn" onclick="goToZones()">Back</button>
   </div>
-
-  <div class="section-label">Add Workers to Room</div>
-  <div class="add-worker-row">
-    <select class="field add-worker-select" id="worker-select"></select>
-    <button class="small-ice-btn" onclick="addWorkerToSetup()">Add to Room</button>
-  </div>
-
-  <div class="section-label">Workers in Room (<span id="worker-count">0</span>)</div>
-  <div class="worker-setup-grid" id="worker-setup-list"></div>
-
-  <button class="start-session-btn" onclick="startSession()">Start Session</button>
 </div>
 
 <!-- SESSION -->
@@ -476,6 +470,7 @@
           <div class="room-title" id="session-zone-name"></div>
           <div class="room-meta">Select a request, then select a worker to dispatch</div>
         </div>
+        <button class="ghost-btn" onclick="openAddWorkerToSession()">+ Add Worker</button>
       </div>
       <!-- Request section -->
       <div id="request-section">
@@ -489,9 +484,16 @@
           <button class="ghost-btn" style="margin-bottom:20px;" onclick="openRequestReceived()">+ New Request</button>
         </div>
       </div>
-      <!-- Workers -->
-      <div class="request-section-label" id="workers-label" style="display:none;">Available Workers — select to dispatch</div>
-      <div class="worker-grid" id="worker-grid"></div>
+      <!-- Available workers -->
+      <div id="available-section">
+        <div class="request-section-label" id="workers-label">Available Workers — select to dispatch</div>
+        <div class="worker-grid" id="worker-grid"></div>
+      </div>
+      <!-- Invited workers -->
+      <div id="invited-section" style="margin-top:24px;">
+        <div class="request-section-label" style="color:var(--amber);">Invited — awaiting Zoom confirmation</div>
+        <div class="worker-grid" id="invited-grid"></div>
+      </div>
     </div>
 
     <!-- ON SHIFT TAB -->
@@ -529,6 +531,20 @@
         <tbody id="log-tbody"></tbody>
       </table>
       <div id="log-empty" class="empty">No shifts logged yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: ADD WORKER TO SESSION -->
+<div class="overlay" id="ov-add-session-worker">
+  <div class="modal">
+    <div class="modal-title">Add Worker to Session</div>
+    <div class="modal-sub">Worker will be added as Invited</div>
+    <label>Select Worker</label>
+    <select class="field" id="session-worker-select"></select>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('add-session-worker')">Cancel</button>
+      <button class="confirm-btn" onclick="addWorkerMidSession()">Add to Session</button>
     </div>
   </div>
 </div>
@@ -1033,65 +1049,70 @@ function renderZones() {
 
 async function selectZone(id) {
   activeZone=ZONES.find(z=>z.id===id);
-  document.getElementById('setup-zone-name').textContent=activeZone.name;
+  document.getElementById('setup-zone-title').textContent=activeZone.name;
+  document.getElementById('setup-zone-sub').textContent='Click workers to invite them to tonight\'s session';
   setupWorkers=[];
   await loadAllWorkers();
-  renderSetupWorkerSelect();
-  renderSetupWorkerList();
-  showScreen('setup');
+  document.getElementById('zones-grid').style.display='none';
+  document.getElementById('invite-section').style.display='block';
+  renderInviteGrid();
 }
 
-function goToZones() { showScreen('zones'); renderZones(); setActiveNav('dispatch'); }
-
-async function loadAllWorkers() {
-  allWorkers=await sbGet('applications','?age_group=not.is.null&active=not.eq.false&order=name.asc&select=id,name,phone,postcode_full,email,tier,hourly_rate');
+function goToZones() {
+  document.getElementById('zones-grid').style.display='grid';
+  document.getElementById('invite-section').style.display='none';
+  document.getElementById('setup-zone-title').textContent='Select Zone';
+  document.getElementById('setup-zone-sub').textContent='Choose the zone you are dispatching for tonight';
+  setupWorkers=[];
+  renderZones();
 }
 
-// SETUP
-function renderSetupWorkerSelect() {
-  const added=setupWorkers.map(w=>w.email);
+function renderInviteGrid() {
   const zonePostcodes=activeZone?.postcodes||[];
-  const available=allWorkers.filter(w=>{
-    if(added.includes(w.email)) return false;
+  const zoneWorkers=allWorkers.filter(w=>{
     if(!w.postcode_full) return false;
     const pc=w.postcode_full.trim().toUpperCase();
     return zonePostcodes.some(p=>pc.startsWith(p));
   });
-  document.getElementById('worker-select').innerHTML=
-    available.length
-      ? available.map(w=>`<option value="${w.email}">${w.name} (${w.postcode_full})</option>`).join('')
-      : '<option value="">No more workers available in this zone</option>';
+
+  const uninvited=zoneWorkers.filter(w=>!setupWorkers.find(s=>s.email===w.email));
+  const invited=setupWorkers;
+
+  document.getElementById('invite-count').textContent=invited.length;
+
+  const grid=document.getElementById('invite-worker-grid');
+  if(!uninvited.length) {
+    grid.innerHTML='<div style="color:var(--grey);font-size:13px;">All zone workers invited.</div>';
+  } else {
+    grid.innerHTML=uninvited.map(w=>
+      '<div class="invite-worker-card" onclick="toggleInvite(\''+w.email+'\', true)">'
+      +'<div class="invite-worker-name">'+w.name+'</div>'
+      +'<div class="invite-worker-meta">'+(w.phone||'')+' · '+(w.postcode_full||'')+'</div>'
+      +'</div>'
+    ).join('');
+  }
+
+  const invList=document.getElementById('invited-worker-list');
+  if(!invited.length) {
+    invList.innerHTML='<div style="color:var(--grey);font-size:13px;grid-column:1/-1;">No workers invited yet. Click workers above to invite.</div>';
+  } else {
+    invList.innerHTML=invited.map(w=>
+      '<div class="invite-worker-card invited" onclick="toggleInvite(\''+w.email+'\', false)">'
+      +'<div class="invite-worker-name">'+w.name+' <span style="font-size:10px;color:var(--amber);">✓ Invited</span></div>'
+      +'<div class="invite-worker-meta">'+(w.phone||'')+' · '+(w.postcode_full||'')+'</div>'
+      +'</div>'
+    ).join('');
+  }
 }
 
-function addWorkerToSetup() {
-  const sel=document.getElementById('worker-select');
-  const email=sel.value;
-  if(!email) return;
-  const worker=allWorkers.find(w=>w.email===email);
-  if(!worker || setupWorkers.find(w=>w.email===email)) return;
-  setupWorkers.push(worker);
-  renderSetupWorkerSelect();
-  renderSetupWorkerList();
-}
-
-function removeWorkerFromSetup(email) {
-  setupWorkers=setupWorkers.filter(w=>w.email!==email);
-  renderSetupWorkerSelect();
-  renderSetupWorkerList();
-}
-
-function renderSetupWorkerList() {
-  document.getElementById('worker-count').textContent=setupWorkers.length;
-  const list=document.getElementById('worker-setup-list');
-  if(!setupWorkers.length) { list.innerHTML='<div style="color:var(--grey);font-size:13px;grid-column:1/-1;">No workers added yet.</div>'; return; }
-  list.innerHTML=setupWorkers.map(w=>`
-    <div class="worker-setup-card">
-      <div class="worker-setup-info">
-        <div class="worker-setup-name">${w.name}</div>
-        <div class="worker-setup-meta">${w.phone||''} · ${w.postcode_full||''}</div>
-      </div>
-      <button class="remove-btn" onclick="removeWorkerFromSetup('${w.email}')" title="Remove">✕</button>
-    </div>`).join('');
+function toggleInvite(email, invite) {
+  if(invite) {
+    const w=allWorkers.find(x=>x.email===email);
+    if(w && !setupWorkers.find(s=>s.email===email)) setupWorkers.push(w);
+  } else {
+    setupWorkers=setupWorkers.filter(w=>w.email!==email);
+  }
+  renderInviteGrid();
 }
 
 async function startSession() {
@@ -1116,14 +1137,14 @@ async function startSession() {
 
   activeSessionId = sessionData[0].id;
 
-  // write each worker to session_workers
+  // write each worker to session_workers as invited
   for(const w of setupWorkers) {
     const sw = await sbPost('session_workers', {
       session_id: activeSessionId,
       application_id: w.id,
       worker_name: w.name,
       worker_phone: w.phone||null,
-      status: 'available'
+      status: 'invited'
     });
     w.sessionWorkerId = sw?.[0]?.id || null;
   }
@@ -1132,7 +1153,7 @@ async function startSession() {
     ...w,
     applicationId: w.id,
     id: uid(),
-    status: 'available',
+    status: 'invited',
     code: gen4(),
     clockOutCode: gen4(),
     bar: null,
@@ -1307,8 +1328,12 @@ async function toggleOnDuty(contactId, newVal, barId) {
 
 function updateCounts() {
   const avail=sessionWorkers.filter(w=>w.status==='available'||w.status==='left').length;
+  const invited=sessionWorkers.filter(w=>w.status==='invited'||w.status==='noshow').length;
   const onshift=sessionWorkers.filter(w=>w.status==='dispatched'||w.status==='onshift').length;
   const done=shifts.length;
+  const roomTotal=avail+invited;
+  document.getElementById('count-room').textContent=roomTotal||'';
+  document.getElementById('count-room').className='tab-count'+(roomTotal?' show':'');
   document.getElementById('count-onshift').textContent=onshift;
   document.getElementById('count-log').textContent=done||'';
   document.getElementById('count-log').className='tab-count'+(done?' show':'');
@@ -1316,27 +1341,75 @@ function updateCounts() {
 
 // ROOM
 function renderRoom() {
-  const grid=document.getElementById('worker-grid');
-  const roomWorkers=sessionWorkers.filter(w=>w.status==='available'||w.status==='left');
-  if(!roomWorkers.length){ grid.innerHTML='<div class="empty">No workers in room.<br>All workers have been dispatched or have left.</div>'; return; }
-  grid.innerHTML=roomWorkers.map(w=>{
-    const isLeft=w.status==='left';
-    const isSelected = w.id === selectedWorkerId;
-    const selectedClass = (!isLeft && isSelected) ? ' worker-selected' : '';
-    return '<div class="worker-card '+w.status+selectedClass+'" id="wc-'+w.id+'" onclick="'+(isLeft?'':'selectWorker(\''+w.id+'\')')+'">'+
-      '<div class="wc-status-dot"></div>'+
-      '<div class="wc-name">'+w.name+'</div>'+
-      '<div class="wc-phone">'+(w.phone||'')+'</div>'+
-      '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
-      '<div class="wc-status-label">'+(isLeft?'Left Session':'Available')+'</div>'+
-      '<div class="wc-actions">'+
-      (!isLeft?'<button class="wc-btn wc-btn-dispatch" onclick="event.stopPropagation();openDispatch(\''+w.id+'\')">Dispatch</button>':'')+
-      (!isLeft?'<button class="wc-btn wc-btn-left" onclick="event.stopPropagation();markLeft(\''+w.id+'\')">Left</button>':'')+
-      (isLeft?'<button class="wc-btn wc-btn-restore" onclick="event.stopPropagation();restoreWorker(\''+w.id+'\')">Restore</button>':'')+
-      '</div>'+
-      (!isLeft&&activeShiftRequests.filter(r=>r.status!=='dispatched').length?'<div style="margin-top:8px;"><button style="width:100%;background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:5px;font-size:10px;cursor:pointer;" onclick="event.stopPropagation();openLogResponse(\''+w.id+'\')">Log Response</button></div>':'')+
-      '</div>';
-  }).join('');
+  const grid = document.getElementById('worker-grid');
+  const invitedGrid = document.getElementById('invited-grid');
+  const invitedSection = document.getElementById('invited-section');
+
+  const available = sessionWorkers.filter(w => w.status==='available'||w.status==='left');
+  const invited = sessionWorkers.filter(w => w.status==='invited'||w.status==='noshow');
+
+  // Available section
+  if(!available.length) {
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">No confirmed workers yet. Confirm workers as they join the Zoom.</div>';
+  } else {
+    grid.innerHTML=available.map(w=>{
+      const isLeft=w.status==='left';
+      const isSelected=w.id===selectedWorkerId;
+      const selectedClass=(!isLeft&&isSelected)?' worker-selected':'';
+      return '<div class="worker-card '+w.status+selectedClass+'" id="wc-'+w.id+'" onclick="'+(isLeft?'':'selectWorker(\''+w.id+'\')')+'">'+
+        '<div class="wc-status-dot"></div>'+
+        '<div class="wc-name">'+w.name+'</div>'+
+        '<div class="wc-phone">'+(w.phone||'')+'</div>'+
+        '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
+        '<div class="wc-status-label">'+(isLeft?'Left Session':'Available')+'</div>'+
+        '<div class="wc-actions">'+
+        (!isLeft?'<button class="wc-btn wc-btn-dispatch" onclick="event.stopPropagation();openDispatch(\''+w.id+'\')">Dispatch</button>':'')+
+        (!isLeft?'<button class="wc-btn wc-btn-left" onclick="event.stopPropagation();markLeft(\''+w.id+'\')">Left</button>':'')+
+        (isLeft?'<button class="wc-btn wc-btn-restore" onclick="event.stopPropagation();restoreWorker(\''+w.id+'\')">Restore</button>':'')+
+        '</div>'+
+        (!isLeft&&activeShiftRequests.filter(r=>r.status!=='dispatched').length?'<div style="margin-top:8px;"><button style="width:100%;background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:5px;font-size:10px;cursor:pointer;" onclick="event.stopPropagation();openLogResponse(\''+w.id+'\')">Log Response</button></div>':'')+
+        '</div>';
+    }).join('');
+  }
+
+  // Invited section
+  if(!invited.length) {
+    invitedSection.style.display='none';
+  } else {
+    invitedSection.style.display='block';
+    invitedGrid.innerHTML=invited.map(w=>{
+      const isNoShow=w.status==='noshow';
+      return '<div class="worker-card" style="border-color:'+(isNoShow?'var(--red)':'var(--amber)')+';opacity:'+(isNoShow?'0.5':'1')+'" id="wc-'+w.id+'">'+
+        '<div class="wc-status-dot" style="background:'+(isNoShow?'var(--red)':'var(--amber)')+'"></div>'+
+        '<div class="wc-name">'+w.name+'</div>'+
+        '<div class="wc-phone">'+(w.phone||'')+'</div>'+
+        '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
+        '<div class="wc-status-label" style="color:'+(isNoShow?'var(--red)':'var(--amber)')+'">'+( isNoShow?'No Show':'Invited')+'</div>'+
+        '<div class="wc-actions">'+
+        (!isNoShow?'<button class="wc-btn wc-btn-dispatch" style="background:var(--green);color:var(--navy);" onclick="confirmWorkerArrival(\''+w.id+'\')">Confirm</button>':'')+
+        (!isNoShow?'<button class="wc-btn wc-btn-left" onclick="markNoShow(\''+w.id+'\')">No Show</button>':'')+
+        (isNoShow?'<button class="wc-btn wc-btn-restore" onclick="restoreWorker(\''+w.id+'\')">Restore</button>':'')+
+        '</div></div>';
+    }).join('');
+  }
+}
+
+function confirmWorkerArrival(wid) {
+  const w=sessionWorkers.find(x=>x.id===wid);
+  if(!w) return;
+  w.status='available';
+  if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'available'});
+  renderRoom();
+  updateCounts();
+}
+
+function markNoShow(wid) {
+  const w=sessionWorkers.find(x=>x.id===wid);
+  if(!w) return;
+  w.status='noshow';
+  if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'noshow'});
+  renderRoom();
+  updateCounts();
 }
 
 function selectWorker(wid) {
@@ -1354,12 +1427,61 @@ function selectWorker(wid) {
 
 function markLeft(wid) {
   const w=sessionWorkers.find(x=>x.id===wid);
-  if(w) { w.status='left'; renderRoom(); updateCounts(); }
+  if(w) { w.status='left'; if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'left'}); renderRoom(); updateCounts(); }
 }
 
 function restoreWorker(wid) {
   const w=sessionWorkers.find(x=>x.id===wid);
-  if(w) { w.status='available'; renderRoom(); updateCounts(); }
+  if(w) { w.status='available'; if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'available'}); renderRoom(); updateCounts(); }
+}
+
+function openAddWorkerToSession() {
+  const inSession=sessionWorkers.map(w=>w.applicationId);
+  const zonePostcodes=activeZone?.postcodes||[];
+  const eligible=allWorkers.filter(w=>{
+    if(inSession.includes(w.id)) return false;
+    if(!w.postcode_full) return false;
+    const pc=w.postcode_full.trim().toUpperCase();
+    return zonePostcodes.some(p=>pc.startsWith(p));
+  });
+  const sel=document.getElementById('session-worker-select');
+  sel.innerHTML=eligible.length
+    ? eligible.map(w=>'<option value="'+w.id+'">'+w.name+' ('+w.postcode_full+')</option>').join('')
+    : '<option value="">No eligible workers available</option>';
+  openOv('add-session-worker');
+}
+
+async function addWorkerMidSession() {
+  const sel=document.getElementById('session-worker-select');
+  const wid=parseInt(sel.value);
+  if(!wid) return;
+  const w=allWorkers.find(x=>x.id===wid);
+  if(!w) return;
+  const sw=await sbPost('session_workers',{
+    session_id:activeSessionId,
+    application_id:w.id,
+    worker_name:w.name,
+    worker_phone:w.phone||null,
+    status:'invited'
+  });
+  const newWorker={
+    ...w,
+    applicationId:w.id,
+    id:uid(),
+    status:'invited',
+    code:gen4(),
+    clockOutCode:gen4(),
+    bar:null,barRecord:null,dispatchedAt:null,
+    clockInAt:null,clockInCode:null,shiftLength:null,
+    hourly_rate:w.hourly_rate||12.21,wage:null,
+    clockOutAt:null,rating:null,notes:null,
+    shiftRequestId:null,shiftId:uid(),
+    sessionWorkerId:sw?.[0]?.id||null
+  };
+  sessionWorkers.push(newWorker);
+  closeOv('add-session-worker');
+  renderRoom();
+  updateCounts();
 }
 
 // DISPATCH
