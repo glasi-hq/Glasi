@@ -266,6 +266,7 @@
     .badge-pending { background: var(--ice-dim); color: var(--ice); }
     .badge-completed { background: var(--green-dim); color: var(--green); }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -420,6 +421,23 @@
     <div id="requests-list">
       <div class="empty">Loading requests...</div>
     </div>
+  </div>
+</div>
+
+<!-- SESSION REPORT -->
+<div id="screen-report" class="screen">
+  <div class="history-screen" style="max-width:720px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title">Session Report</div>
+        <div class="page-sub" id="report-subtitle"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="ghost-btn" onclick="dismissReport()">Skip</button>
+        <button class="small-ice-btn" onclick="exportReportPDF()">Export PDF</button>
+      </div>
+    </div>
+    <div id="report-body"></div>
   </div>
 </div>
 
@@ -2142,14 +2160,185 @@ function confirmCloseSession() {
   clearInterval(sessionTimerInterval);
   clearInterval(shiftCountdownInterval);
   clearInterval(requestTimerInterval);
+
+  // capture session data before clearing
+  const sessionShifts = [...shifts];
+  const sessionZone = activeZone;
+  const sessionId = activeSessionId;
+  const sessionRequests = [...activeShiftRequests];
+
   activeSessionId = null;
   activeShiftRequests = [];
   selectedRequestId = null;
   selectedWorkerId = null;
   setupWorkers=[]; sessionWorkers=[]; shifts=[];
+
+  // show report if there are completed shifts
+  if(sessionShifts.length) {
+    generateSessionReport(sessionShifts, sessionZone, sessionRequests);
+  } else {
+    showScreen('zones');
+    setActiveNav('dispatch');
+    renderZones();
+  }
+}
+
+function dismissReport() {
   showScreen('zones');
   setActiveNav('dispatch');
   renderZones();
+}
+
+async function generateSessionReport(sessionShifts, zone, requests) {
+  showScreen('report');
+  setActiveNav(null);
+
+  const reportBody = document.getElementById('report-body');
+  reportBody.innerHTML = '<div class="empty">Generating report...</div>';
+
+  // get bar data from first shift
+  const firstShift = sessionShifts[0];
+  const barId = firstShift?.barRecord?.id || null;
+  let barData = null;
+
+  if(barId) {
+    const result = await sbGet('bars', '?id=eq.'+barId+'&select=name,bartenders,drinks_per_hour,avg_drink_value,avg_customer_spend,typical_rush_minutes,lost_minutes_per_bartender');
+    barData = result?.[0] || null;
+  }
+
+  const date = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'Europe/London' });
+  const barName = firstShift?.bar || zone?.name || 'Unknown venue';
+
+  document.getElementById('report-subtitle').textContent = barName + ' · ' + date;
+
+  // calculate totals from session data
+  const totalShifts = sessionShifts.length;
+  const totalHours = sessionShifts.reduce((sum, s) => sum + (parseFloat(s.shiftLength)||0), 0);
+  const totalCost = sessionShifts.reduce((sum, s) => sum + (parseFloat(s.total_earned)||0), 0);
+  const filledRequests = requests.filter(r => r.status === 'dispatched').length;
+  const totalRequests = requests.length;
+
+  // response time — avg from request_time to dispatched
+  let avgResponseMins = null;
+  const responseTimes = sessionShifts.filter(s => s.requestTime && s.dispatchedAt).map(s => {
+    return Math.round((new Date(s.dispatchedAt) - new Date(s.requestTime)) / 60000);
+  });
+  if(responseTimes.length) avgResponseMins = Math.round(responseTimes.reduce((a,b)=>a+b,0) / responseTimes.length);
+
+  // customer impact calculation using bar data + 75% floor reduction
+  let impactSection = '';
+  if(barData && barData.bartenders && barData.drinks_per_hour && barData.avg_drink_value) {
+    const FLOOR_REDUCTION = 0.75;
+    const bartenders = parseInt(barData.bartenders);
+    const drinksPerHr = parseInt(barData.drinks_per_hour);
+    const drinkVal = parseFloat(barData.avg_drink_value);
+    const lostMins = parseInt(barData.lost_minutes_per_bartender||10);
+    const avgSpend = parseFloat(barData.avg_customer_spend||25);
+
+    const minsRecoveredPerHr = bartenders * lostMins * FLOOR_REDUCTION;
+    const extraDrinksPerHr = (minsRecoveredPerHr / 60) * drinksPerHr;
+    const extraDrinksTotal = extraDrinksPerHr * totalHours;
+    const revenueProtected = extraDrinksTotal * drinkVal;
+    const customersPerHr = Math.round(extraDrinksPerHr / 5);
+    const netValue = revenueProtected - totalCost;
+
+    impactSection = `
+      <div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy-mid) 100%);border:1px solid var(--ice);border-radius:16px;padding:24px;margin-bottom:20px;">
+        <div style="font-size:9px;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:16px;">Customer Experience Impact</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Customers served per hour</div>
+            <div style="font-size:28px;font-weight:700;color:var(--white);">${customersPerHr}</div>
+            <div style="font-size:11px;color:var(--grey);margin-top:2px;">additional per hour during support</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Revenue protected</div>
+            <div style="font-size:28px;font-weight:700;color:var(--green);">£${revenueProtected.toFixed(0)}</div>
+            <div style="font-size:11px;color:var(--grey);margin-top:2px;">across ${totalHours} hours of support</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Glasi cost</div>
+            <div style="font-size:20px;font-weight:600;color:var(--white);">£${totalCost.toFixed(2)}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--grey);margin-bottom:4px;">Net value delivered</div>
+            <div style="font-size:20px;font-weight:600;color:var(--green);">£${netValue.toFixed(0)}</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:var(--grey);line-height:1.6;">
+          Based on your figures: ${bartenders} bartenders, ${drinksPerHr} drinks/hr, £${drinkVal.toFixed(2)} avg drink value. 
+          Glasi floor support reduced bartender time off bar by 75%, freeing approximately ${Math.round(minsRecoveredPerHr)} minutes of serving time per hour.
+        </div>
+      </div>`;
+  }
+
+  // shift breakdown
+  const shiftRows = sessionShifts.map(s => `
+    <tr>
+      <td>${s.workerName}</td>
+      <td><span class="mono">${fmtT(s.clockInAt)}</span></td>
+      <td><span class="mono">${fmtT(s.clockOutAt)}</span></td>
+      <td><span class="mono">${fmtLen(parseFloat(s.shiftLength)||0)}</span></td>
+      <td><span class="mono">£${(parseFloat(s.total_earned)||0).toFixed(2)}</span></td>
+    </tr>`).join('');
+
+  reportBody.innerHTML = `
+    <div id="report-content">
+      <div style="text-align:center;margin-bottom:28px;">
+        <div style="font-family:'Raleway',sans-serif;font-size:22px;letter-spacing:6px;color:var(--white);border:1px solid rgba(255,255,255,0.3);border-radius:4px;padding:6px 16px;display:inline-block;margin-bottom:12px;">GLASI</div>
+        <div style="font-size:16px;font-weight:600;">${barName}</div>
+        <div style="font-size:13px;color:var(--grey);">${date}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Requests</div>
+          <div style="font-size:24px;font-weight:700;">${filledRequests}/${totalRequests}</div>
+          <div style="font-size:10px;color:var(--grey);">filled</div>
+        </div>
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Support hours</div>
+          <div style="font-size:24px;font-weight:700;">${totalHours.toFixed(1)}</div>
+          <div style="font-size:10px;color:var(--grey);">hrs delivered</div>
+        </div>
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:11px;color:var(--grey);margin-bottom:6px;">Avg response</div>
+          <div style="font-size:24px;font-weight:700;">${avgResponseMins !== null ? avgResponseMins+'m' : '—'}</div>
+          <div style="font-size:10px;color:var(--grey);">request to dispatch</div>
+        </div>
+      </div>
+
+      ${impactSection}
+
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Shift Breakdown</div>
+        <table class="history-table" style="margin:0;">
+          <thead><tr><th>Worker</th><th>Clock In</th><th>Clock Out</th><th>Length</th><th>Cost</th></tr></thead>
+          <tbody>${shiftRows}</tbody>
+        </table>
+      </div>
+
+      <div style="text-align:center;font-size:11px;color:var(--grey);margin-top:20px;">
+        Tonight ${barName} used Glasi proactive floor support. Report generated by Glasi Dispatch.
+      </div>
+    </div>`;
+}
+
+function exportReportPDF() {
+  const content = document.getElementById('report-content');
+  if(!content) return;
+  if(typeof html2pdf === 'undefined') {
+    alert('PDF export requires the html2pdf library. Please add it to the page.');
+    return;
+  }
+  const opt = {
+    margin: [10,10,10,10],
+    filename: 'Glasi-Session-Report.pdf',
+    image: { type:'jpeg', quality:0.98 },
+    html2canvas: { scale:2 },
+    jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
+  };
+  html2pdf().set(opt).from(content).save();
 }
 
 // WORKER RESPONSE LOGGING
