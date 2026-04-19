@@ -1908,10 +1908,12 @@ function confirmComplete() {
   const hours = parseFloat(w.shiftLength)||0;
   shifts.push({
     id: w.shiftId,
+    sessionId: activeSessionId,
     workerName: w.name,
     workerPhone: w.phone||'',
     workerPostcode: w.postcode_full||'',
     bar: w.bar,
+    barRecord: w.barRecord,
     zone: activeZone.name,
     requestTime: w.requestTime,
     requestMessage: w.requestMessage||'',
@@ -2227,6 +2229,10 @@ async function generateSessionReport(sessionShifts, zone, requests) {
 
   // customer impact calculation using bar data + 75% floor reduction
   let impactSection = '';
+  let customersPerHrSave = null;
+  let revenueProtectedSave = null;
+  let netValueSave = null;
+
   if(barData && barData.bartenders && barData.drinks_per_hour && barData.avg_drink_value) {
     const FLOOR_REDUCTION = 0.75;
     const bartenders = parseInt(barData.bartenders);
@@ -2241,6 +2247,10 @@ async function generateSessionReport(sessionShifts, zone, requests) {
     const revenueProtected = extraDrinksTotal * drinkVal;
     const customersPerHr = Math.round(extraDrinksPerHr / 5);
     const netValue = revenueProtected - totalCost;
+
+    customersPerHrSave = customersPerHr;
+    revenueProtectedSave = parseFloat(revenueProtected.toFixed(2));
+    netValueSave = parseFloat(netValue.toFixed(2));
 
     impactSection = `
       <div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy-mid) 100%);border:1px solid var(--ice);border-radius:16px;padding:24px;margin-bottom:20px;">
@@ -2271,6 +2281,23 @@ async function generateSessionReport(sessionShifts, zone, requests) {
         </div>
       </div>`;
   }
+
+  // save report to Supabase
+  const sessionIdForReport = sessionShifts[0]?.sessionId || null;
+  sbPost('session_reports', {
+    session_id: sessionIdForReport,
+    bar_id: barId,
+    report_date: today(),
+    total_shifts: totalShifts,
+    total_hours: totalHours,
+    total_cost: parseFloat(totalCost.toFixed(2)),
+    requests_total: totalRequests,
+    requests_filled: filledRequests,
+    avg_response_minutes: avgResponseMins,
+    customers_per_hour: customersPerHrSave,
+    revenue_protected: revenueProtectedSave,
+    net_value: netValueSave
+  }).catch(e => console.log('Report save failed', e));
 
   // shift breakdown
   const shiftRows = sessionShifts.map(s => `
