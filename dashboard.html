@@ -43,7 +43,7 @@
     .err { color: var(--red); font-size: 12px; margin-top: 8px; }
 
     /* HEADER */
-    #header { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; display: none; height: 49px; }
+    #header { background: var(--navy-mid); border-bottom: 1px solid var(--border); padding: 0 24px; display: none; align-items: center; justify-content: space-between; height: 49px; }
     .hdr-left { display: flex; align-items: center; gap: 0; }
     .hdr-wordmark { font-weight: 400; font-size: 14px; letter-spacing: 5px; color: var(--white); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 10px; margin-right: 16px; cursor: pointer; }
     .hdr-nav { display: flex; align-items: center; height: 49px; }
@@ -424,18 +424,25 @@
 
 <!-- ZONE SELECT -->
 <div id="screen-zones" class="screen">
-  <div style="padding:32px 24px;max-width:900px;margin:0 auto;">
+  <div style="padding:48px 24px;max-width:680px;margin:0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div class="page-title" id="setup-zone-title">Select Zone</div>
+      <div class="page-title">Select Zone</div>
       <button class="ghost-btn" onclick="safeNavigate(()=>{showScreen('home');setActiveNav(null);})">Home</button>
     </div>
-    <div class="page-sub" id="setup-zone-sub">Choose the zone you are dispatching for tonight</div>
-
-    <!-- Zone cards — shown until zone selected -->
+    <div class="page-sub">Choose the zone you are dispatching for tonight</div>
     <div class="zones-grid" id="zones-grid" style="margin-top:24px;"></div>
+  </div>
+</div>
 
-    <!-- Worker invite grid — shown after zone selected -->
-    <div id="invite-section" style="display:none;margin-top:24px;">
+<!-- INVITE SCREEN -->
+<div id="screen-invite" class="screen">
+  <div style="padding:32px 24px;max-width:900px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="page-title" id="invite-zone-title"></div>
+      <button class="ghost-btn" onclick="goToZones()">Back</button>
+    </div>
+    <div class="page-sub">Click workers to invite them to tonight's session. Click again to uninvite.</div>
+    <div style="margin-top:24px;">
       <div class="section-label">Workers in Zone — click to invite</div>
       <div id="invite-worker-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:28px;"></div>
       <div class="section-label">Invited (<span id="invite-count">0</span>)</div>
@@ -1047,24 +1054,24 @@ function renderZones() {
     </button>`).join('');
 }
 
+async function loadAllWorkers() {
+  allWorkers = await sbGet('applications','?age_group=not.is.null&active=not.eq.false&order=name.asc&select=id,name,phone,postcode_full,email,tier,hourly_rate');
+}
+
 async function selectZone(id) {
-  activeZone=ZONES.find(z=>z.id===id);
-  document.getElementById('setup-zone-title').textContent=activeZone.name;
-  document.getElementById('setup-zone-sub').textContent='Click workers to invite them to tonight\'s session';
-  setupWorkers=[];
+  activeZone = ZONES.find(z => z.id === id);
+  document.getElementById('invite-zone-title').textContent = activeZone.name;
+  setupWorkers = [];
   await loadAllWorkers();
-  document.getElementById('zones-grid').style.display='none';
-  document.getElementById('invite-section').style.display='block';
   renderInviteGrid();
+  showScreen('invite');
 }
 
 function goToZones() {
-  document.getElementById('zones-grid').style.display='grid';
-  document.getElementById('invite-section').style.display='none';
-  document.getElementById('setup-zone-title').textContent='Select Zone';
-  document.getElementById('setup-zone-sub').textContent='Choose the zone you are dispatching for tonight';
-  setupWorkers=[];
+  setupWorkers = [];
+  showScreen('zones');
   renderZones();
+  setActiveNav('dispatch');
 }
 
 function renderInviteGrid() {
