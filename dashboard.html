@@ -1322,6 +1322,7 @@ function renderBars(bars, contacts) {
       <div class="bar-actions">
         ${b.address?`<button class="copy-address-btn" onclick="copyText('${b.address.replace(/'/g,"\\'")}', this)">Copy Address</button>`:''}
         ${b.google_maps_link?`<button class="copy-address-btn" onclick="copyText('${b.google_maps_link.replace(/'/g,"\\'")}', this)">Copy Maps Link</button>`:''}
+        <button class="copy-address-btn" onclick="copyCalcLink(${b.id}, this)">Copy Calculator Link</button>
         <select class="field" style="width:auto;padding:6px 10px;margin:0;font-size:12px;" onchange="updateBarStatus(${b.id}, this.value)">
           <option value="prospect" ${b.status==='prospect'?'selected':''}>Prospect</option>
           <option value="trial" ${b.status==='trial'?'selected':''}>Trial</option>
@@ -1347,6 +1348,15 @@ function renderBars(bars, contacts) {
         </div>`:''}
     </div>`;
   }).join('');
+}
+
+function copyCalcLink(barId, btn) {
+  const link = 'https://glasi.co.uk/calculator?bar=' + barId;
+  navigator.clipboard.writeText(link).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
 }
 
 function copyText(text, btn) {
