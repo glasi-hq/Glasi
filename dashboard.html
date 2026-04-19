@@ -505,12 +505,14 @@
 
     <!-- LOG TAB -->
     <div id="tab-content-log" class="log-view" style="display:none;">
-      <div class="export-row">
-        <button class="small-ice-btn" onclick="exportCSV()">Export Timesheet CSV</button>
+      <div class="export-row" style="gap:8px;">
+        <button class="ghost-btn" onclick="exportPayrollCSV()">Export for Payroll</button>
+        <button class="small-ice-btn" onclick="exportFullCSV()">Export Full Log</button>
       </div>
       <table class="log-table" id="log-table">
         <thead>
           <tr>
+            <th><input type="checkbox" id="log-select-all" onchange="toggleAllShifts(this.checked)" /></th>
             <th>Worker</th>
             <th>Bar</th>
             <th>Request</th>
@@ -601,6 +603,37 @@
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('edit-worker')">Cancel</button>
       <button class="confirm-btn" onclick="saveWorkerEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: REQUEST DETAIL -->
+<div class="overlay" id="ov-request-detail">
+  <div class="modal">
+    <div class="modal-title" id="rd-bar"></div>
+    <div class="modal-sub" id="rd-status"></div>
+    <label>Original Message</label>
+    <div id="rd-message" style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--white);margin-bottom:16px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:4px;">Request Time</div>
+        <div class="mono" id="rd-request-time" style="font-size:13px;"></div>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:4px;">Posted to Zoom</div>
+        <div class="mono" id="rd-posted-time" style="font-size:13px;"></div>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:4px;">Shift Length</div>
+        <div class="mono" id="rd-shift-length" style="font-size:13px;"></div>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:4px;">Status</div>
+        <div id="rd-status-badge" style="font-size:13px;"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="confirm-btn" onclick="closeOv('request-detail')">Close</button>
     </div>
   </div>
 </div>
@@ -1693,14 +1726,21 @@ function renderLog() {
   const empty=document.getElementById('log-empty');
   if(!shifts.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML=shifts.map(s=>{
+  tbody.innerHTML=shifts.map((s,i)=>{
     const rate = s.hourly_rate||s.wage||'';
     const hours = parseFloat(s.shiftLength)||0;
     const total = rate && hours ? '£'+(parseFloat(rate)*hours).toFixed(2) : '';
+    const reqCell = s.requestMessage
+      ? '<td style="max-width:160px;cursor:pointer;" onclick="showRequestDetail('+i+')">'
+        +'<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ice);font-size:11px;">'+s.requestMessage+'</div>'
+        +(s.requestTime?'<div class="mono" style="font-size:10px;color:var(--grey);">'+fmtT(s.requestTime)+'</div>':'')
+        +'</td>'
+      : '<td style="color:var(--grey);font-size:11px;">—</td>';
     return '<tr>'
+      +'<td><input type="checkbox" class="shift-checkbox" data-index="'+i+'" /></td>'
       +'<td>'+s.workerName+'<br><span class="mono">'+s.workerPhone+'</span></td>'
       +'<td>'+s.bar+'</td>'
-      +'<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--grey);font-size:11px;">'+(s.requestMessage||'')+'</td>'
+      +reqCell
       +'<td><span class="mono">'+fmtT(s.dispatchedAt)+'</span></td>'
       +'<td><span class="mono">'+fmtT(s.clockInAt)+'</span></td>'
       +'<td><span class="mono">'+fmtT(s.clockOutAt)+'</span></td>'
@@ -1713,26 +1753,88 @@ function renderLog() {
   }).join('');
 }
 
-// CSV EXPORT
-function exportCSV() {
-  if(!shifts.length) { alert('No shifts to export.'); return; }
-  const headers=['Worker Name','Phone','Postcode','Bar','Zone','Request Time','Request Method','Dispatched At','Clock In','Clock Out','Shift Length (hrs)','Hourly Wage','Total Earned','Clock In Code','Rating','Notes'];
-  const rows=shifts.map(s=>[
-    s.workerName, s.workerPhone, s.workerPostcode, s.bar, s.zone,
-    s.requestTime||'', s.requestMethod||'',
-    fmtT(s.dispatchedAt), fmtT(s.clockInAt), fmtT(s.clockOutAt),
-    s.shiftLength, s.wage,
-    s.shiftLength&&s.wage?(parseFloat(s.shiftLength)*parseFloat(s.wage)).toFixed(2):'',
-    s.code, s.rating||'', s.notes||''
-  ]);
-  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`glasi-timesheet-${today()}.csv`;
+function toggleAllShifts(checked) {
+  document.querySelectorAll('.shift-checkbox').forEach(cb => cb.checked = checked);
+}
+
+function getSelectedShifts() {
+  const selected = [];
+  document.querySelectorAll('.shift-checkbox:checked').forEach(cb => {
+    const i = parseInt(cb.dataset.index);
+    if(shifts[i]) selected.push(shifts[i]);
+  });
+  return selected;
+}
+
+function showRequestDetail(index) {
+  const s = shifts[index];
+  if(!s) return;
+  // find the linked request
+  const req = activeShiftRequests.find(r => r.raw_message === s.requestMessage) || null;
+  document.getElementById('rd-bar').textContent = s.bar;
+  document.getElementById('rd-message').textContent = s.requestMessage || 'No message recorded';
+  document.getElementById('rd-request-time').textContent = s.requestTime ? fmtT(s.requestTime) : '—';
+  document.getElementById('rd-posted-time').textContent = req?.posted_at ? fmtT(req.posted_at) : '—';
+  document.getElementById('rd-shift-length').textContent = s.shiftLength ? fmtLen(parseFloat(s.shiftLength)) : '—';
+  document.getElementById('rd-status-badge').innerHTML = req ? '<span class="status-badge badge-'+(req.status||'pending')+'">'+(req.status||'pending')+'</span>' : '—';
+  openOv('request-detail');
+}
+
+// CSV EXPORTS
+function csvRow(arr) {
+  return arr.map(v => '"'+String(v||'').replace(/"/g,'""')+'"').join(',');
+}
+
+function downloadCSV(content, filename) {
+  const blob = new Blob([content], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportPayrollCSV() {
+  const selected = getSelectedShifts();
+  const data = selected.length ? selected : shifts;
+  if(!data.length) { alert('No shifts to export.'); return; }
+  const headers = ['Worker Name','Bar','Clock In','Clock Out','Total Hours','Pay Rate','Total Pay'];
+  const rows = data.map(s => {
+    const rate = parseFloat(s.hourly_rate||s.wage||0);
+    const hours = parseFloat(s.shiftLength)||0;
+    return [
+      s.workerName,
+      s.bar,
+      fmtT(s.clockInAt),
+      fmtT(s.clockOutAt),
+      fmtLen(hours),
+      rate?'£'+rate.toFixed(2)+'/hr':'',
+      rate&&hours?'£'+(rate*hours).toFixed(2):''
+    ];
+  });
+  downloadCSV([headers,...rows].map(csvRow).join('\n'), 'glasi-payroll-'+today()+'.csv');
+}
+
+function exportFullCSV() {
+  const selected = getSelectedShifts();
+  const data = selected.length ? selected : shifts;
+  if(!data.length) { alert('No shifts to export.'); return; }
+  const headers = ['Worker Name','Phone','Bar','Request Message','Request Time','Dispatched','Clock In','Clock Out','Length','Pay Rate','Total Earned','Clock In Code','Rating','Notes'];
+  const rows = data.map(s => {
+    const rate = parseFloat(s.hourly_rate||s.wage||0);
+    const hours = parseFloat(s.shiftLength)||0;
+    return [
+      s.workerName, s.workerPhone||'', s.bar,
+      s.requestMessage||'', s.requestTime?fmtT(s.requestTime):'',
+      fmtT(s.dispatchedAt), fmtT(s.clockInAt), fmtT(s.clockOutAt),
+      fmtLen(hours),
+      rate?'£'+rate.toFixed(2)+'/hr':'',
+      rate&&hours?'£'+(rate*hours).toFixed(2):'',
+      s.code||'', s.rating||'', s.notes||''
+    ];
+  });
+  downloadCSV([headers,...rows].map(csvRow).join('\n'), 'glasi-full-log-'+today()+'.csv');
 }
 
 // CLOSE SESSION
