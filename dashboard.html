@@ -1059,6 +1059,7 @@ async function startSession() {
 
   sessionWorkers=setupWorkers.map(w=>({
     ...w,
+    applicationId: w.id,
     id: uid(),
     status: 'available',
     code: gen4(),
@@ -1339,7 +1340,17 @@ async function confirmDispatchBar() {
 
   document.getElementById('code-value').textContent=dispatchCode;
   document.getElementById('code-worker-bar').textContent=`${w.name} dispatched to ${barRecord.name}`;
-  document.getElementById('dispatch-eta').value='';
+
+  // auto-fill ETA from worker bar distances (+3 min buffer)
+  let etaValue = '';
+  if(w.applicationId && barRecord.id) {
+    const distData = await sbGet('worker_bar_distances', `?application_id=eq.${w.applicationId}&bar_id=eq.${barRecord.id}&select=walking_minutes`);
+    if(distData.length && distData[0].walking_minutes) {
+      etaValue = distData[0].walking_minutes + 3;
+      w.expectedArrivalMinutes = etaValue;
+    }
+  }
+  document.getElementById('dispatch-eta').value = etaValue;
 
   // build messages — will update when ETA is typed
   window._dispatchContext = { w, barRecord, contactName, shiftLength };
@@ -1597,6 +1608,7 @@ async function saveShiftToSupabase(w) {
       clock_out_confirmed_at: w.clockOutAt,
       clock_in_code: w.code,
       clock_out_code: w.clockOutCode||null,
+      expected_arrival_minutes: w.expectedArrivalMinutes||null,
       bar_rating: w.rating||null,
       notes: w.notes||null,
       status:'completed'
