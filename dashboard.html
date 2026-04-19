@@ -1704,7 +1704,7 @@ async function saveShiftToSupabase(w) {
       shift_length_hours: hours,
       hourly_rate: rate,
       total_earned: total,
-      requested_at: toISO(w.requestTime),
+requested_at: w.requestTime ? (String(w.requestTime).includes('T') ? w.requestTime : toISO(w.requestTime)) : null,
       accepted_at: w.dispatchedAt,
       clock_in_confirmed_at: w.clockInAt,
       clock_out_confirmed_at: w.clockOutAt,
