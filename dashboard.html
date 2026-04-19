@@ -1307,6 +1307,10 @@ function renderRoom() {
 }
 
 function selectWorker(wid) {
+  if(!selectedRequestId) {
+    alert('Please select a shift request first before selecting a worker.');
+    return;
+  }
   if(selectedWorkerId === wid) {
     selectedWorkerId = null;
   } else {
@@ -1878,10 +1882,9 @@ async function saveShiftRequest() {
 
   if(result && result[0]?.id) {
     currentRequestId = result[0].id;
-    // store bar name on request for display
     result[0]._barName = venueEl.options[venueEl.selectedIndex]?.text || '';
     activeShiftRequests.push(result[0]);
-    selectedRequestId = result[0].id;
+    // do not auto-select — user must click the card
   }
 
   closeOv('request');
@@ -1953,8 +1956,10 @@ function renderRequestCards() {
 function selectRequest(id) {
   const r = activeShiftRequests.find(x => x.id === id);
   if(!r || r.status === 'dispatched') return;
-  selectedRequestId = id;
+  selectedRequestId = selectedRequestId === id ? null : id;
+  if(!selectedRequestId) selectedWorkerId = null;
   renderRequestCards();
+  renderRoom();
 }
 
 // SHIFTS HISTORY
