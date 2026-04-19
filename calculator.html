@@ -321,7 +321,7 @@
       <div class="experience-banner" id="experienceBanner" style="display:none;">
         <div class="experience-banner-icon">👥</div>
         <div class="experience-banner-text">
-          <p class="experience-banner-label">Customer experience impact</p>
+          <p class="experience-banner-label">Customer experience impact — per hour</p>
           <p class="experience-banner-value" id="customersAffected">0 customers</p>
           <p class="experience-banner-desc" id="customersDesc">That's roughly how many customers' experience was under pressure during this rush. It only takes a handful of those moments to show up in your reviews.</p>
         </div>
@@ -494,9 +494,9 @@
       barNameDisplay.textContent = currentBarName ? "Bar / Venue: " + currentBarName : "";
 
       if (revenueAtRisk > 0 && drinkValue > 0) {
-        const customersAffected = Math.round((revenueAtRisk / drinkValue) / 3);
-        customersAffectedEl.textContent = customersAffected + " customers";
-        customersDescEl.textContent = "That's roughly " + customersAffected + " customers whose experience was under pressure during this rush" + (currentBarName ? " at " + currentBarName : "") + ". It only takes a handful of those moments to show up in your reviews.";
+        const customersAffectedPerHour = Math.round((revenueAtRisk / rushHours) / (drinkValue * 5));
+        customersAffectedEl.textContent = customersAffectedPerHour + " customers per hour";
+        customersDescEl.textContent = "During peak hours" + (currentBarName ? " at " + currentBarName : "") + ", approximately " + customersAffectedPerHour + " customers per hour were affected by slower service. It only takes a handful of those moments to show up in your reviews.";
         experienceBanner.style.display = "flex";
       } else {
         experienceBanner.style.display = "none";
