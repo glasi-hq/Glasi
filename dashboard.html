@@ -2854,6 +2854,9 @@ function confirmCloseSession() {
   const sessionId = activeSessionId;
   const sessionRequests = [...activeShiftRequests];
 
+  // write end_time to sessions table
+  if(sessionId) sbPatch('sessions', '?id=eq.'+sessionId, { end_time: new Date().toISOString() });
+
   activeSessionId = null;
   activeShiftRequests = [];
   selectedRequestId = null;
