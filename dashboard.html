@@ -1545,11 +1545,12 @@ async function goToZoneDetail(zoneId) {
     return (z.postcodes||[]).some(p=>pc.startsWith(p));
   });
 
-  // work out current availability slot
-  const now = new Date(new Date().toLocaleString('en-GB', {timeZone:'Europe/London'}));
+  // work out current availability slot using London timezone
+  const now = new Date();
+  const londonTime = new Date(now.toLocaleString('en-US', {timeZone:'Europe/London'}));
   const days = ['sun','mon','tue','wed','thu','fri','sat'];
-  const dayStr = days[now.getDay()];
-  const hour = now.getHours();
+  const dayStr = days[londonTime.getDay()];
+  const hour = londonTime.getHours();
   let slot = null;
   if(hour >= 20) slot = dayStr+'_20_00';
   else if(hour >= 16) slot = dayStr+'_16_20';
@@ -1557,7 +1558,7 @@ async function goToZoneDetail(zoneId) {
 
   // also compute tonight's slot (8pm+) regardless of current time
   const tonightSlot = dayStr+'_20_00';
-  const tomorrowSlot = days[(now.getDay()+1)%7]+'_20_00';
+  const tomorrowSlot = days[(londonTime.getDay()+1)%7]+'_20_00';
 
   const isWorkerAvailableNow = w => slot && w.available_hours && w.available_hours.includes(slot);
   const isWorkerAvailableTonight = w => w.available_hours && w.available_hours.includes(tonightSlot);
