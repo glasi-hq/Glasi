@@ -288,6 +288,7 @@
     <div class="hdr-wordmark" onclick="safeNavigate(()=>{showScreen('home');setActiveNav(null);})">GLASI</div>
     <nav class="hdr-nav">
       <button class="hdr-nav-btn" id="nav-bars" onclick="safeNavigate(goToBars)">Bars</button>
+      <button class="hdr-nav-btn" id="nav-zones" onclick="safeNavigate(goToZonesMgmt)">Zones</button>
       <button class="hdr-nav-btn" id="nav-workers" onclick="safeNavigate(goToWorkers)">Workers</button>
       <button class="hdr-nav-btn" id="nav-dispatch" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})">Dispatch</button>
       <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
@@ -297,6 +298,7 @@
   </div>
   <div class="hdr-right">
     <div class="hdr-date" id="hdr-date"></div>
+    <div style="font-size:12px;color:var(--ice);font-family:'JetBrains Mono',monospace;" id="hdr-user"></div>
     <button class="ghost-btn" onclick="doLogout()">Sign Out</button>
   </div>
 </div>
@@ -320,7 +322,7 @@
       </div>
       <!-- Centre: Dispatch -->
       <div style="margin-bottom:16px;">
-        <button class="zone-card" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})" style="text-align:center;background:var(--navy-light);border-color:var(--ice);padding:32px 24px;">
+        <button class="zone-card" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})" style="text-align:center;padding:32px 24px;width:100%;">
           <div class="zone-card-name" style="font-size:22px;letter-spacing:2px;">DISPATCH</div>
           <div class="zone-card-meta" style="margin-top:6px;">Start a session and manage live shifts</div>
         </button>
@@ -459,8 +461,36 @@
   </div>
 </div>
 
-<!-- ZONE SELECT -->
-<div id="screen-zones" class="screen">
+<!-- ZONES MANAGEMENT SCREEN -->
+<div id="screen-zones-mgmt" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title">Zones</div>
+        <div class="page-sub">Manage dispatch zones and postcode coverage</div>
+      </div>
+      <button class="small-ice-btn" onclick="openAddZone()">+ Add Zone</button>
+    </div>
+    <div id="zones-mgmt-list"><div class="empty">Loading zones...</div></div>
+  </div>
+</div>
+
+<!-- OVERLAY: ADD/EDIT ZONE -->
+<div class="overlay" id="ov-zone">
+  <div class="modal">
+    <div class="modal-title" id="zone-modal-title">Add Zone</div>
+    <label>Zone Name</label>
+    <input class="field" type="text" id="zone-name" placeholder="e.g. Southampton City Centre" />
+    <label>Postcodes (comma separated)</label>
+    <input class="field" type="text" id="zone-postcodes" placeholder="e.g. SO14, SO15" />
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('zone')">Cancel</button>
+      <button class="confirm-btn" onclick="saveZone()">Save Zone</button>
+    </div>
+  </div>
+</div>
+
+<!-- ZONE SELECT (DISPATCH) -->
   <div style="padding:48px 24px;max-width:680px;margin:0 auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <div class="page-title">Select Zone</div>
@@ -872,14 +902,10 @@ const H = { 'Content-Type':'application/json', 'apikey':KEY, 'Authorization':`Be
 
 const USERS = [
   { email:'sam@glasi.co.uk', pass:'Sponger64112!', name:'Sam' },
+  { email:'lewis@glasi.co.uk', pass:'', name:'Lewis' },
 ];
 
-const ZONES = [
-  { id:'southampton-city-centre', dbId:1, name:'Southampton City Centre', meta:'SO14 · Dancing Man, Smokin Barrels etc', postcodes:['SO14','SO15'], bars:['Dancing Man Brewery','Smokin Barrels','The Audit House'] },
-  { id:'southampton-north', dbId:2, name:'Southampton North', meta:'SO16 · Bassett, Shirley area', postcodes:['SO16','SO17'], bars:['TBC'] },
-  { id:'southampton-east', dbId:3, name:'Southampton East', meta:'SO17-18 · Portswood, Bitterne area', postcodes:['SO17','SO18','SO19'], bars:['TBC'] },
-  { id:'portsmouth-city-centre', dbId:4, name:'Portsmouth City Centre', meta:'PO1 · Gunwharf, Old Portsmouth area', postcodes:['PO1','PO2','PO3','PO4','PO5'], bars:['TBC'] }
-];
+let ZONES = []; // loaded from Supabase on login
 
 let currentUser = null;
 let activeZone = null;
@@ -912,7 +938,7 @@ async function sbPatch(t,q,b) { try { const r=await fetch(`${SB}/rest/v1/${t}${q
 async function sbDelete(t,q) { try { await fetch(`${SB}/rest/v1/${t}${q}`,{method:'DELETE',headers:H}); } catch {} }
 
 // AUTH
-function doLogin() {
+async function doLogin() {
   const e=document.getElementById('l-email').value.trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
   const user=USERS.find(u=>u.email===e && u.pass===p);
@@ -921,6 +947,8 @@ function doLogin() {
     document.getElementById('screen-login').style.display='none';
     document.getElementById('header').style.display='flex';
     document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    document.getElementById('hdr-user').textContent=user.name;
+    await loadZones();
     loadAllWorkers();
     showScreen('home');
     setActiveNav(null);
@@ -1321,12 +1349,26 @@ async function saveWorkerEdit() {
 }
 
 // ZONES
+async function loadZones() {
+  const data = await sbGet('zones', '?order=name.asc&select=id,name,postcodes');
+  ZONES = data.map(z => ({
+    id: 'zone-'+z.id,
+    dbId: z.id,
+    name: z.name,
+    postcodes: z.postcodes || [],
+    meta: (z.postcodes||[]).join(', ')
+  }));
+}
+
 function renderZones() {
-  document.getElementById('zones-grid').innerHTML=ZONES.map(z=>`
-    <button class="zone-card" onclick="selectZone('${z.id}')">
-      <div class="zone-card-name">${z.name}</div>
-      <div class="zone-card-meta">${z.meta}</div>
-    </button>`).join('');
+  const grid = document.getElementById('zones-grid');
+  if(!ZONES.length) { grid.innerHTML = '<div class="empty">No zones set up yet. Add a zone to get started.</div>'; return; }
+  grid.innerHTML = ZONES.map(z =>
+    '<button class="zone-card" onclick="selectZone(\''+z.id+'\')">'+
+    '<div class="zone-card-name">'+z.name+'</div>'+
+    '<div class="zone-card-meta">'+z.meta+'</div>'+
+    '</button>'
+  ).join('');
 }
 
 async function loadAllWorkers() {
@@ -1347,6 +1389,66 @@ function goToZones() {
   showScreen('zones');
   renderZones();
   setActiveNav('dispatch');
+}
+
+function goToZonesMgmt() {
+  showScreen('zones-mgmt');
+  setActiveNav('zones');
+  loadZonesMgmt();
+}
+
+async function loadZonesMgmt() {
+  await loadZones();
+  renderZonesMgmt();
+}
+
+function renderZonesMgmt() {
+  const list = document.getElementById('zones-mgmt-list');
+  if(!ZONES.length) { list.innerHTML = '<div class="empty">No zones yet. Add one to get started.</div>'; return; }
+  list.innerHTML = '<table class="history-table"><thead><tr><th>Zone</th><th>Postcodes</th><th>Bars</th><th></th></tr></thead><tbody>'
+    + ZONES.map(z => '<tr>'
+      +'<td style="font-weight:500;">'+z.name+'</td>'
+      +'<td><span class="mono">'+(z.postcodes||[]).join(', ')+'</span></td>'
+      +'<td><span class="mono">'+( bars.filter(b=>String(b.zone_id)===String(z.dbId)).length||0)+'</span></td>'
+      +'<td><button class="ghost-btn" onclick="openEditZone('+z.dbId+')">Edit</button></td>'
+      +'</tr>'
+    ).join('')
+    +'</tbody></table>';
+}
+
+let editingZoneId = null;
+
+function openAddZone() {
+  editingZoneId = null;
+  document.getElementById('zone-modal-title').textContent = 'Add Zone';
+  document.getElementById('zone-name').value = '';
+  document.getElementById('zone-postcodes').value = '';
+  openOv('zone');
+}
+
+function openEditZone(dbId) {
+  const z = ZONES.find(x => x.dbId === dbId);
+  if(!z) return;
+  editingZoneId = dbId;
+  document.getElementById('zone-modal-title').textContent = 'Edit Zone';
+  document.getElementById('zone-name').value = z.name;
+  document.getElementById('zone-postcodes').value = (z.postcodes||[]).join(', ');
+  openOv('zone');
+}
+
+async function saveZone() {
+  const name = document.getElementById('zone-name').value.trim();
+  const postcodesRaw = document.getElementById('zone-postcodes').value;
+  const postcodes = postcodesRaw.split(',').map(p=>p.trim().toUpperCase()).filter(Boolean);
+  if(!name) { alert('Please enter a zone name.'); return; }
+  if(editingZoneId) {
+    await sbPatch('zones', '?id=eq.'+editingZoneId, { name, postcodes });
+  } else {
+    await sbPost('zones', { name, postcodes });
+  }
+  closeOv('zone');
+  await loadZonesMgmt();
+  renderZones();
 }
 
 function renderInviteGrid() {
