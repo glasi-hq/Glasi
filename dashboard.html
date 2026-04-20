@@ -983,12 +983,17 @@ async function doLogin() {
     document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     document.getElementById('hdr-user').textContent=user.name;
     await loadZones();
-    loadAllWorkers();
+    await loadAllWorkers();
     loadWorkerFunnel();
-    showScreen('home');
-    setActiveNav(null);
-    document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-    renderZones();
+
+    // check for open session today
+    const restored = await tryRestoreSession();
+    if(!restored) {
+      showScreen('home');
+      setActiveNav(null);
+      document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+      renderZones();
+    }
   } else {
     document.getElementById('l-err').textContent='Incorrect email or password.';
   }
@@ -1452,6 +1457,133 @@ async function loadWorkerFunnel() {
     +'<div style="font-size:24px;font-weight:700;font-family:\'JetBrains Mono\',monospace;color:var(--green);">'+onboarded+'</div>'
     +'<div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Onboarded</div>'
     +'</div>';
+}
+
+async function tryRestoreSession() {
+  // check for open session today
+  const openSessions = await sbGet('sessions', '?session_date=eq.'+today()+'&end_time=is.null&order=id.desc&limit=1');
+  if(!openSessions.length) return false;
+
+  const session = openSessions[0];
+  activeSessionId = session.id;
+
+  // restore zone
+  const zone = ZONES.find(z => z.dbId === session.zone_id);
+  if(!zone) return false;
+  activeZone = zone;
+
+  // load bars if needed
+  if(!bars.length) {
+    const result = await sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword');
+    bars = Array.isArray(result) ? result : [];
+  }
+
+  // load session workers
+  const swData = await sbGet('session_workers',
+    '?session_id=eq.'+session.id+'&select=id,application_id,worker_name,worker_phone,status,clock_in_code,clock_out_code,clock_in_at,dispatched_at,bar_id,shift_length_hours,shift_request_id,expected_arrival_minutes'
+  );
+
+  // load active shift requests
+  const reqData = await sbGet('shift_requests',
+    '?session_id=eq.'+session.id+'&order=request_time.asc&select=*,bars(name)'
+  );
+  activeShiftRequests = reqData.map(r => ({
+    ...r,
+    _barName: r.bars?.name || ''
+  }));
+
+  // load completed shifts for this session
+  const swIds = swData.map(s=>s.id).join(',');
+  if(swIds) {
+    const shiftData = await sbGet('shifts',
+      '?session_worker_id=in.('+swIds+')&status=eq.completed&select=*,session_workers(worker_name,worker_phone,application_id)'
+    );
+    shifts = shiftData.map(s => ({
+      id: s.id,
+      sessionId: session.id,
+      workerName: s.session_workers?.worker_name||'',
+      workerPhone: s.session_workers?.worker_phone||'',
+      bar: bars.find(b=>b.id===s.bar_id)?.name||'',
+      barRecord: bars.find(b=>b.id===s.bar_id)||null,
+      zone: zone.name,
+      requestTime: s.requested_at,
+      requestMessage: '',
+      dispatchedAt: s.accepted_at,
+      clockInAt: s.clock_in_confirmed_at,
+      clockOutAt: s.clock_out_confirmed_at,
+      shiftLength: parseFloat(s.shift_length_hours)||0,
+      hourly_rate: parseFloat(s.hourly_rate)||0,
+      total_earned: parseFloat(s.total_earned)||0,
+      code: s.clock_in_code||'',
+      rating: s.bar_rating,
+      notes: s.notes||''
+    }));
+  }
+
+  // rebuild sessionWorkers from session_workers table
+  sessionWorkers = await Promise.all(swData.map(async sw => {
+    const appWorker = allWorkers.find(w => w.id === sw.application_id) || {};
+    const barRecord = bars.find(b => b.id === sw.bar_id) || null;
+
+    // get on duty contact for bar if dispatched
+    let barContact = 'the manager';
+    if(barRecord?.id) {
+      const contacts = await sbGet('bar_contacts', '?bar_id=eq.'+barRecord.id+'&on_duty=eq.true&select=name');
+      if(contacts.length) barContact = contacts[0].name;
+    }
+
+    // get shift request info if linked
+    const linkedRequest = activeShiftRequests.find(r => r.id === sw.shift_request_id);
+
+    return {
+      ...appWorker,
+      applicationId: sw.application_id,
+      id: uid(),
+      sessionWorkerId: sw.id,
+      status: sw.status,
+      code: sw.clock_in_code || gen4(),
+      clockOutCode: sw.clock_out_code || gen4(),
+      bar: barRecord?.name || null,
+      barRecord: barRecord,
+      barContact: barContact,
+      dispatchedAt: sw.dispatched_at,
+      clockInAt: sw.clock_in_at,
+      clockInCode: sw.clock_in_code,
+      shiftLength: sw.shift_length_hours ? String(sw.shift_length_hours) : null,
+      hourly_rate: appWorker.hourly_rate || 12.21,
+      clockOutAt: null,
+      rating: null,
+      notes: null,
+      shiftRequestId: sw.shift_request_id,
+      requestMessage: linkedRequest?.raw_message || '',
+      requestTime: linkedRequest?.request_time || null,
+      expectedArrivalMinutes: sw.expected_arrival_minutes || null,
+      shiftId: uid()
+    };
+  }));
+
+  // restore UI
+  document.getElementById('session-zone-name').textContent = zone.name;
+  document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+
+  // start timer
+  sessionStartTime = new Date(session.start_time ? today()+'T'+session.start_time : Date.now());
+  startTimer();
+
+  // start shift countdown for any onshift workers
+  if(sessionWorkers.some(w=>w.status==='onshift')) startShiftCountdown();
+
+  showScreen('session');
+  setActiveNav('dispatch');
+  switchTab('room');
+  renderRoom();
+  renderRequestCards();
+  renderOnShift();
+  updateCounts();
+  renderLog();
+
+  console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers');
+  return true;
 }
 
 async function loadAllWorkers() {
@@ -2216,6 +2348,20 @@ async function confirmDispatchBar() {
   w.shiftLength = String(shiftLength);
   w.requestTime = latestRequest?.request_time || null;
 
+  // write dispatch state to session_workers for persistence
+  if(w.sessionWorkerId) {
+    sbPatch('session_workers', '?id=eq.'+w.sessionWorkerId, {
+      status: 'dispatched',
+      bar_id: barRecord.id||null,
+      dispatched_at: dispatchedAt,
+      clock_in_code: w.code,
+      clock_out_code: w.clockOutCode||null,
+      shift_length_hours: parseFloat(shiftLength)||null,
+      shift_request_id: latestRequest?.id||null,
+      expected_arrival_minutes: w.expectedArrivalMinutes||null
+    });
+  }
+
   document.getElementById('code-value').textContent=dispatchCode;
   document.getElementById('code-worker-bar').textContent=`${w.name} dispatched to ${barRecord.name}`;
 
@@ -2343,6 +2489,7 @@ function confirmClockIn(wid) {
   w.status='onshift';
   w.clockInAt=new Date().toISOString();
   w.clockInCode=entered;
+  if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'onshift', clock_in_at: w.clockInAt});
   renderOnShift();
   updateCounts();
   startShiftCountdown();
