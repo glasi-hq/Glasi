@@ -1014,6 +1014,26 @@ function goToBars() {
   loadBars();
 }
 
+async function goToBar(barId) {
+  showScreen('bars');
+  setActiveNav('bars');
+  await loadBars();
+  // scroll to and highlight the bar card
+  const card = document.getElementById('bar-card-'+barId);
+  if(card) {
+    card.scrollIntoView({ behavior:'smooth', block:'center' });
+    card.style.border = '2px solid var(--ice)';
+    setTimeout(() => { card.style.border = ''; }, 2500);
+  }
+}
+
+async function goToWorker(workerId) {
+  showScreen('workers');
+  setActiveNav('workers');
+  await loadWorkers();
+  openEditWorker(workerId);
+}
+
 function goToShifts() {
   showScreen('shifts');
   setActiveNav('shifts');
@@ -1484,7 +1504,7 @@ async function goToZoneDetail(zoneId) {
     +'</div>'
     +(zoneBars.length
       ? '<table class="history-table"><thead><tr><th>Name</th><th>Address</th><th>Status</th><th>Keyword</th></tr></thead><tbody>'
-        +zoneBars.map(b=>'<tr>'
+        +zoneBars.map(b=>'<tr style="cursor:pointer;" onclick="goToBar('+b.id+')">'
           +'<td style="font-weight:500;">'+b.name+'</td>'
           +'<td style="font-size:12px;color:var(--grey);">'+(b.address||'')+'</td>'
           +'<td><span class="status-badge badge-'+(b.status||'prospect')+'">'+(b.status||'prospect')+'</span></td>'
@@ -1502,7 +1522,7 @@ async function goToZoneDetail(zoneId) {
     +'</div>'
     +(zoneWorkers.length
       ? '<table class="history-table"><thead><tr><th>Name</th><th>Postcode</th><th>Tier</th><th>Score</th></tr></thead><tbody>'
-        +zoneWorkers.map(w=>'<tr>'
+        +zoneWorkers.map(w=>'<tr style="cursor:pointer;" onclick="goToWorker('+w.id+')">'
           +'<td style="font-weight:500;">'+w.name+'</td>'
           +'<td><span class="mono">'+(w.postcode_full||'')+'</span></td>'
           +'<td><span class="status-badge badge-pending">Tier '+(w.tier||1)+'</span></td>'
@@ -1711,7 +1731,7 @@ function renderBars(bars, contacts) {
   const statusClass = s => s==='active'?'status-active':s==='trial'?'status-trial':s==='paused'?'status-paused':'status-prospect';
   list.innerHTML = bars.map(b => {
     const barContacts = contacts.filter(c => c.bar_id === b.id);
-    return `<div class="bar-card">
+    return `<div class="bar-card" id="bar-card-${b.id}">
       <div class="bar-card-top">
         <div>
           <div class="bar-card-name">${b.name}</div>
