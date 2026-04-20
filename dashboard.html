@@ -475,6 +475,23 @@
   </div>
 </div>
 
+<!-- ZONE DETAIL SCREEN -->
+<div id="screen-zone-detail" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title" id="zone-detail-name"></div>
+        <div class="page-sub" id="zone-detail-postcodes"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="ghost-btn" onclick="goToZonesMgmt()">Back</button>
+        <button class="small-ice-btn" onclick="openEditZone(currentZoneDetail?.dbId)">Edit Zone</button>
+      </div>
+    </div>
+    <div id="zone-detail-body"></div>
+  </div>
+</div>
+
 <!-- OVERLAY: ADD/EDIT ZONE -->
 <div class="overlay" id="ov-zone">
   <div class="modal">
@@ -1403,18 +1420,101 @@ async function loadZonesMgmt() {
   renderZonesMgmt();
 }
 
+async function loadZonesMgmt() {
+  await loadZones();
+  if(!bars.length) {
+    const result = await sbGet('bars','?order=name.asc&select=id,name,address,zone_id,status,zoom_keyword,google_maps_link,notes');
+    bars = Array.isArray(result) ? result : [];
+  }
+  renderZonesMgmt();
+}
+
 function renderZonesMgmt() {
   const list = document.getElementById('zones-mgmt-list');
   if(!ZONES.length) { list.innerHTML = '<div class="empty">No zones yet. Add one to get started.</div>'; return; }
-  list.innerHTML = '<table class="history-table"><thead><tr><th>Zone</th><th>Postcodes</th><th>Bars</th><th></th></tr></thead><tbody>'
-    + ZONES.map(z => '<tr>'
-      +'<td style="font-weight:500;">'+z.name+'</td>'
-      +'<td><span class="mono">'+(z.postcodes||[]).join(', ')+'</span></td>'
-      +'<td><span class="mono">'+( bars.filter(b=>String(b.zone_id)===String(z.dbId)).length||0)+'</span></td>'
-      +'<td><button class="ghost-btn" onclick="openEditZone('+z.dbId+')">Edit</button></td>'
-      +'</tr>'
-    ).join('')
+  list.innerHTML = '<table class="history-table"><thead><tr><th>Zone</th><th>Postcodes</th><th>Bars</th><th>Workers</th><th></th></tr></thead><tbody>'
+    + ZONES.map(z => {
+      const barCount = bars.filter(b=>String(b.zone_id)===String(z.dbId)).length;
+      const workerCount = allWorkers.filter(w=>{
+        if(!w.postcode_full) return false;
+        const pc = w.postcode_full.trim().toUpperCase();
+        return (z.postcodes||[]).some(p=>pc.startsWith(p));
+      }).length;
+      return '<tr style="cursor:pointer;" onclick="goToZoneDetail(\''+z.id+'\')">'
+        +'<td style="font-weight:500;">'+z.name+'</td>'
+        +'<td><span class="mono">'+(z.postcodes||[]).join(', ')+'</span></td>'
+        +'<td><span class="mono">'+barCount+'</span></td>'
+        +'<td><span class="mono">'+workerCount+'</span></td>'
+        +'<td><button class="ghost-btn" onclick="event.stopPropagation();openEditZone('+z.dbId+')">Edit</button></td>'
+        +'</tr>';
+    }).join('')
     +'</tbody></table>';
+}
+
+let currentZoneDetail = null;
+
+async function goToZoneDetail(zoneId) {
+  const z = ZONES.find(x => x.id === zoneId);
+  if(!z) return;
+  currentZoneDetail = z;
+  showScreen('zone-detail');
+  setActiveNav('zones');
+  document.getElementById('zone-detail-name').textContent = z.name;
+  document.getElementById('zone-detail-postcodes').textContent = 'Postcodes: '+(z.postcodes||[]).join(', ');
+  const body = document.getElementById('zone-detail-body');
+  body.innerHTML = '<div class="empty">Loading...</div>';
+
+  // load bars and workers for this zone
+  if(!bars.length) {
+    const result = await sbGet('bars','?order=name.asc&select=id,name,address,zone_id,status,zoom_keyword,google_maps_link,notes');
+    bars = Array.isArray(result) ? result : [];
+  }
+  if(!allWorkers.length) await loadAllWorkers();
+
+  const zoneBars = bars.filter(b=>String(b.zone_id)===String(z.dbId));
+  const zoneWorkers = allWorkers.filter(w=>{
+    if(!w.postcode_full) return false;
+    const pc = w.postcode_full.trim().toUpperCase();
+    return (z.postcodes||[]).some(p=>pc.startsWith(p));
+  });
+
+  const barsHtml = '<div style="margin-bottom:28px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    +'<div class="section-label">Bars in this zone ('+zoneBars.length+')</div>'
+    +'</div>'
+    +(zoneBars.length
+      ? '<table class="history-table"><thead><tr><th>Name</th><th>Address</th><th>Status</th><th>Keyword</th></tr></thead><tbody>'
+        +zoneBars.map(b=>'<tr>'
+          +'<td style="font-weight:500;">'+b.name+'</td>'
+          +'<td style="font-size:12px;color:var(--grey);">'+(b.address||'')+'</td>'
+          +'<td><span class="status-badge badge-'+(b.status||'prospect')+'">'+(b.status||'prospect')+'</span></td>'
+          +'<td><span class="mono">'+(b.zoom_keyword||'Not set')+'</span></td>'
+          +'</tr>'
+        ).join('')
+        +'</tbody></table>'
+      : '<div style="font-size:13px;color:var(--grey);padding:16px;background:var(--navy-mid);border-radius:10px;">No bars in this zone yet. To add a bar, go to the Bars screen and select <strong>'+z.name+'</strong> as the zone when adding.</div>'
+    )
+    +'</div>';
+
+  const workersHtml = '<div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    +'<div class="section-label">Workers in this zone ('+zoneWorkers.length+')</div>'
+    +'</div>'
+    +(zoneWorkers.length
+      ? '<table class="history-table"><thead><tr><th>Name</th><th>Postcode</th><th>Tier</th><th>Score</th></tr></thead><tbody>'
+        +zoneWorkers.map(w=>'<tr>'
+          +'<td style="font-weight:500;">'+w.name+'</td>'
+          +'<td><span class="mono">'+(w.postcode_full||'')+'</span></td>'
+          +'<td><span class="status-badge badge-pending">Tier '+(w.tier||1)+'</span></td>'
+          +'<td>'+(w.reliability_score!=null?scorebadge(w.reliability_score):'<span style="color:var(--grey);font-size:11px;">No data</span>')+'</td>'
+          +'</tr>'
+        ).join('')
+        +'</tbody></table>'
+      : '<div style="font-size:13px;color:var(--grey);padding:16px;background:var(--navy-mid);border-radius:10px;">No workers matched to this zone yet. Workers are matched automatically by postcode. Zone postcodes: <strong>'+(z.postcodes||[]).join(', ')+'</strong></div>'
+    )
+    +'</div>';
+
+  body.innerHTML = barsHtml + workersHtml;
 }
 
 let editingZoneId = null;
