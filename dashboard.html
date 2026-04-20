@@ -1562,29 +1562,38 @@ async function goToZoneDetail(zoneId) {
 
   const isWorkerAvailableNow = w => slot && w.available_hours && w.available_hours.includes(slot);
   const isWorkerAvailableTonight = w => w.available_hours && w.available_hours.includes(tonightSlot);
+  const isWorkerAvailableTonightAny = w => w.available_hours && (
+    w.available_hours.includes(dayStr+'_12_16') ||
+    w.available_hours.includes(dayStr+'_16_20') ||
+    w.available_hours.includes(dayStr+'_20_00')
+  );
   const isWorkerAvailableTomorrow = w => w.available_hours && w.available_hours.includes(tomorrowSlot);
 
   const availableNow = zoneWorkers.filter(isWorkerAvailableNow);
   const availableTonight = zoneWorkers.filter(isWorkerAvailableTonight);
+  const availableTonightAny = zoneWorkers.filter(isWorkerAvailableTonightAny);
 
   const dayLabel = dayStr.charAt(0).toUpperCase()+dayStr.slice(1);
   const tomorrowLabel = tomorrowSlot.slice(0,3).charAt(0).toUpperCase()+tomorrowSlot.slice(0,3).slice(1);
 
-  // availability banner
   const bannerColor = availableTonight.length < 3 ? 'var(--red)' : availableTonight.length < 5 ? 'var(--amber)' : 'var(--green)';
   const bannerText = availableTonight.length < 3 ? 'Low coverage tonight — consider recruiting more workers in this zone'
     : availableTonight.length < 5 ? 'Moderate coverage tonight'
     : 'Good coverage tonight';
 
   const availBanner = '<div style="background:var(--navy-mid);border:1px solid '+bannerColor+';border-radius:16px;padding:20px;margin-bottom:24px;">'
-    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Tonight\'s Availability</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:12px;">'
+    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Tonight\'s Availability — '+dayLabel+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:12px;">'
     +'<div style="text-align:center;">'
-    +'<div style="font-size:28px;font-weight:700;color:'+bannerColor+';font-family:\'JetBrains Mono\',monospace;">'+availableTonight.length+'</div>'
+    +'<div style="font-size:28px;font-weight:700;color:'+bannerColor+';font-family:\'JetBrains Mono\',monospace;">'+availableTonightAny.length+'</div>'
+    +'<div style="font-size:11px;color:var(--grey);">available any time today</div>'
+    +'</div>'
+    +'<div style="text-align:center;">'
+    +'<div style="font-size:28px;font-weight:700;color:var(--white);font-family:\'JetBrains Mono\',monospace;">'+availableTonight.length+'</div>'
     +'<div style="font-size:11px;color:var(--grey);">available '+dayLabel+' 8pm+</div>'
     +'</div>'
     +'<div style="text-align:center;">'
-    +'<div style="font-size:28px;font-weight:700;color:var(--white);font-family:\'JetBrains Mono\',monospace;">'+(slot?availableNow.length:'—')+'</div>'
+    +'<div style="font-size:28px;font-weight:700;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'+(slot?availableNow.length:'—')+'</div>'
     +'<div style="font-size:11px;color:var(--grey);">available right now</div>'
     +'</div>'
     +'<div style="text-align:center;">'
@@ -1621,13 +1630,15 @@ async function goToZoneDetail(zoneId) {
       ? '<table class="history-table"><thead><tr><th>Name</th><th>Postcode</th><th>Tier</th><th>Score</th><th>Tonight</th></tr></thead><tbody>'
         +zoneWorkers.map(w=>{
           const availTonight = isWorkerAvailableTonight(w);
+          const availTonightAny = isWorkerAvailableTonightAny(w);
           const availNow = isWorkerAvailableNow(w);
-          return '<tr style="cursor:pointer;'+(availTonight?'':'opacity:0.5;')+'" onclick="goToWorker('+w.id+')">'
+          const tonightLabel = availNow ? 'Now' : availTonight ? '8pm+' : availTonightAny ? '4-8pm' : null;
+          return '<tr style="cursor:pointer;'+(availTonightAny?'':'opacity:0.5;')+'" onclick="goToWorker('+w.id+')">'
             +'<td style="font-weight:500;">'+w.name+'</td>'
             +'<td><span class="mono">'+(w.postcode_full||'')+'</span></td>'
             +'<td><span class="status-badge badge-pending">Tier '+(w.tier||1)+'</span></td>'
             +'<td>'+(w.reliability_score!=null?scorebadge(w.reliability_score):'<span style="color:var(--grey);font-size:11px;">No data</span>')+'</td>'
-            +'<td>'+(availTonight?'<span style="color:var(--green);font-size:12px;">'+(availNow?'Now':'8pm+')+'</span>':'<span style="color:var(--grey);font-size:12px;">Not set</span>')+'</td>'
+            +'<td>'+(tonightLabel?'<span style="color:var(--green);font-size:12px;">'+tonightLabel+'</span>':'<span style="color:var(--grey);font-size:12px;">Not set</span>')+'</td>'
             +'</tr>';
         }).join('')
         +'</tbody></table>'
