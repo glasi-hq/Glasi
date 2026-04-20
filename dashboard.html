@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Glasi | Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --navy: #0F1F3D;
@@ -153,7 +153,9 @@
     .request-card { background: var(--navy-mid); border: 2px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
     .request-card:hover { border-color: var(--ice); }
     .request-card.selected { border-color: var(--green); background: var(--green-dim); }
-    .request-card.dispatched { border-color: var(--amber); opacity: 0.7; cursor: default; }
+    .request-card.dispatched { border-color: var(--border); opacity: 0.8; cursor: default; position: relative; overflow: hidden; }
+    #report-body p { font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.8; color: rgba(255,255,255,0.85); }
+    #report-body strong { font-family: 'Inter', sans-serif; }
     .req-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
     .req-card-bar { font-size: 14px; font-weight: 500; }
     .req-card-timer { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--amber); }
@@ -1684,22 +1686,27 @@ async function goToZoneDetail(zoneId) {
   const dayStr = days[londonTime.getDay()];
   const hour = londonTime.getHours();
   let slot = null;
-  if(hour >= 20) slot = dayStr+'_20_00';
-  else if(hour >= 16) slot = dayStr+'_16_20';
-  else if(hour >= 12) slot = dayStr+'_12_16';
+  if(hour >= 18) slot = dayStr+'_18_00';
+  else if(hour >= 12) slot = dayStr+'_12_18';
 
-  // also compute tonight's slot (8pm+) regardless of current time
-  const tonightSlot = dayStr+'_20_00';
-  const tomorrowSlot = days[(londonTime.getDay()+1)%7]+'_20_00';
+  // tonight's evening slot and tomorrow's
+  const tonightSlot = dayStr+'_18_00';
+  const tomorrowSlot = days[(londonTime.getDay()+1)%7]+'_18_00';
 
   const isWorkerAvailableNow = w => slot && w.available_hours && w.available_hours.includes(slot);
   const isWorkerAvailableTonight = w => w.available_hours && w.available_hours.includes(tonightSlot);
   const isWorkerAvailableTonightAny = w => w.available_hours && (
+    w.available_hours.includes(dayStr+'_12_18') ||
+    w.available_hours.includes(dayStr+'_18_00') ||
+    // legacy support for old slot format
     w.available_hours.includes(dayStr+'_12_16') ||
     w.available_hours.includes(dayStr+'_16_20') ||
     w.available_hours.includes(dayStr+'_20_00')
   );
-  const isWorkerAvailableTomorrow = w => w.available_hours && w.available_hours.includes(tomorrowSlot);
+  const isWorkerAvailableTomorrow = w => w.available_hours && (
+    w.available_hours.includes(tomorrowSlot) ||
+    w.available_hours.includes(days[(londonTime.getDay()+1)%7]+'_20_00')
+  );
 
   const availableNow = zoneWorkers.filter(isWorkerAvailableNow);
   const availableTonight = zoneWorkers.filter(isWorkerAvailableTonight);
@@ -1708,29 +1715,25 @@ async function goToZoneDetail(zoneId) {
   const dayLabel = dayStr.charAt(0).toUpperCase()+dayStr.slice(1);
   const tomorrowLabel = tomorrowSlot.slice(0,3).charAt(0).toUpperCase()+tomorrowSlot.slice(0,3).slice(1);
 
-  const bannerColor = availableTonight.length < 3 ? 'var(--red)' : availableTonight.length < 5 ? 'var(--amber)' : 'var(--green)';
-  const bannerText = availableTonight.length < 3 ? 'Low coverage tonight — consider recruiting more workers in this zone'
-    : availableTonight.length < 5 ? 'Moderate coverage tonight'
+  const bannerColor = availableTonightAny.length < 3 ? 'var(--red)' : availableTonightAny.length < 5 ? 'var(--amber)' : 'var(--green)';
+  const bannerText = availableTonightAny.length < 3 ? 'Low coverage tonight — consider recruiting more workers in this zone'
+    : availableTonightAny.length < 5 ? 'Moderate coverage tonight'
     : 'Good coverage tonight';
 
   const availBanner = '<div style="background:var(--navy-mid);border:1px solid '+bannerColor+';border-radius:16px;padding:20px;margin-bottom:24px;">'
-    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Tonight\'s Availability — '+dayLabel+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:12px;">'
+    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Workers Available — '+dayLabel+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:12px;">'
     +'<div style="text-align:center;">'
     +'<div style="font-size:28px;font-weight:700;color:'+bannerColor+';font-family:\'JetBrains Mono\',monospace;">'+availableTonightAny.length+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);">available any time today</div>'
+    +'<div style="font-size:11px;color:var(--grey);">available today</div>'
     +'</div>'
     +'<div style="text-align:center;">'
     +'<div style="font-size:28px;font-weight:700;color:var(--white);font-family:\'JetBrains Mono\',monospace;">'+availableTonight.length+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);">available '+dayLabel+' 8pm+</div>'
-    +'</div>'
-    +'<div style="text-align:center;">'
-    +'<div style="font-size:28px;font-weight:700;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'+(slot?availableNow.length:'—')+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);">available right now</div>'
+    +'<div style="font-size:11px;color:var(--grey);">available '+dayLabel+' 6pm+</div>'
     +'</div>'
     +'<div style="text-align:center;">'
     +'<div style="font-size:28px;font-weight:700;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'+zoneWorkers.filter(isWorkerAvailableTomorrow).length+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);">available '+tomorrowLabel+' 8pm+</div>'
+    +'<div style="font-size:11px;color:var(--grey);">available '+tomorrowLabel+' 6pm+</div>'
     +'</div>'
     +'</div>'
     +'<div style="font-size:12px;color:'+bannerColor+';">'+bannerText+'</div>'
@@ -1764,7 +1767,7 @@ async function goToZoneDetail(zoneId) {
           const availTonight = isWorkerAvailableTonight(w);
           const availTonightAny = isWorkerAvailableTonightAny(w);
           const availNow = isWorkerAvailableNow(w);
-          const tonightLabel = availNow ? 'Now' : availTonight ? '8pm+' : availTonightAny ? '4-8pm' : null;
+          const tonightLabel = availNow ? 'Now' : availTonight ? '6pm+' : availTonightAny ? '12-6pm' : null;
           return '<tr style="cursor:pointer;'+(availTonightAny?'':'opacity:0.5;')+'" onclick="goToWorker('+w.id+')">'
             +'<td style="font-weight:500;">'+w.name+'</td>'
             +'<td><span class="mono">'+(w.postcode_full||'')+'</span></td>'
@@ -3231,6 +3234,7 @@ function renderRequestCards() {
     else if(isSelected) cardClass += ' selected';
 
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
+      +(isDispatched?'<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-15deg);font-size:28px;font-weight:700;letter-spacing:6px;color:rgba(255,255,255,0.06);pointer-events:none;white-space:nowrap;font-family:\'Raleway\',sans-serif;">DISPATCHED</div>':'')
       +'<div class="req-card-top">'
       +'<div class="req-card-bar">'+barName+'</div>'
       +'<div class="req-card-timer'+(urgent?' urgent':'')+'" id="rtimer-'+r.id+'">'+timerStr+'</div>'
