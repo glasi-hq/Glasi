@@ -308,7 +308,9 @@
   <div style="padding:48px 24px;max-width:780px;margin:0 auto;">
     <div class="page-title">Good to see you, Sam</div>
     <div class="page-sub" id="home-date"></div>
-    <div style="margin-top:40px;">
+    <!-- Worker funnel -->
+    <div id="worker-funnel" style="display:flex;gap:24px;margin-top:20px;padding:16px 20px;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;"></div>
+    <div style="margin-top:20px;">
       <!-- Top row: Bars | Workers -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
         <button class="zone-card" onclick="goToBars()" style="text-align:center;">
@@ -387,6 +389,13 @@
         <option value="">All workers</option>
         <option value="true">Active only</option>
         <option value="false">Inactive only</option>
+      </select>
+      <select class="field" id="worker-filter-status" style="max-width:160px;margin-bottom:0;" onchange="renderWorkerList()">
+        <option value="">All statuses</option>
+        <option value="registered">Registered</option>
+        <option value="applied">Applied</option>
+        <option value="vetted">Vetted</option>
+        <option value="onboarded">Onboarded</option>
       </select>
     </div>
     <div id="promotion-banner" style="display:none;margin-bottom:20px;"></div>
@@ -704,10 +713,17 @@
       <div id="edit-worker-score" style="font-size:16px;font-weight:600;font-family:'JetBrains Mono',monospace;"></div>
       <div id="edit-worker-score-updated" style="font-size:10px;color:var(--grey);margin-top:2px;"></div>
     </div>
-    <label>Status</label>
+    <label>Active</label>
     <select class="field" id="edit-worker-active">
       <option value="true">Active</option>
       <option value="false">Inactive</option>
+    </select>
+    <label>Pipeline Status</label>
+    <select class="field" id="edit-worker-pipeline">
+      <option value="registered">Registered</option>
+      <option value="applied">Applied</option>
+      <option value="vetted">Vetted</option>
+      <option value="onboarded">Onboarded</option>
     </select>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
       <div class="section-label">Walking Distance to Bars (minutes)</div>
@@ -968,6 +984,7 @@ async function doLogin() {
     document.getElementById('hdr-user').textContent=user.name;
     await loadZones();
     loadAllWorkers();
+    loadWorkerFunnel();
     showScreen('home');
     setActiveNav(null);
     document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
@@ -1214,7 +1231,7 @@ async function loadWorkers() {
   list.innerHTML = '<div class="empty">Loading...</div>';
 
   // fetch all workers with reliability data
-  allWorkersData = await sbGet('applications', '?order=name.asc&select=id,name,phone,email,postcode_full,tier,hourly_rate,active,age_group,reliability_notes,available_hours,reliability_score,reliability_updated_at');
+  allWorkersData = await sbGet('applications', '?order=name.asc&select=id,name,phone,email,postcode_full,tier,hourly_rate,active,age_group,reliability_notes,available_hours,reliability_score,reliability_updated_at,worker_status');
 
   // fetch shift counts per worker via session_workers join
   const shiftCounts = await sbGet('shifts', '?status=eq.completed&select=session_worker_id,session_workers(application_id)');
@@ -1272,36 +1289,39 @@ function renderWorkerList() {
   const postcodeFilter = document.getElementById('worker-filter-postcode').value.toLowerCase();
   const tierFilter = document.getElementById('worker-filter-tier').value;
   const activeFilter = document.getElementById('worker-filter-active').value;
+  const statusFilter = document.getElementById('worker-filter-status').value;
 
   let filtered = allWorkersData.filter(w => {
     if(nameFilter && !w.name?.toLowerCase().includes(nameFilter)) return false;
     if(postcodeFilter && !w.postcode_full?.toLowerCase().includes(postcodeFilter)) return false;
     if(tierFilter && String(w.tier||1) !== tierFilter) return false;
     if(activeFilter !== '' && String(w.active !== false) !== activeFilter) return false;
+    if(statusFilter && (w.worker_status||'registered') !== statusFilter) return false;
     return true;
   });
 
   if(!filtered.length) { list.innerHTML = '<div class="empty">No workers match your filters.</div>'; return; }
 
   const tierRate = t => [12.21,13.21,14.21,15.21,16.21][parseInt(t||1)-1];
+  const statusColour = s => s==='onboarded'?'badge-completed':s==='vetted'?'badge-dispatched':s==='applied'?'badge-pending':'badge-unfilled';
 
-  list.innerHTML = `<table class="history-table">
-    <thead><tr>
-      <th>Name</th><th>Postcode</th><th>Email</th><th>Phone</th><th>Tier</th><th>Rate</th><th>Shifts</th><th>Score</th><th>Status</th><th></th>
-    </tr></thead>
-    <tbody>${filtered.map(w=>`<tr>
-      <td style="font-weight:500;">${w.name||''}</td>
-      <td><span class="mono">${w.postcode_full||''}</span></td>
-      <td><span class="mono" style="font-size:11px;">${w.email||''}</span></td>
-      <td><span class="mono">${w.phone||''}</span></td>
-      <td><span class="status-badge badge-pending">Tier ${w.tier||1}</span></td>
-      <td><span class="mono">£${(w.hourly_rate||tierRate(w.tier)).toFixed(2)}/hr</span></td>
-      <td><span class="mono">${w._shiftsCompleted||0}</span></td>
-      <td>${w.reliability_score!=null?scorebadge(w.reliability_score):'<span style="color:var(--grey);font-size:11px;">No data</span>'}</td>
-      <td><span class="status-badge ${w.active===false?'badge-unfilled':'badge-completed'}">${w.active===false?'Inactive':'Active'}</span></td>
-      <td><button class="ghost-btn" onclick="openEditWorker(${w.id})">Edit</button></td>
-    </tr>`).join('')}</tbody>
-  </table>`;
+  list.innerHTML = '<table class="history-table"><thead><tr>'
+    +'<th>Name</th><th>Postcode</th><th>Email</th><th>Phone</th><th>Tier</th><th>Rate</th><th>Shifts</th><th>Score</th><th>Pipeline</th><th></th>'
+    +'</tr></thead><tbody>'
+    +filtered.map(w=>'<tr>'
+      +'<td style="font-weight:500;">'+(w.name||'')+'</td>'
+      +'<td><span class="mono">'+(w.postcode_full||'')+'</span></td>'
+      +'<td><span class="mono" style="font-size:11px;">'+(w.email||'')+'</span></td>'
+      +'<td><span class="mono">'+(w.phone||'')+'</span></td>'
+      +'<td><span class="status-badge badge-pending">Tier '+(w.tier||1)+'</span></td>'
+      +'<td><span class="mono">£'+(w.hourly_rate||tierRate(w.tier)).toFixed(2)+'/hr</span></td>'
+      +'<td><span class="mono">'+(w._shiftsCompleted||0)+'</span></td>'
+      +'<td>'+(w.reliability_score!=null?scorebadge(w.reliability_score):'<span style="color:var(--grey);font-size:11px;">No data</span>')+'</td>'
+      +'<td><span class="status-badge '+(statusColour(w.worker_status||'registered'))+'">'+(w.worker_status||'registered')+'</span></td>'
+      +'<td><button class="ghost-btn" onclick="openEditWorker('+w.id+')">Edit</button></td>'
+      +'</tr>'
+    ).join('')
+    +'</tbody></table>';
 }
 
 async function openEditWorker(id) {
@@ -1319,6 +1339,7 @@ async function openEditWorker(id) {
   document.getElementById('edit-worker-availability').value = w.available_hours||'';
   document.getElementById('edit-worker-notes').value = w.reliability_notes||'';
   document.getElementById('edit-worker-active').value = w.active===false?'false':'true';
+  document.getElementById('edit-worker-pipeline').value = w.worker_status||'registered';
 
   // reliability score
   const scoreEl = document.getElementById('edit-worker-score');
@@ -1369,7 +1390,8 @@ async function saveWorkerEdit() {
     hourly_rate: rate,
     available_hours: document.getElementById('edit-worker-availability').value.trim()||null,
     reliability_notes: document.getElementById('edit-worker-notes').value.trim()||null,
-    active: document.getElementById('edit-worker-active').value === 'true'
+    active: document.getElementById('edit-worker-active').value === 'true',
+    worker_status: document.getElementById('edit-worker-pipeline').value
   });
 
   const bars = window._editWorkerBars||[];
@@ -1409,8 +1431,31 @@ function renderZones() {
   ).join('');
 }
 
+async function loadWorkerFunnel() {
+  const data = await sbGet('applications', '?select=worker_status');
+  const total = data.length;
+  const applied = data.filter(w=>['applied','vetted','onboarded'].includes(w.worker_status)).length;
+  const vetted = data.filter(w=>['vetted','onboarded'].includes(w.worker_status)).length;
+  const onboarded = data.filter(w=>w.worker_status==='onboarded').length;
+  const funnel = document.getElementById('worker-funnel');
+  if(!funnel) return;
+  const item = (label, count, colour) =>
+    '<div style="flex:1;text-align:center;border-right:1px solid var(--border);padding-right:24px;margin-right:0;">'
+    +'<div style="font-size:24px;font-weight:700;font-family:\'JetBrains Mono\',monospace;color:'+colour+';">'+count+'</div>'
+    +'<div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">'+label+'</div>'
+    +'</div>';
+  funnel.innerHTML =
+    item('Registered', total, 'var(--white)')
+    +item('Applied', applied, 'var(--ice)')
+    +item('Vetted', vetted, 'var(--amber)')
+    +'<div style="flex:1;text-align:center;">'
+    +'<div style="font-size:24px;font-weight:700;font-family:\'JetBrains Mono\',monospace;color:var(--green);">'+onboarded+'</div>'
+    +'<div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Onboarded</div>'
+    +'</div>';
+}
+
 async function loadAllWorkers() {
-  allWorkers = await sbGet('applications','?age_group=not.is.null&active=not.eq.false&order=name.asc&select=id,name,phone,postcode_full,email,tier,hourly_rate,reliability_score,available_hours');
+  allWorkers = await sbGet('applications','?active=not.eq.false&order=name.asc&select=id,name,phone,postcode_full,email,tier,hourly_rate,reliability_score,available_hours,worker_status');
 }
 
 async function selectZone(id) {
@@ -1457,6 +1502,7 @@ function renderZonesMgmt() {
       const barCount = bars.filter(b=>String(b.zone_id)===String(z.dbId)).length;
       const workerCount = allWorkers.filter(w=>{
         if(!w.postcode_full) return false;
+        if(!['vetted','onboarded'].includes(w.worker_status||'')) return false;
         const pc = w.postcode_full.trim().toUpperCase();
         return (z.postcodes||[]).some(p=>pc.startsWith(p));
       }).length;
@@ -1494,6 +1540,7 @@ async function goToZoneDetail(zoneId) {
   const zoneBars = bars.filter(b=>String(b.zone_id)===String(z.dbId));
   const zoneWorkers = allWorkers.filter(w=>{
     if(!w.postcode_full) return false;
+    if(!['vetted','onboarded'].includes(w.worker_status||'')) return false;
     const pc = w.postcode_full.trim().toUpperCase();
     return (z.postcodes||[]).some(p=>pc.startsWith(p));
   });
@@ -1629,6 +1676,7 @@ function renderInviteGrid() {
   const zonePostcodes=activeZone?.postcodes||[];
   const zoneWorkers=allWorkers.filter(w=>{
     if(!w.postcode_full) return false;
+    if(!['vetted','onboarded'].includes(w.worker_status||'')) return false;
     const pc=w.postcode_full.trim().toUpperCase();
     return zonePostcodes.some(p=>pc.startsWith(p));
   });
