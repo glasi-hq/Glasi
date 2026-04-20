@@ -1256,14 +1256,21 @@ async function loadWorkers() {
   renderWorkerList();
 }
 
+const dismissedPromotions = new Set();
+
+function dismissPromotion(workerId) {
+  dismissedPromotions.add(workerId);
+  renderPromotionBanner();
+}
+
 function renderPromotionBanner() {
   const banner = document.getElementById('promotion-banner');
   const eligible = allWorkersData.filter(w => {
     if(w.reliability_score == null) return false;
+    if(dismissedPromotions.has(w.id)) return false;
     const currentTier = parseInt(w.tier||1);
     const score = parseFloat(w.reliability_score);
     const shifts = w._shiftsCompleted||0;
-    // find the next tier they qualify for
     const nextThreshold = TIER_THRESHOLDS.find(t => t.tier > currentTier && score >= t.minScore && shifts >= t.minShifts);
     if(nextThreshold) { w._suggestedTier = nextThreshold.tier; return true; }
     return false;
@@ -1279,12 +1286,15 @@ function renderPromotionBanner() {
       +'<div>'
       +'<div style="font-size:13px;font-weight:500;">'+w.name+'</div>'
       +'<div style="font-size:11px;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'
-      +'Tier '+( w.tier||1)+' → Tier '+w._suggestedTier+' · '
+      +'Tier '+(w.tier||1)+' → Tier '+w._suggestedTier+' · '
       +w._shiftsCompleted+' shifts · '
       +parseFloat(w.reliability_score).toFixed(1)+'% reliability'
       +'</div>'
       +'</div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button class="ghost-btn" onclick="dismissPromotion('+w.id+')">Dismiss</button>'
       +'<button class="ghost-btn" onclick="openEditWorker('+w.id+')">Review</button>'
+      +'</div>'
       +'</div>'
     ).join('')
     +'</div>';
