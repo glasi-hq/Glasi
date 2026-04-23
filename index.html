@@ -283,13 +283,14 @@ form.addEventListener('submit', async (e) => {
 
         if (!res.ok) throw new Error();
 
-        feedback.innerHTML = `
-            <div class="success-message text-green-600 text-sm">
-                Registration received. Check your email for the next step. Check spam if you cannot see it.
-                Any issues, email <strong>hello@glasi.co.uk</strong>.
-            </div>
-        `;
-
+feedback.innerHTML = `
+    <div class="success-message text-green-600 text-sm">
+        <strong>You’re in.</strong><br><br>
+        We’ve received your registration and will be in touch with the next steps.<br><br>
+        Keep an eye on your email. Check spam if needed.<br><br>
+        Any issues, email <strong>hello@glasi.co.uk</strong>.
+    </div>
+`;
         form.reset();
 
     } catch {
