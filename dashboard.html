@@ -984,8 +984,7 @@ async function doLogin() {
     document.getElementById('header').style.display='flex';
     document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
     document.getElementById('hdr-user').textContent=user.name;
-    await loadZones();
-    await loadAllWorkers();
+    await Promise.all([loadZones(), loadAllWorkers()]);
     loadWorkerFunnel();
 
     // check for open session today
@@ -1237,11 +1236,12 @@ async function loadWorkers() {
   const list = document.getElementById('workers-list');
   list.innerHTML = '<div class="empty">Loading...</div>';
 
-  // fetch all workers with reliability data
-  allWorkersData = await sbGet('applications', '?order=name.asc&select=id,name,phone,email,postcode_full,tier,hourly_rate,active,age_group,reliability_notes,available_hours,reliability_score,reliability_updated_at,worker_status');
-
-  // fetch shift counts per worker via session_workers join
-  const shiftCounts = await sbGet('shifts', '?status=eq.completed&select=session_worker_id,session_workers(application_id)');
+  // fetch workers and shift counts in parallel
+  const [workersResult, shiftCounts] = await Promise.all([
+    sbGet('applications', '?order=name.asc&select=id,name,phone,email,postcode_full,tier,hourly_rate,active,age_group,reliability_notes,available_hours,reliability_score,reliability_updated_at,worker_status'),
+    sbGet('shifts', '?status=eq.completed&select=session_worker_id,session_workers(application_id)')
+  ]);
+  allWorkersData = workersResult;
   const countMap = {};
   shiftCounts.forEach(s => {
     const appId = s.session_workers?.application_id;
@@ -1490,15 +1490,15 @@ async function tryRestoreSession() {
     bars = Array.isArray(result) ? result : [];
   }
 
-  // load session workers
-  const swData = await sbGet('session_workers',
-    '?session_id=eq.'+session.id+'&select=id,application_id,worker_name,worker_phone,status,clock_in_code,clock_out_code,clock_in_at,dispatched_at,bar_id,shift_length_hours,shift_request_id,expected_arrival_minutes'
-  );
-
-  // load active shift requests
-  const reqData = await sbGet('shift_requests',
-    '?session_id=eq.'+session.id+'&order=request_time.asc&select=*,bars(name)'
-  );
+  // load session workers and requests in parallel
+  const [swData, reqData] = await Promise.all([
+    sbGet('session_workers',
+      '?session_id=eq.'+session.id+'&select=id,application_id,worker_name,worker_phone,status,clock_in_code,clock_out_code,clock_in_at,dispatched_at,bar_id,shift_length_hours,shift_request_id,expected_arrival_minutes'
+    ),
+    sbGet('shift_requests',
+      '?session_id=eq.'+session.id+'&order=request_time.asc&select=*,bars(name)'
+    )
+  ]);
   activeShiftRequests = reqData.map(r => ({
     ...r,
     _barName: r.bars?.name || ''
@@ -1975,10 +1975,12 @@ let bars = [];
 let addingContactBarId = null;
 
 async function loadBars() {
-  const result = await sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword,bartenders,drinks_per_hour,avg_drink_value,avg_customer_spend,typical_rush_minutes,lost_minutes_per_bartender');
-  bars = Array.isArray(result) ? result : [];
-  const contacts = await sbGet('bar_contacts','?order=name.asc');
-  const allContacts = Array.isArray(contacts) ? contacts : [];
+  const [barsResult, contactsResult] = await Promise.all([
+    sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword,bartenders,drinks_per_hour,avg_drink_value,avg_customer_spend,typical_rush_minutes,lost_minutes_per_bartender'),
+    sbGet('bar_contacts','?order=name.asc')
+  ]);
+  bars = Array.isArray(barsResult) ? barsResult : [];
+  const allContacts = Array.isArray(contactsResult) ? contactsResult : [];
   renderBars(bars, allContacts);
 }
 
