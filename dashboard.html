@@ -411,11 +411,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <div>
         <div class="page-title">Shifts</div>
-        <div class="page-sub">All completed shifts across every session</div>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button class="ghost-btn" onclick="exportPayrollCSV()">Export for Parasol</button>
-        <button class="small-ice-btn" onclick="exportShiftsCSV()">Export CSV</button>
+        <div class="page-sub">Click a shift to view details and manage financials</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
@@ -436,6 +432,20 @@
     <div id="shifts-list">
       <div class="empty">Loading shifts...</div>
     </div>
+  </div>
+</div>
+
+<!-- SHIFT DETAIL SCREEN -->
+<div id="screen-shift-detail" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title" id="shift-detail-ref"></div>
+        <div class="page-sub" id="shift-detail-sub"></div>
+      </div>
+      <button class="ghost-btn" onclick="goToShifts()">Back to Shifts</button>
+    </div>
+    <div id="shift-detail-body"></div>
   </div>
 </div>
 
@@ -710,11 +720,11 @@
     <input class="field" type="text" id="edit-worker-postcode" />
     <label>Tier</label>
 <select class="field" id="edit-worker-tier" onchange="autoUpdateRate()">
-  <option value="1">Tier 1 — £12.21/hr</option>
-  <option value="2">Tier 2 — £13.21/hr</option>
-  <option value="3">Tier 3 — £14.21/hr</option>
-  <option value="4">Tier 4 — £15.21/hr</option>
-  <option value="5">Tier 5 — £16.21/hr</option>
+  <option value="1">Tier 1 — £12.71/hr</option>
+  <option value="2">Tier 2 — £13.71/hr</option>
+  <option value="3">Tier 3 — £14.71/hr</option>
+  <option value="4">Tier 4 — £15.71/hr</option>
+  <option value="5">Tier 5 — £16.71/hr</option>
 </select>
     <label>Hourly Rate (£)</label>
     <input class="field" type="number" id="edit-worker-rate" step="0.01" />
@@ -1331,7 +1341,7 @@ function renderWorkerList() {
 
   if(!filtered.length) { list.innerHTML = '<div class="empty">No workers match your filters.</div>'; return; }
 
-  const tierRate = t => [12.21,13.21,14.21,15.21,16.21][parseInt(t||1)-1];
+  const tierRate = t => [12.71,13.71,14.71,15.71,16.71][parseInt(t||1)-1];
   const statusColour = s => s==='onboarded'?'badge-completed':s==='vetted'?'badge-dispatched':s==='applied'?'badge-pending':'badge-unfilled';
 
   list.innerHTML = '<table class="history-table"><thead><tr>'
@@ -1363,7 +1373,7 @@ async function openEditWorker(id) {
   document.getElementById('edit-worker-phone').value = w.phone||'';
   document.getElementById('edit-worker-postcode').value = w.postcode_full||'';
   document.getElementById('edit-worker-tier').value = String(w.tier||1);
-  const defaultRate = [12.21,13.21,14.21,15.21,16.21][(parseInt(w.tier)||1)-1];
+  const defaultRate = [12.71,13.71,14.71,15.71,16.71][(parseInt(w.tier)||1)-1];
   document.getElementById('edit-worker-rate').value = w.hourly_rate||defaultRate;
   document.getElementById('edit-worker-availability').value = w.available_hours||'';
   document.getElementById('edit-worker-notes').value = w.reliability_notes||'';
@@ -1403,7 +1413,7 @@ async function openEditWorker(id) {
 
 function autoUpdateRate() {
   const tier = parseInt(document.getElementById('edit-worker-tier').value);
-  const rates = [12.21, 13.21, 14.21, 15.21, 16.21];
+  const rates = [12.71, 13.71, 14.71, 15.71, 16.71];
   document.getElementById('edit-worker-rate').value = rates[tier-1];
 }
 
@@ -1574,7 +1584,7 @@ async function tryRestoreSession() {
       clockInAt: sw.clock_in_at,
       clockInCode: sw.clock_in_code,
       shiftLength: sw.shift_length_hours ? String(sw.shift_length_hours) : null,
-      hourly_rate: appWorker.hourly_rate || 12.21,
+      hourly_rate: appWorker.hourly_rate || 12.71,
       clockOutAt: null,
       rating: null,
       notes: null,
@@ -1940,7 +1950,7 @@ async function startSession() {
     clockInAt: null,
     clockInCode: null,
     shiftLength: null,
-    hourly_rate: w.hourly_rate||12.21,
+    hourly_rate: w.hourly_rate||12.71,
     wage: null,
     clockOutAt: null,
     rating: null,
@@ -2288,7 +2298,7 @@ async function addWorkerMidSession() {
     clockOutCode:gen4(),
     bar:null,barRecord:null,dispatchedAt:null,
     clockInAt:null,clockInCode:null,shiftLength:null,
-    hourly_rate:w.hourly_rate||12.21,wage:null,
+    hourly_rate:w.hourly_rate||12.71,wage:null,
     clockOutAt:null,rating:null,notes:null,
     shiftRequestId:null,shiftId:uid(),
     sessionWorkerId:sw?.[0]?.id||null
@@ -2616,7 +2626,7 @@ function confirmComplete() {
   w.rating=starRating||null;
   w.notes=document.getElementById('co-notes').value.trim()||null;
   w.status='completed';
-  const rate = parseFloat(w.hourly_rate||12.21);
+  const rate = parseFloat(w.hourly_rate||12.71);
   const hours = parseFloat(w.shiftLength)||0;
   shifts.push({
     id: w.shiftId,
@@ -2647,7 +2657,7 @@ function confirmComplete() {
 
 async function saveShiftToSupabase(w) {
   try {
-    const rate = parseFloat(w.hourly_rate||w.wage||12.21);
+    const rate = parseFloat(w.hourly_rate||w.wage||12.71);
     const hours = parseFloat(w.shiftLength)||null;
     const total = rate && hours ? parseFloat((rate*hours).toFixed(2)) : null;
     await sbPost('shifts',{
@@ -3367,7 +3377,7 @@ function renderShiftsList() {
   const monoStyle = 'font-family:\'JetBrains Mono\',monospace;font-size:11px;';
 
   list.innerHTML = '<table class="history-table"><thead><tr>'
-    +'<th>Ref</th><th>Worker</th><th>Bar</th><th>Date</th><th>Hours</th><th>Worker Cost</th><th>Bar Rate</th><th>Status</th><th>Send TS</th><th>Send BI</th><th>Actions</th>'
+    +'<th>Ref</th><th>Worker</th><th>Bar</th><th>Date</th><th>Hours</th><th>Bar Total</th><th>Status</th>'
     +'</tr></thead><tbody>'
     +filtered.map(s => {
       const rate = s.hourly_rate||0;
@@ -3412,21 +3422,210 @@ function renderShiftsList() {
         actionBtn += ' <button class="ghost-btn" style="font-size:10px;" onclick="markBarPaid('+s.id+')">Bar Paid</button>';
       }
 
-      return '<tr>'
+      return '<tr style="cursor:pointer;" onclick="openShiftDetail('+s.id+')">'
         +'<td><span style="'+monoStyle+'color:var(--ice);">'+ref+'</span></td>'
         +'<td style="font-weight:500;">'+(s.session_workers?.worker_name||'Unknown')+'</td>'
         +'<td>'+(s.bars?.name||'Unknown')+'</td>'
         +'<td><span style="'+monoStyle+'">'+date+'</span></td>'
         +'<td><span style="'+monoStyle+'">'+fmtLen(hours)+'</span></td>'
-        +'<td><span style="'+monoStyle+'">'+workerTotal+'</span></td>'
-        +'<td><span style="'+monoStyle+'color:var(--green);">'+barTotal+' @ £30</span></td>'
+        +'<td><span style="'+monoStyle+'color:var(--green);">'+barTotal+'</span></td>'
         +'<td><span style="font-size:10px;font-family:\'JetBrains Mono\',monospace;color:'+fs.colour+';">'+fs.code+'</span></td>'
-        +'<td>'+tsBox+'</td>'
-        +'<td>'+biBox+'</td>'
-        +'<td style="white-space:nowrap;">'+actionBtn+'</td>'
         +'</tr>';
     }).join('')
     +'</tbody></table>';
+}
+
+async function openShiftDetail(shiftId) {
+  const s = allShiftsData.find(x=>x.id===shiftId);
+  if(!s) return;
+
+  const fin = s._fin;
+  const ref = fin?.shift_reference || 'No reference';
+  const hours = parseFloat(s.shift_length_hours)||0;
+  const workerRate = s.hourly_rate||0;
+  const workerTotal = workerRate && hours ? (workerRate*hours).toFixed(2) : '—';
+  const barTotal = hours ? (hours*30).toFixed(2) : '—';
+  const date = s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+  const fs = getFinancialStatus(fin, s.created_at);
+  const monoStyle = 'font-family:\'JetBrains Mono\',monospace;';
+
+  document.getElementById('shift-detail-ref').textContent = ref;
+  document.getElementById('shift-detail-sub').textContent = (s.bars?.name||'Unknown bar') + ' · ' + date;
+
+  showScreen('shift-detail');
+  setActiveNav('shifts');
+
+  // load request for this shift if we have session info
+  let requestData = null;
+  let sessionZone = null;
+  if(s.session_worker_id) {
+    const swData = await sbGet('session_workers','?id=eq.'+s.session_worker_id+'&select=session_id,shift_request_id,dispatched_at,clock_in_at,expected_arrival_minutes,bar_id');
+    if(swData.length) {
+      const sw = swData[0];
+      if(sw.shift_request_id) {
+        const reqs = await sbGet('shift_requests','?id=eq.'+sw.shift_request_id+'&select=raw_message,request_time,bar_id');
+        if(reqs.length) requestData = reqs[0];
+      }
+      if(sw.session_id) {
+        const sess = await sbGet('sessions','?id=eq.'+sw.session_id+'&select=zone_id');
+        if(sess.length) {
+          const zone = ZONES.find(z=>z.dbId===sess[0].zone_id);
+          if(zone) sessionZone = zone.name;
+        }
+      }
+    }
+  }
+
+  const body = document.getElementById('shift-detail-body');
+
+  // section helper
+  const section = (title, content) =>
+    '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">'
+    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:14px;">'+title+'</div>'
+    +content
+    +'</div>';
+
+  const row = (label, value) =>
+    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">'
+    +'<span style="color:var(--grey);">'+label+'</span>'
+    +'<span style="'+monoStyle+'">'+value+'</span>'
+    +'</div>';
+
+  // shift info
+  const shiftSection = section('Shift', 
+    row('Reference', ref)
+    +row('Bar', s.bars?.name||'Unknown')
+    +row('Zone', sessionZone||'—')
+    +row('Date', date)
+    +row('Worker', s.session_workers?.worker_name||'Unknown')
+    +row('Clock In', fmtT(s.clock_in_confirmed_at))
+    +row('Clock Out', fmtT(s.clock_out_confirmed_at))
+    +row('Duration', fmtLen(hours))
+    +row('Worker Rate', workerRate ? '£'+workerRate.toFixed(2)+'/hr' : '—')
+    +row('Worker Total', '£'+workerTotal)
+    +row('Bar Total', '<span style="color:var(--green);">£'+barTotal+' @ £30/hr</span>')
+    +(s.bar_rating ? row('Bar Rating', '★'.repeat(s.bar_rating)) : '')
+  );
+
+  // request info
+  const requestSection = section('Request',
+    requestData
+      ? '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">'
+        +'<span style="font-size:13px;font-weight:500;">Request received</span>'
+        +'<span style="font-size:12px;color:var(--grey);">'+fmtT(requestData.request_time)+'</span>'
+        +'</div>'
+        +(requestData.raw_message
+          ? '<div style="background:var(--navy);border-left:3px solid var(--amber);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;font-style:italic;color:var(--white);line-height:1.6;">"'+requestData.raw_message+'"</div>'
+          : '<div style="color:var(--grey);font-size:13px;">No message recorded</div>'
+        )
+      : '<div style="color:var(--grey);font-size:13px;">No request data available</div>'
+  );
+
+  // financial status
+  const tsChecked = fin?.ts_sent_at ? 'checked' : '';
+  const biChecked = fin?.bi_sent_at ? 'checked' : '';
+
+  const financialSection = section('Financial — '+ref,
+    '<div style="margin-bottom:16px;">'
+    +'<span style="font-size:11px;font-family:\'JetBrains Mono\',monospace;color:'+fs.colour+';">'+fs.code+'</span>'
+    +'</div>'
+    // TS row
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
+    +'<div>'
+    +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Timesheet to Parasol</div>'
+    +'<div style="font-size:11px;color:var(--grey);">Worker: '+(s.session_workers?.worker_name||'Unknown')+' · '+fmtLen(hours)+' · £'+workerRate.toFixed(2)+'/hr · Total £'+workerTotal+'</div>'
+    +(fin?.ts_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.ts_sent_at)+'</div>' : '')
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +'<button class="ghost-btn" onclick="downloadTsForShift('+shiftId+')">Download CSV</button>'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">'
+    +'<input type="checkbox" '+tsChecked+' onchange="toggleTsSent('+shiftId+', this.checked)"> TS Sent'
+    +'</label>'
+    +'</div>'
+    +'</div>'
+    // BI row
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
+    +'<div>'
+    +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Bar Invoice</div>'
+    +'<div style="font-size:11px;color:var(--grey);">'+fmtLen(hours)+' @ £30/hr · Total £'+barTotal+' · Ref '+ref+'</div>'
+    +(fin?.bi_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.bi_sent_at)+'</div>' : '')
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +'<button class="ghost-btn" onclick="openBiEmail('+shiftId+', \''+ref+'\')">Open Email</button>'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">'
+    +'<input type="checkbox" '+biChecked+' onchange="toggleBiSent('+shiftId+', this.checked, \''+ref+'\')"> BI Sent'
+    +'</label>'
+    +'</div>'
+    +'</div>'
+    // Parasol invoice row
+    +(fin?.ts_sent_at
+      ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
+        +'<div>'
+        +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Parasol Invoice</div>'
+        +(fin.parasol_invoice_ref
+          ? '<div style="font-size:11px;color:var(--grey);">Ref: '+fin.parasol_invoice_ref+' · £'+(fin.parasol_invoice_amount||'?')+'</div>'
+          : '<div style="font-size:11px;color:var(--amber);">Awaiting invoice from Parasol</div>'
+        )
+        +(fin?.parasol_paid_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Paid '+fmtT(fin.parasol_paid_at)+'</div>' : '')
+        +'</div>'
+        +'<div style="display:flex;gap:8px;">'
+        +(!fin.parasol_invoice_ref ? '<button class="ghost-btn" onclick="logParasolInvoice('+shiftId+')">Log PI</button>' : '')
+        +(fin.parasol_invoice_ref && !fin.parasol_paid_at ? '<button class="ghost-btn" onclick="markParasolPaid('+shiftId+')">Mark Paid</button>' : '')
+        +'</div>'
+        +'</div>'
+      : ''
+    )
+    // Bar payment row
+    +(fin?.bi_sent_at
+      ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;">'
+        +'<div>'
+        +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Bar Payment</div>'
+        +(fin.bar_paid_at
+          ? '<div style="font-size:11px;color:var(--green);">Received '+fmtT(fin.bar_paid_at)+'</div>'
+          : '<div style="font-size:11px;color:var(--amber);">Awaiting payment from bar</div>'
+        )
+        +'</div>'
+        +(!fin.bar_paid_at ? '<button class="ghost-btn" onclick="markBarPaid('+shiftId+')">Mark Paid</button>' : '')
+        +'</div>'
+      : ''
+    )
+  );
+
+  body.innerHTML = shiftSection + requestSection + financialSection;
+}
+
+function downloadTsForShift(shiftId) {
+  const s = allShiftsData.find(x=>x.id===shiftId);
+  if(!s) return;
+  const fin = s._fin;
+  const ref = fin?.shift_reference || '';
+  const workerName = s.session_workers?.worker_name || 'Unknown';
+  const barName = s.bars?.name || 'Unknown';
+  const hours = parseFloat(s.shift_length_hours)||0;
+  const rate = s.hourly_rate||0;
+  const total = rate && hours ? (rate*hours).toFixed(2) : '';
+  const date = s.created_at ? s.created_at.split('T')[0] : '';
+  const headers = ['Reference','Worker Name','Bar','Date','Clock In','Clock Out','Total Hours','Pay Rate','Total Pay'];
+  const row = [ref, workerName, barName, date, fmtT(s.clock_in_confirmed_at), fmtT(s.clock_out_confirmed_at), fmtLen(hours), rate?'£'+rate.toFixed(2)+'/hr':'', total?'£'+total:''];
+  downloadCSV([headers,row].map(csvRow).join('\n'), 'glasi-ts-'+ref+'-'+date+'.csv');
+}
+
+function openBiEmail(shiftId, ref) {
+  const s = allShiftsData.find(x=>x.id===shiftId);
+  if(!s) return;
+  const barName = s.bars?.name || 'the bar';
+  const hours = parseFloat(s.shift_length_hours)||0;
+  const barTotal = (hours*30).toFixed(2);
+  const date = s.created_at ? s.created_at.split('T')[0] : '';
+  const subject = encodeURIComponent('Glasi Invoice '+ref+' — '+barName+' — '+date);
+  const body = encodeURIComponent(
+    'Hi,\n\nPlease find attached your Glasi invoice '+ref+' for floor support on '+date+'.\n\n'
+    +hours+' hours floor support @ £30/hr = £'+barTotal+'\nReference: '+ref+'\n\n'
+    +'Payment due within 7 days.\n\n'
+    +'Bank: Glasi Ltd\nSort code: [SORT CODE]\nAccount: [ACCOUNT NUMBER]\nReference: '+ref+'\n\n'
+    +'Thanks,\nSam\nGlasi Ltd\nsam@glasi.co.uk'
+  );
+  window.open('mailto:?subject='+subject+'&body='+body);
 }
 
 async function toggleTsSent(shiftId, checked) {
