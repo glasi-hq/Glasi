@@ -296,6 +296,7 @@
       <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
       <button class="hdr-nav-btn" id="nav-requests" onclick="safeNavigate(goToRequests)">Requests</button>
       <button class="hdr-nav-btn" id="nav-reports" onclick="safeNavigate(goToReports)">Reports</button>
+      <button class="hdr-nav-btn" id="nav-chat" onclick="safeNavigate(goToChatParser)">Log Chat</button>
     </nav>
   </div>
   <div class="hdr-right">
@@ -494,6 +495,37 @@
   </div>
 </div>
 
+<!-- CHAT PARSER SCREEN -->
+<div id="screen-chat-parser" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title">Log Session Chat</div>
+        <div class="page-sub">Paste your Zoom chat export to log worker response times</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+      <select class="field" id="chat-session-select" style="max-width:300px;margin-bottom:0;">
+        <option value="">Select session to log against...</option>
+      </select>
+      <button class="small-ice-btn" onclick="parseZoomChat()">Parse Chat</button>
+      <button class="ghost-btn" onclick="document.getElementById('chat-input').value=''">Clear</button>
+    </div>
+
+    <textarea id="chat-input" class="field" rows="12" placeholder="Paste your Zoom chat export here...&#10;&#10;Format example:&#10;22:14:32 From fran_leach@yahoo.co.uk to Everyone:&#10;&#9;WOOL&#10;22:15:03 From Sam Morrall to Everyone:&#10;&#9;Shift posted..." style="font-family:'JetBrains Mono',monospace;font-size:12px;width:100%;margin-bottom:16px;"></textarea>
+
+    <div id="chat-parse-results" style="display:none;">
+      <div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:16px;">Parsed Results</div>
+      <div id="chat-parse-table"></div>
+      <div style="margin-top:20px;display:flex;gap:10px;">
+        <button class="small-ice-btn" onclick="saveChatData()">Save to Database</button>
+        <button class="ghost-btn" onclick="document.getElementById('chat-parse-results').style.display='none'">Clear Results</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ZONES MANAGEMENT SCREEN -->
 <div id="screen-zones-mgmt" class="screen">
   <div class="history-screen">
@@ -582,6 +614,9 @@
     <button class="tab-btn" onclick="switchTab('log')" id="tab-log">
       Shift Log <span class="tab-count" id="count-log"></span>
     </button>
+    <button class="tab-btn" onclick="switchTab('zoom')" id="tab-zoom">
+      Zoom Chat
+    </button>
     <div style="flex:1;"></div>
     <div class="session-time" id="session-timer"></div>
     <button class="close-session-btn" style="margin-left:16px;" onclick="confirmCloseSession()">Close Session</button>
@@ -656,6 +691,20 @@
         <tbody id="log-tbody"></tbody>
       </table>
       <div id="log-empty" class="empty">No shifts logged yet.</div>
+    </div>
+
+    <!-- ZOOM CHAT TAB -->
+    <div id="tab-content-zoom" style="display:none;padding:20px 0;">
+      <div style="margin-bottom:16px;">
+        <div class="page-title" style="font-size:18px;">Zoom Chat Log</div>
+        <div class="page-sub">Paste the Zoom chat export before closing the session</div>
+      </div>
+      <textarea id="session-chat-input" class="field" rows="14" placeholder="Paste your Zoom chat export here...&#10;&#10;Example format:&#10;22:14:32 From fran_leach@yahoo.co.uk to Everyone:&#10;&#9;WOOL" style="font-family:'JetBrains Mono',monospace;font-size:12px;width:100%;margin-bottom:12px;"></textarea>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <button class="small-ice-btn" onclick="parseSessionChat()">Parse Chat</button>
+        <button class="ghost-btn" onclick="document.getElementById('session-chat-input').value='';document.getElementById('session-chat-results').style.display='none'">Clear</button>
+      </div>
+      <div id="session-chat-results" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -1089,6 +1138,333 @@ function goToWorkers() {
   showScreen('workers');
   setActiveNav('workers');
   loadWorkers();
+}
+
+function goToChatParser() {
+  showScreen('chat-parser');
+  setActiveNav('chat');
+  loadChatSessionSelect();
+}
+
+async function loadChatSessionSelect() {
+  const sessions = await sbGet('sessions','?order=session_date.desc&select=id,session_date,start_time,zones(name)');
+  const sel = document.getElementById('chat-session-select');
+  sel.innerHTML = '<option value="">Select session to log against...</option>'
+    + sessions.map(s =>
+        '<option value="'+s.id+'">'
+        +(s.zones?.name||'Unknown zone')+' — '
+        +new Date(s.session_date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})
+        +(s.start_time?' '+s.start_time.slice(0,5):'')
+        +'</option>'
+      ).join('');
+}
+
+let parsedChatData = [];
+
+function parseZoomChat() {
+  const raw = document.getElementById('chat-input').value.trim();
+  if(!raw) { alert('Paste your Zoom chat first.'); return; }
+
+  const sessionId = document.getElementById('chat-session-select').value;
+  if(!sessionId) { alert('Select a session first.'); return; }
+
+  // parse lines
+  // format: HH:MM:SS From [sender] to Everyone:
+  //         \t[message]
+  const lines = raw.split('\n');
+  const messages = [];
+  let current = null;
+
+  for(let i=0; i<lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(/^(\d{2}:\d{2}:\d{2})\s+From\s+(.+?)\s+to\s+Everyone:/i);
+    if(match) {
+      current = { time: match[1], sender: match[2].trim(), message: '' };
+      messages.push(current);
+    } else if(current && line.match(/^\t|^    /)) {
+      current.message = line.trim();
+    }
+  }
+
+  if(!messages.length) { alert('Could not parse any messages. Check the format matches Zoom chat export.'); return; }
+
+  // identify shift posts — messages from Sam/dispatcher containing keywords
+  // keywords are typically uppercase short words
+  // shift posts are messages that contain a keyword prompt
+  const keywordPattern = /^[A-Z0-9]{2,8}$/;
+  const shiftPostPattern = /shift|posted|keyword|accept/i;
+
+  // find all shift posts (from dispatcher)
+  const shiftPosts = messages.filter(m =>
+    (m.sender.toLowerCase().includes('sam') || m.sender.toLowerCase().includes('glasi'))
+    && shiftPostPattern.test(m.message)
+  );
+
+  // find all keywords from workers
+  const workerKeywords = messages.filter(m =>
+    !m.sender.toLowerCase().includes('sam')
+    && !m.sender.toLowerCase().includes('glasi')
+    && keywordPattern.test(m.message)
+  );
+
+  // time to seconds
+  const toSecs = t => {
+    const [h,m,s] = t.split(':').map(Number);
+    return h*3600 + m*60 + s;
+  };
+
+  // match workers to database by email or name
+  const matchWorker = sender => {
+    const sLower = sender.toLowerCase().trim();
+    // try email match first
+    const byEmail = allWorkers.find(w => w.email && w.email.toLowerCase() === sLower);
+    if(byEmail) return byEmail;
+    // try full name match
+    const byName = allWorkers.find(w => w.name && w.name.toLowerCase() === sLower);
+    if(byName) return byName;
+    // try partial name match
+    const byPartial = allWorkers.find(w => w.name && (
+      sLower.includes(w.name.toLowerCase().split(' ')[0]) ||
+      w.name.toLowerCase().includes(sLower.split(' ')[0])
+    ));
+    return byPartial || null;
+  };
+
+  // build per-worker response data
+  const workerData = {};
+
+  // all unique senders except dispatcher
+  const senders = [...new Set(messages
+    .filter(m => !m.sender.toLowerCase().includes('sam') && !m.sender.toLowerCase().includes('glasi'))
+    .map(m => m.sender)
+  )];
+
+  senders.forEach(sender => {
+    const worker = matchWorker(sender);
+    const workerMessages = messages.filter(m => m.sender === sender);
+    const keywords = workerKeywords.filter(m => m.sender === sender);
+
+    // find their check-in response (any keyword before first shift post)
+    const firstShiftPost = shiftPosts.length ? toSecs(shiftPosts[0].time) : null;
+    const checkIn = workerMessages.find(m => toSecs(m.time) < (firstShiftPost || Infinity) && keywordPattern.test(m.message));
+
+    // find their response to each shift post
+    const responses = shiftPosts.map(post => {
+      const postSecs = toSecs(post.time);
+      const response = keywords.find(k => toSecs(k.time) > postSecs && toSecs(k.time) < postSecs + 300);
+      return {
+        postTime: post.time,
+        postMessage: post.message,
+        responseTime: response ? response.time : null,
+        responseSeconds: response ? toSecs(response.time) - postSecs : null
+      };
+    });
+
+    workerData[sender] = {
+      sender,
+      worker,
+      matched: !!worker,
+      messageCount: workerMessages.length,
+      checkIn: checkIn ? checkIn.time : null,
+      responses
+    };
+  });
+
+  parsedChatData = Object.values(workerData);
+
+  // render results
+  const resultsDiv = document.getElementById('chat-parse-results');
+  const tableDiv = document.getElementById('chat-parse-table');
+  resultsDiv.style.display = 'block';
+
+  if(!parsedChatData.length) {
+    tableDiv.innerHTML = '<div class="empty">No worker messages found in the chat.</div>';
+    return;
+  }
+
+  tableDiv.innerHTML = '<table class="history-table"><thead><tr>'
+    +'<th>Zoom Name</th><th>Matched Worker</th><th>Check-in</th><th>Shift Responses</th><th>Override Match</th>'
+    +'</tr></thead><tbody>'
+    +parsedChatData.map((d,i) => {
+      const matchBadge = d.matched
+        ? '<span style="color:var(--green);font-size:11px;">✓ '+d.worker.name+'</span>'
+        : '<span style="color:var(--red);font-size:11px;">No match</span>';
+
+      const responsesSummary = d.responses.map(r =>
+        r.responseSeconds !== null
+          ? '<span style="color:var(--green);font-size:11px;">'+r.responseSeconds+'s</span>'
+          : '<span style="color:var(--grey);font-size:11px;">No response</span>'
+      ).join(' · ') || '—';
+
+      const overrideSelect = '<select class="field" style="max-width:160px;margin-bottom:0;font-size:11px;" onchange="overrideChatMatch('+i+', this.value)">'
+        +'<option value="">Override...</option>'
+        +allWorkers.map(w=>'<option value="'+w.id+'">'+w.name+'</option>').join('')
+        +'</select>';
+
+      return '<tr>'
+        +'<td style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+d.sender+'</td>'
+        +'<td>'+matchBadge+'</td>'
+        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+(d.checkIn||'—')+'</span></td>'
+        +'<td>'+responsesSummary+'</td>'
+        +'<td>'+overrideSelect+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>'
+    +'<div style="font-size:11px;color:var(--grey);margin-top:12px;">'+messages.length+' messages parsed · '+parsedChatData.length+' workers found · '+shiftPosts.length+' shift posts detected</div>';
+}
+
+function overrideChatMatch(index, workerId) {
+  const worker = allWorkers.find(w => String(w.id) === String(workerId));
+  if(worker) {
+    parsedChatData[index].worker = worker;
+    parsedChatData[index].matched = true;
+  }
+}
+
+async function saveChatData() {
+  const sessionId = document.getElementById('chat-session-select').value;
+  if(!sessionId) { alert('Select a session first.'); return; }
+
+  const unmatched = parsedChatData.filter(d => !d.matched);
+  if(unmatched.length) {
+    if(!confirm(unmatched.length+' workers could not be matched and will be skipped. Continue?')) return;
+  }
+
+  const matched = parsedChatData.filter(d => d.matched && d.worker);
+  let saved = 0;
+
+  for(const d of matched) {
+    const workerId = d.worker.id;
+
+    // calculate best response time across all shift posts
+    const bestResponse = d.responses.filter(r=>r.responseSeconds!==null)
+      .sort((a,b)=>a.responseSeconds-b.responseSeconds)[0];
+
+    // check if they were a no-show (accepted but no clock in)
+    // we'll just log the response data for now
+    const payload = {
+      session_id: parseInt(sessionId),
+      application_id: workerId,
+      zoom_display_name: d.sender,
+      checked_in: !!d.checkIn,
+      check_in_time: d.checkIn || null,
+      shift_response_seconds: bestResponse ? bestResponse.responseSeconds : null,
+      shift_responded: bestResponse ? true : false,
+      message_count: d.messageCount
+    };
+
+    // upsert to session_chat_log table
+    await sbPost('session_chat_log', payload);
+    saved++;
+  }
+
+  alert(saved+' worker records saved successfully.');
+  document.getElementById('chat-parse-results').style.display = 'none';
+  document.getElementById('chat-input').value = '';
+}
+
+function parseSessionChat() {
+  const raw = document.getElementById('session-chat-input').value.trim();
+  if(!raw) { alert('Paste your Zoom chat first.'); return; }
+  if(!activeSessionId) { alert('No active session found.'); return; }
+
+  const lines = raw.split('\n');
+  const messages = [];
+  let current = null;
+  for(let i=0; i<lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(/^(\d{2}:\d{2}:\d{2})\s+From\s+(.+?)\s+to\s+Everyone:/i);
+    if(match) {
+      current = { time: match[1], sender: match[2].trim(), message: '' };
+      messages.push(current);
+    } else if(current && (line.startsWith('\t') || line.startsWith('    '))) {
+      current.message = line.trim();
+    }
+  }
+
+  if(!messages.length) { alert('Could not parse any messages. Check the format.'); return; }
+
+  const keywordPattern = /^[A-Z0-9]{2,8}$/;
+  const shiftPostPattern = /shift|posted|keyword|accept/i;
+  const toSecs = t => { const [h,m,s]=t.split(':').map(Number); return h*3600+m*60+s; };
+
+  const shiftPosts = messages.filter(m =>
+    (m.sender.toLowerCase().includes('sam') || m.sender.toLowerCase().includes('glasi'))
+    && shiftPostPattern.test(m.message)
+  );
+
+  const matchWorker = sender => {
+    const sLower = sender.toLowerCase().trim();
+    const byEmail = allWorkers.find(w => w.email && w.email.toLowerCase() === sLower);
+    if(byEmail) return byEmail;
+    const byName = allWorkers.find(w => w.name && w.name.toLowerCase() === sLower);
+    if(byName) return byName;
+    const byPartial = allWorkers.find(w => w.name && (
+      sLower.includes(w.name.toLowerCase().split(' ')[0]) ||
+      w.name.toLowerCase().includes(sLower.split(' ')[0])
+    ));
+    return byPartial || null;
+  };
+
+  const senders = [...new Set(messages
+    .filter(m => !m.sender.toLowerCase().includes('sam') && !m.sender.toLowerCase().includes('glasi'))
+    .map(m => m.sender)
+  )];
+
+  parsedChatData = senders.map(sender => {
+    const worker = matchWorker(sender);
+    const workerMessages = messages.filter(m => m.sender === sender);
+    const keywords = workerMessages.filter(m => keywordPattern.test(m.message));
+    const firstShiftPost = shiftPosts.length ? toSecs(shiftPosts[0].time) : null;
+    const checkIn = workerMessages.find(m => toSecs(m.time) < (firstShiftPost||Infinity) && keywordPattern.test(m.message));
+    const responses = shiftPosts.map(post => {
+      const postSecs = toSecs(post.time);
+      const response = keywords.find(k => toSecs(k.time) > postSecs && toSecs(k.time) < postSecs+300);
+      return { responseSeconds: response ? toSecs(response.time) - postSecs : null };
+    });
+    return { sender, worker, matched: !!worker, messageCount: workerMessages.length, checkIn: checkIn?checkIn.time:null, responses };
+  });
+
+  const resultsDiv = document.getElementById('session-chat-results');
+  resultsDiv.style.display = 'block';
+  resultsDiv.innerHTML = '<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Parsed — '+messages.length+' messages · '+parsedChatData.length+' workers · '+shiftPosts.length+' shift posts</div>'
+    +'<table class="history-table"><thead><tr><th>Zoom Name</th><th>Matched Worker</th><th>Check-in</th><th>Response Time</th><th>Override</th></tr></thead><tbody>'
+    +parsedChatData.map((d,i) => {
+      const bestResp = d.responses.filter(r=>r.responseSeconds!==null).sort((a,b)=>a.responseSeconds-b.responseSeconds)[0];
+      return '<tr>'
+        +'<td style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+d.sender+'</td>'
+        +'<td>'+(d.matched?'<span style="color:var(--green);font-size:11px;">✓ '+d.worker.name+'</span>':'<span style="color:var(--red);font-size:11px;">No match</span>')+'</td>'
+        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+(d.checkIn||'—')+'</span></td>'
+        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--green);">'+(bestResp?bestResp.responseSeconds+'s':'—')+'</span></td>'
+        +'<td><select class="field" style="max-width:150px;margin-bottom:0;font-size:11px;" onchange="overrideChatMatch('+i+', this.value)">'
+        +'<option value="">Override...</option>'
+        +allWorkers.map(w=>'<option value="'+w.id+'">'+w.name+'</option>').join('')
+        +'</select></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>'
+    +'<button class="small-ice-btn" style="margin-top:16px;" onclick="saveSessionChatData()">Save Response Data</button>';
+}
+
+async function saveSessionChatData() {
+  const matched = parsedChatData.filter(d => d.matched && d.worker);
+  const unmatched = parsedChatData.filter(d => !d.matched);
+  if(unmatched.length && !confirm(unmatched.length+' workers unmatched and will be skipped. Continue?')) return;
+
+  for(const d of matched) {
+    const bestResp = d.responses.filter(r=>r.responseSeconds!==null).sort((a,b)=>a.responseSeconds-b.responseSeconds)[0];
+    await sbPost('session_chat_log', {
+      session_id: activeSessionId,
+      application_id: d.worker.id,
+      zoom_display_name: d.sender,
+      checked_in: !!d.checkIn,
+      check_in_time: d.checkIn||null,
+      shift_response_seconds: bestResp ? bestResp.responseSeconds : null,
+      shift_responded: !!bestResp,
+      message_count: d.messageCount
+    });
+  }
+  alert(matched.length+' worker records saved.');
 }
 
 function goToReports() {
@@ -2879,6 +3255,15 @@ async function updateWorkerReliabilityScores() {
 }
 
 function confirmCloseSession() {
+  // check if zoom chat has been logged
+  const chatInput = document.getElementById('session-chat-input').value.trim();
+  const chatSaved = document.getElementById('session-chat-results').style.display !== 'none';
+  if(!chatInput && !chatSaved) {
+    if(!confirm('You haven\'t pasted the Zoom chat log yet. Response time data won\'t be recorded. Close anyway?')) {
+      switchTab('zoom');
+      return;
+    }
+  }
   if(!confirm('Close this session? Make sure all shifts are completed first.')) return;
   updateWorkerReliabilityScores();
   clearInterval(sessionTimerInterval);
