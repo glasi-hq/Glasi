@@ -2972,15 +2972,19 @@ function openComplete(wid) {
   openOv('complete');
 }
 
-function confirmComplete() {
+async function confirmComplete() {
   const w=sessionWorkers.find(x=>x.id===completingShiftId);
   if(!w) { closeOv('complete'); return; }
   w.clockOutAt=toISO(document.getElementById('co-time').value);
   w.rating=starRating||null;
   w.notes=document.getElementById('co-notes').value.trim()||null;
-  w.status='completed';
   const rate = parseFloat(w.hourly_rate||12.71);
   const hours = parseFloat(w.shiftLength)||0;
+
+  const ok = await saveShiftToSupabase(w);
+  if(!ok) return;
+
+  w.status='completed';
   shifts.push({
     id: w.shiftId,
     sessionId: activeSessionId,
@@ -3002,7 +3006,6 @@ function confirmComplete() {
     rating: w.rating,
     notes: w.notes||''
   });
-  saveShiftToSupabase(w);
   closeOv('complete');
   renderOnShift();
   updateCounts();
@@ -3032,7 +3035,8 @@ requested_at: w.requestTime ? (String(w.requestTime).includes('T') ? w.requestTi
       notes: w.notes||null,
       status:'completed'
     });
-  } catch(e) { alert('Shift save failed: ' + (e.message||e) + '\n\nDo not close the session. Note the worker and time, then contact support.'); console.error('Supabase shift save failed',e); }
+  } catch(e) { alert('Shift save failed: ' + (e.message||e) + '\n\nDo not close the session. Note the worker and time, then contact support.'); console.error('Supabase shift save failed',e); return false; }
+  return true;
 }
 
 function setStar(n) { starRating=n; document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n)); }
