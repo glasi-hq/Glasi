@@ -1163,7 +1163,7 @@ function parseZoomChat() {
   // identify shift posts — messages from Sam/dispatcher containing keywords
   // keywords are typically uppercase short words
   // shift posts are messages that contain a keyword prompt
-  const keywordPattern = /^[A-Z0-9]{2,8}$/;
+  const keywordPattern = /^[A-Z0-9]{2,8}$/i;
   const shiftPostPattern = /shift|posted|keyword|accept/i;
 
   // find all shift posts (from dispatcher)
@@ -1356,7 +1356,7 @@ function parseSessionChat() {
 
   if(!messages.length) { alert('Could not parse any messages. Check the format.'); return; }
 
-  const keywordPattern = /^[A-Z0-9]{2,8}$/;
+  const keywordPattern = /^[A-Z0-9]{2,8}$/i;
   const shiftPostPattern = /shift|posted|keyword|accept/i;
   const toSecs = t => { const [h,m,s]=t.split(':').map(Number); return h*3600+m*60+s; };
 
