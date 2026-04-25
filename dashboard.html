@@ -662,30 +662,9 @@
 
     <!-- LOG TAB -->
     <div id="tab-content-log" class="log-view" style="display:none;">
-      <div class="export-row" style="gap:8px;">
-        <button class="ghost-btn" onclick="exportPayrollCSV()">Export for Payroll</button>
-        <button class="small-ice-btn" onclick="exportFullCSV()">Export Full Log</button>
+      <div id="session-event-log" style="padding:8px 0;">
+        <div class="empty">No events logged yet.</div>
       </div>
-      <table class="log-table" id="log-table">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="log-select-all" onchange="toggleAllShifts(this.checked)" /></th>
-            <th>Worker</th>
-            <th>Bar</th>
-            <th>Request</th>
-            <th>Dispatched</th>
-            <th>Clock In</th>
-            <th>Clock Out</th>
-            <th>Length</th>
-            <th>Rate</th>
-            <th>Total</th>
-            <th>Code</th>
-            <th>Rating</th>
-          </tr>
-        </thead>
-        <tbody id="log-tbody"></tbody>
-      </table>
-      <div id="log-empty" class="empty">No shifts logged yet.</div>
     </div>
 
     <!-- ZOOM CHAT TAB -->
@@ -3060,34 +3039,28 @@ function setStar(n) { starRating=n; document.querySelectorAll('.star').forEach((
 
 // LOG
 function renderLog() {
-  const tbody=document.getElementById('log-tbody');
-  const empty=document.getElementById('log-empty');
-  if(!shifts.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  tbody.innerHTML=shifts.map((s,i)=>{
-    const rate = s.hourly_rate||s.wage||'';
+  const log = document.getElementById('session-event-log');
+  if(!log) return;
+  if(!shifts.length) {
+    log.innerHTML = '<div class="empty">No events logged yet.</div>';
+    return;
+  }
+  const monoStyle = 'font-family:\'JetBrains Mono\',monospace;font-size:11px;';
+  log.innerHTML = shifts.map(s => {
     const hours = parseFloat(s.shiftLength)||0;
-    const total = rate && hours ? '£'+(parseFloat(rate)*hours).toFixed(2) : '';
-    const reqCell = s.requestMessage
-      ? '<td style="max-width:160px;cursor:pointer;" onclick="showRequestDetail('+i+')">'
-        +'<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ice);font-size:11px;">'+s.requestMessage+'</div>'
-        +(s.requestTime?'<div class="mono" style="font-size:10px;color:var(--grey);">'+fmtT(s.requestTime)+'</div>':'')
-        +'</td>'
-      : '<td style="color:var(--grey);font-size:11px;">—</td>';
-    return '<tr>'
-      +'<td><input type="checkbox" class="shift-checkbox" data-index="'+i+'" /></td>'
-      +'<td>'+s.workerName+'<br><span class="mono">'+s.workerPhone+'</span></td>'
-      +'<td>'+s.bar+'</td>'
-      +reqCell
-      +'<td><span class="mono">'+fmtT(s.dispatchedAt)+'</span></td>'
-      +'<td><span class="mono">'+fmtT(s.clockInAt)+'</span></td>'
-      +'<td><span class="mono">'+fmtT(s.clockOutAt)+'</span></td>'
-      +'<td><span class="mono">'+fmtLen(hours)+'</span></td>'
-      +'<td><span class="mono">'+(rate?'£'+parseFloat(rate).toFixed(2)+'/hr':'')+'</span></td>'
-      +'<td><span class="mono">'+total+'</span></td>'
-      +'<td><span class="mono" style="color:var(--ice);letter-spacing:2px;">'+s.code+'</span></td>'
-      +'<td>'+(s.rating?'★'.repeat(s.rating)+'☆'.repeat(5-s.rating):'')+'</td>'
-      +'</tr>';
+    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">'
+      +'<div style="'+monoStyle+'color:var(--grey);white-space:nowrap;min-width:48px;">'+fmtT(s.clockOutAt||s.clockInAt)+'</div>'
+      +'<div style="flex:1;">'
+      +'<div style="font-size:13px;font-weight:500;">'+s.workerName+' — '+s.bar+'</div>'
+      +'<div style="font-size:11px;color:var(--grey);margin-top:2px;">'
+      +fmtLen(hours)+' shift'
+      +(s.clockInAt ? ' · Clocked in '+fmtT(s.clockInAt) : '')
+      +(s.clockOutAt ? ' · Clocked out '+fmtT(s.clockOutAt) : '')
+      +(s.rating ? ' · '+('★'.repeat(s.rating)+'☆'.repeat(5-s.rating)) : '')
+      +'</div>'
+      +(s.requestMessage ? '<div style="font-size:11px;color:var(--ice);margin-top:2px;font-style:italic;">"'+s.requestMessage+'"</div>' : '')
+      +'</div>'
+      +'</div>';
   }).join('');
 }
 
