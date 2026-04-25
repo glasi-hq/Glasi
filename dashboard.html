@@ -295,7 +295,6 @@
       <button class="hdr-nav-btn" id="nav-dispatch" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})">Dispatch</button>
       <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
       <button class="hdr-nav-btn" id="nav-requests" onclick="safeNavigate(goToRequests)">Requests</button>
-      <button class="hdr-nav-btn" id="nav-reports" onclick="safeNavigate(goToReports)">Reports</button>
       <button class="hdr-nav-btn" id="nav-chat" onclick="safeNavigate(goToChatParser)">Log Chat</button>
     </nav>
   </div>
@@ -341,10 +340,6 @@
         <button class="zone-card" onclick="goToRequests()" style="text-align:center;">
           <div class="zone-card-name">Requests</div>
           <div class="zone-card-meta">All shift requests</div>
-        </button>
-        <button class="zone-card" onclick="goToReports()" style="text-align:center;">
-          <div class="zone-card-name">Reports</div>
-          <div class="zone-card-meta">Session reports</div>
         </button>
       </div>
     </div>
@@ -3861,12 +3856,47 @@ async function openShiftDetail(shiftId) {
     }
   }
 
+  // load on duty contact
+  let onDutyName = 'your manager';
+  if(s.bar_id) {
+    const contacts = await sbGet('bar_contacts','?bar_id=eq.'+s.bar_id+'&on_duty=eq.true&select=name');
+    if(contacts.length) onDutyName = contacts[0].name;
+    else {
+      const allC = await sbGet('bar_contacts','?bar_id=eq.'+s.bar_id+'&select=name&order=name.asc');
+      if(allC.length) onDutyName = allC[0].name;
+    }
+  }
+
+  // load session report for impact data
+  let reportData = null;
+  if(s.session_worker_id) {
+    const swCheck = await sbGet('session_workers','?id=eq.'+s.session_worker_id+'&select=session_id');
+    if(swCheck.length && swCheck[0].session_id) {
+      const reps = await sbGet('session_reports','?session_id=eq.'+swCheck[0].session_id+'&select=*');
+      if(reps.length) reportData = reps[0];
+    }
+  }
+
+  // load bar data for impact calc if no saved report
+  const barData = bars.find(b=>b.id===s.bar_id) || null;
+
+  // calculate impact
+  let customersPerHr = reportData?.customers_per_hour || null;
+  let revenueProtected = reportData?.revenue_protected || null;
+  if(!customersPerHr && barData?.bartenders && barData?.drinks_per_hour && barData?.avg_drink_value) {
+    const FLOOR_REDUCTION = 0.75;
+    const minsRecoveredPerHr = parseInt(barData.bartenders) * parseInt(barData.lost_minutes_per_bartender||10) * FLOOR_REDUCTION;
+    const extraDrinksPerHr = (minsRecoveredPerHr / 60) * parseInt(barData.drinks_per_hour);
+    const extraDrinksTotal = extraDrinksPerHr * hours;
+    customersPerHr = Math.round(extraDrinksPerHr / 5);
+    revenueProtected = (extraDrinksTotal * parseFloat(barData.avg_drink_value)).toFixed(2);
+  }
+
   const body = document.getElementById('shift-detail-body');
 
-  // section helper
-  const section = (title, content) =>
-    '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">'
-    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:14px;">'+title+'</div>'
+  const section = (title, content, accent) =>
+    '<div style="background:var(--navy-mid);border:1px solid '+(accent||'var(--border)')+';border-radius:12px;padding:20px;margin-bottom:16px;">'
+    +'<div style="font-size:9px;letter-spacing:3px;color:'+(accent||'var(--grey)')+';text-transform:uppercase;margin-bottom:14px;">'+title+'</div>'
     +content
     +'</div>';
 
@@ -3876,8 +3906,8 @@ async function openShiftDetail(shiftId) {
     +'<span style="'+monoStyle+'">'+value+'</span>'
     +'</div>';
 
-  // shift info
-  const shiftSection = section('Shift', 
+  // SECTION 1: Shift Details
+  const shiftSection = section('Shift Details',
     row('Reference', ref)
     +row('Bar', s.bars?.name||'Unknown')
     +row('Zone', sessionZone||'—')
@@ -3889,41 +3919,52 @@ async function openShiftDetail(shiftId) {
     +row('Worker Rate', workerRate ? '£'+workerRate.toFixed(2)+'/hr' : '—')
     +row('Worker Total', '£'+workerTotal)
     +row('Bar Total', '<span style="color:var(--green);">£'+barTotal+' @ £30/hr</span>')
-    +(s.bar_rating ? row('Bar Rating', '★'.repeat(s.bar_rating)) : '')
+    +(s.bar_rating ? row('Bar Rating', '★'.repeat(s.bar_rating)+'☆'.repeat(5-s.bar_rating)) : '')
   );
 
-  // request info
-  const requestSection = section('Request',
-    requestData
-      ? '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">'
-        +'<span style="font-size:13px;font-weight:500;">Request received</span>'
-        +'<span style="font-size:12px;color:var(--grey);">'+fmtT(requestData.request_time)+'</span>'
-        +'</div>'
-        +(requestData.raw_message
-          ? '<div style="background:var(--navy);border-left:3px solid var(--amber);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;font-style:italic;color:var(--white);line-height:1.6;">"'+requestData.raw_message+'"</div>'
-          : '<div style="color:var(--grey);font-size:13px;">No message recorded</div>'
-        )
-      : '<div style="color:var(--grey);font-size:13px;">No request data available</div>'
-  );
+  // SECTION 2: Report (The Request + The Impact)
+  const requestHtml = requestData
+    ? '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">'
+      +'<span style="font-size:14px;font-weight:600;">'+onDutyName+'</span>'
+      +'<span style="font-size:12px;color:var(--grey);">requested a Glasi at '+fmtT(requestData.request_time)+'</span>'
+      +'</div>'
+      +(requestData.raw_message
+        ? '<div style="background:var(--navy);border-left:3px solid var(--amber);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;font-style:italic;color:var(--white);line-height:1.6;margin-bottom:16px;">"'+requestData.raw_message+'"</div>'
+        : '')
+    : '<div style="color:var(--grey);font-size:13px;margin-bottom:16px;">No request data available</div>';
 
-  // financial status
+  const impactHtml = customersPerHr
+    ? '<div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy) 100%);border-radius:8px;padding:16px;margin-top:4px;">'
+      +'<p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.8;color:rgba(230,237,243,0.85);margin:0 0 12px;">'+onDutyName+' using Glasi at the right time meant that approximately <strong style="color:var(--white);">'+customersPerHr+' additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at.</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.8;color:rgba(230,237,243,0.85);margin:0 0 12px;">Over '+hours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);">£'+parseFloat(revenueProtected).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+barTotal+'.</p>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">'
+      +'<div style="color:var(--grey);">Customers per hour</div><div style="'+monoStyle+'">'+customersPerHr+' additional</div>'
+      +'<div style="color:var(--grey);">Revenue protected</div><div style="color:var(--green);'+monoStyle+'">£'+parseFloat(revenueProtected).toFixed(0)+'</div>'
+      +'<div style="color:var(--grey);">Glasi cost to bar</div><div style="'+monoStyle+'">£'+barTotal+'</div>'
+      +'</div>'
+      +'</div>'
+    : '';
+
+  const reportSection = section('Report — '+ref, requestHtml + impactHtml, 'var(--ice)');
+
+  // SECTION 3: Financial / Timesheet
   const tsChecked = fin?.ts_sent_at ? 'checked' : '';
   const biChecked = fin?.bi_sent_at ? 'checked' : '';
 
-  const financialSection = section('Financial — '+ref,
-    '<div style="margin-bottom:16px;">'
+  const financialSection = section('Timesheet & Invoice — '+ref,
+    '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
     +'<span style="font-size:11px;font-family:\'JetBrains Mono\',monospace;color:'+fs.colour+';">'+fs.code+'</span>'
     +'</div>'
     // TS row
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
     +'<div>'
-    +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Timesheet to Parasol</div>'
-    +'<div style="font-size:11px;color:var(--grey);">Worker: '+(s.session_workers?.worker_name||'Unknown')+' · '+fmtLen(hours)+' · £'+workerRate.toFixed(2)+'/hr · Total £'+workerTotal+'</div>'
-    +(fin?.ts_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.ts_sent_at)+'</div>' : '')
+    +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Timesheet to Parasol (TS)</div>'
+    +'<div style="font-size:11px;color:var(--grey);">'+ref+' · '+(s.session_workers?.worker_name||'Unknown')+' · '+fmtLen(hours)+' · £'+workerRate.toFixed(2)+'/hr · Total £'+workerTotal+'</div>'
+    +(fin?.ts_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.ts_sent_at)+'</div>' : '<div style="font-size:10px;color:var(--amber);margin-top:2px;">Not sent yet</div>')
     +'</div>'
     +'<div style="display:flex;align-items:center;gap:10px;">'
     +'<button class="ghost-btn" onclick="downloadTsForShift('+shiftId+')">Download TS</button>'
-    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;white-space:nowrap;">'
     +'<input type="checkbox" '+tsChecked+' onchange="toggleTsSent('+shiftId+', this.checked)"> TS Sent'
     +'</label>'
     +'</div>'
@@ -3931,23 +3972,23 @@ async function openShiftDetail(shiftId) {
     // BI row
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
     +'<div>'
-    +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Bar Invoice</div>'
-    +'<div style="font-size:11px;color:var(--grey);">'+fmtLen(hours)+' @ £30/hr · Total £'+barTotal+' · Ref '+ref+'</div>'
-    +(fin?.bi_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.bi_sent_at)+'</div>' : '')
+    +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Bar Invoice (BI)</div>'
+    +'<div style="font-size:11px;color:var(--grey);">'+ref+' · '+fmtLen(hours)+' @ £30/hr · Total £'+barTotal+'</div>'
+    +(fin?.bi_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.bi_sent_at)+'</div>' : '<div style="font-size:10px;color:var(--amber);margin-top:2px;">Not sent yet</div>')
     +'</div>'
-    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">'
     +'<button class="ghost-btn" onclick="downloadBiForShift('+shiftId+', \''+ref+'\')">Download BI</button>'
     +'<button class="ghost-btn" onclick="openBiEmail('+shiftId+', \''+ref+'\')">Open Email</button>'
-    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;white-space:nowrap;">'
     +'<input type="checkbox" '+biChecked+' onchange="toggleBiSent('+shiftId+', this.checked, \''+ref+'\')"> BI Sent'
     +'</label>'
     +'</div>'
     +'</div>'
-    // Parasol invoice row
+    // Parasol invoice row — shows after TS sent
     +(fin?.ts_sent_at
       ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
         +'<div>'
-        +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Parasol Invoice</div>'
+        +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Parasol Invoice (PAY P)</div>'
         +(fin.parasol_invoice_ref
           ? '<div style="font-size:11px;color:var(--grey);">Ref: '+fin.parasol_invoice_ref+' · £'+(fin.parasol_invoice_amount||'?')+'</div>'
           : '<div style="font-size:11px;color:var(--amber);">Awaiting invoice from Parasol</div>'
@@ -3955,29 +3996,40 @@ async function openShiftDetail(shiftId) {
         +(fin?.parasol_paid_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Paid '+fmtT(fin.parasol_paid_at)+'</div>' : '')
         +'</div>'
         +'<div style="display:flex;gap:8px;">'
-        +(!fin.parasol_invoice_ref ? '<button class="ghost-btn" onclick="logParasolInvoice('+shiftId+')">Log PI</button>' : '')
+        +(!fin.parasol_invoice_ref ? '<button class="ghost-btn" onclick="logParasolInvoice('+shiftId+')">Log Parasol Invoice</button>' : '')
         +(fin.parasol_invoice_ref && !fin.parasol_paid_at ? '<button class="ghost-btn" onclick="markParasolPaid('+shiftId+')">Mark Paid</button>' : '')
         +'</div>'
         +'</div>'
       : ''
     )
-    // Bar payment row
+    // Bar payment row — shows after BI sent
     +(fin?.bi_sent_at
       ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;">'
         +'<div>'
         +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Bar Payment</div>'
         +(fin.bar_paid_at
           ? '<div style="font-size:11px;color:var(--green);">Received '+fmtT(fin.bar_paid_at)+'</div>'
-          : '<div style="font-size:11px;color:var(--amber);">Awaiting payment from bar</div>'
+          : '<div style="font-size:11px;color:var(--amber);">Awaiting payment from '+( s.bars?.name||'bar')+'</div>'
         )
         +'</div>'
-        +(!fin.bar_paid_at ? '<button class="ghost-btn" onclick="markBarPaid('+shiftId+')">Mark Paid</button>' : '')
+        +(!fin.bar_paid_at ? '<button class="ghost-btn" onclick="markBarPaid('+shiftId+')">Mark Bar Paid</button>' : '')
+        +'</div>'
+      : ''
+    )
+    // Shift Pack — only when fully settled
+    +(fs.code === 'DONE'
+      ? '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">'
+        +'<div>'
+        +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;color:var(--green);">Shift Settled</div>'
+        +'<div style="font-size:11px;color:var(--grey);">All payments sent and received. Download the complete shift record.</div>'
+        +'</div>'
+        +'<button class="small-ice-btn" onclick="downloadShiftPack('+shiftId+', \''+ref+'\')">Download Shift Pack</button>'
         +'</div>'
       : ''
     )
   );
 
-  body.innerHTML = shiftSection + requestSection + financialSection;
+  body.innerHTML = shiftSection + reportSection + financialSection;
 }
 
 async function downloadBiForShift(shiftId, ref) {
@@ -4132,6 +4184,162 @@ ${customersPerHr ? `
 <div class="footer">
   Glasi Ltd · Registered in England and Wales · hello@glasi.co.uk · glasi.co.uk<br>
   Figures are estimates based on bar data provided at onboarding.
+</div>
+
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.print(); };
+}
+
+async function downloadShiftPack(shiftId, ref) {
+  const s = allShiftsData.find(x=>x.id===shiftId);
+  if(!s) return;
+
+  const fin = s._fin;
+  const hours = parseFloat(s.shift_length_hours)||0;
+  const workerRate = s.hourly_rate||0;
+  const workerTotal = (workerRate*hours).toFixed(2);
+  const barTotal = (hours*30).toFixed(2);
+  const date = s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+  const shortDate = s.created_at ? s.created_at.split('T')[0] : '';
+  const barName = s.bars?.name || 'Unknown venue';
+  const workerName = s.session_workers?.worker_name || 'Unknown';
+
+  // load request
+  let requestMsg = null;
+  let requestTime = null;
+  let onDutyName = 'Unknown';
+  let sessionZone = null;
+
+  if(s.session_worker_id) {
+    const swData = await sbGet('session_workers','?id=eq.'+s.session_worker_id+'&select=shift_request_id,session_id');
+    if(swData.length) {
+      if(swData[0].shift_request_id) {
+        const reqs = await sbGet('shift_requests','?id=eq.'+swData[0].shift_request_id+'&select=raw_message,request_time');
+        if(reqs.length) { requestMsg = reqs[0].raw_message; requestTime = reqs[0].request_time; }
+      }
+      if(swData[0].session_id) {
+        const sess = await sbGet('sessions','?id=eq.'+swData[0].session_id+'&select=zone_id');
+        if(sess.length) { const zone = ZONES.find(z=>z.dbId===sess[0].zone_id); if(zone) sessionZone = zone.name; }
+      }
+    }
+  }
+
+  if(s.bar_id) {
+    const contacts = await sbGet('bar_contacts','?bar_id=eq.'+s.bar_id+'&on_duty=eq.true&select=name');
+    if(contacts.length) onDutyName = contacts[0].name;
+  }
+
+  // impact calc
+  let customersPerHr = null;
+  let revenueProtected = null;
+  const barData = bars.find(b=>b.id===s.bar_id);
+  if(barData?.bartenders && barData?.drinks_per_hour && barData?.avg_drink_value) {
+    const minsRecoveredPerHr = parseInt(barData.bartenders) * parseInt(barData.lost_minutes_per_bartender||10) * 0.75;
+    const extraDrinksPerHr = (minsRecoveredPerHr/60) * parseInt(barData.drinks_per_hour);
+    customersPerHr = Math.round(extraDrinksPerHr/5);
+    revenueProtected = (extraDrinksPerHr * hours * parseFloat(barData.avg_drink_value)).toFixed(0);
+  }
+
+  const stamp = (label, val) => val
+    ? '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:12px;">'
+      +'<span style="color:#888;">'+label+'</span><span style="font-family:monospace;">'+val+'</span></div>'
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Glasi Shift Pack ${ref}</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Raleway',sans-serif; background:#fff; color:#1a1a2e; padding:40px; max-width:800px; margin:0 auto; font-size:13px; }
+  .mono { font-family:'JetBrains Mono',monospace; }
+  h1 { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:#888; margin-bottom:4px; }
+  h2 { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:#888; margin-bottom:10px; margin-top:24px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:20px; border-bottom:2px solid #0d1117; margin-bottom:24px; }
+  .wordmark { font-size:20px; letter-spacing:8px; font-weight:400; border:1.5px solid #0d1117; border-radius:4px; padding:6px 14px; display:inline-block; }
+  .ref { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; }
+  .section { margin-bottom:20px; background:#f8f9fa; border-radius:8px; padding:16px; }
+  .section-internal { border-left:3px solid #0d1117; }
+  .section-report { border-left:3px solid #a8c6e8; }
+  .section-financial { border-left:3px solid #2a7a4a; }
+  .row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; font-size:12px; }
+  .row:last-child { border-bottom:none; }
+  .label { color:#888; }
+  .val { font-family:'JetBrains Mono',monospace; }
+  .quote { background:#fff; border-left:3px solid #c8a24a; padding:10px 14px; border-radius:0 4px 4px 0; font-style:italic; color:#333; line-height:1.6; margin:10px 0; font-size:12px; }
+  .green { color:#2a7a4a; font-weight:600; }
+  .settled { background:#f0fff4; border:1px solid #9ae6b4; border-radius:6px; padding:12px 16px; text-align:center; margin-bottom:20px; }
+  .footer { margin-top:32px; padding-top:16px; border-top:1px solid #eee; font-size:10px; color:#aaa; text-align:center; }
+  @media print { body { padding:24px; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="wordmark">GLASI</div>
+    <div style="font-size:11px;color:#888;margin-top:6px;">Internal Shift Record — Confidential</div>
+  </div>
+  <div style="text-align:right;">
+    <div class="ref">${ref}</div>
+    <div style="font-size:11px;color:#888;margin-top:4px;">${date}</div>
+    <div style="font-size:11px;color:#888;">${barName}</div>
+  </div>
+</div>
+
+<div class="settled">
+  <span style="color:#2a7a4a;font-weight:600;font-size:13px;">✓ Shift fully settled — all payments sent and received</span>
+</div>
+
+<h2>Shift Details</h2>
+<div class="section section-internal">
+  ${stamp('Reference', ref)}
+  ${stamp('Bar', barName)}
+  ${stamp('Zone', sessionZone||'—')}
+  ${stamp('Date', date)}
+  ${stamp('Worker', workerName)}
+  ${stamp('Tier rate', workerRate ? '£'+parseFloat(workerRate).toFixed(2)+'/hr' : '—')}
+  ${stamp('Clock in', fmtT(s.clock_in_confirmed_at))}
+  ${stamp('Clock out', fmtT(s.clock_out_confirmed_at))}
+  ${stamp('Duration', fmtLen(hours))}
+  ${stamp('Worker total', '£'+workerTotal)}
+  ${stamp('Bar charge', '£'+barTotal+' @ £30/hr')}
+  ${s.bar_rating ? stamp('Bar rating', '★'.repeat(s.bar_rating)+'☆'.repeat(5-s.bar_rating)) : ''}
+</div>
+
+<h2>Request & Impact</h2>
+<div class="section section-report">
+  ${requestTime ? `<div style="font-size:12px;margin-bottom:8px;"><strong>${onDutyName}</strong> requested a Glasi at ${fmtT(requestTime)}</div>` : ''}
+  ${requestMsg ? `<div class="quote">"${requestMsg}"</div>` : ''}
+  ${customersPerHr ? `
+  <div style="margin-top:12px;font-size:12px;color:#555;line-height:1.7;">
+    ${onDutyName} using Glasi at the right time meant approximately <strong>${customersPerHr} additional customers per hour</strong> had a better experience.
+    Over ${hours} hours, an estimated <strong class="green">£${revenueProtected} in revenue was protected</strong> against a Glasi cost of £${barTotal}.
+  </div>` : ''}
+</div>
+
+<h2>Financial Record</h2>
+<div class="section section-financial">
+  ${stamp('GS Reference', ref)}
+  ${stamp('Timesheet sent to Parasol', fin?.ts_sent_at ? fmtT(fin.ts_sent_at) : '—')}
+  ${stamp('Parasol invoice ref', fin?.parasol_invoice_ref || '—')}
+  ${stamp('Parasol invoice amount', fin?.parasol_invoice_amount ? '£'+fin.parasol_invoice_amount : '—')}
+  ${stamp('Parasol paid', fin?.parasol_paid_at ? fmtT(fin.parasol_paid_at) : '—')}
+  ${stamp('Bar invoice sent', fin?.bi_sent_at ? fmtT(fin.bi_sent_at) : '—')}
+  ${stamp('Bar invoice amount', '£'+barTotal)}
+  ${stamp('Bar payment received', fin?.bar_paid_at ? fmtT(fin.bar_paid_at) : '—')}
+</div>
+
+<div class="footer">
+  Glasi Ltd · Registered in England and Wales · hello@glasi.co.uk · glasi.co.uk<br>
+  Internal document — not for distribution
 </div>
 
 </body>
