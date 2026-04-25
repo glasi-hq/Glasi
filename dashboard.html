@@ -3679,7 +3679,7 @@ async function loadShiftsHistory() {
   ]);
   allShiftsData = shiftsResult;
   allShiftsData.forEach(s => {
-    s._fin = financialsResult.find(f => f.shift_id === s.id) || null;
+    s._fin = financialsResult.find(f => Number(f.shift_id) === Number(s.id)) || null;
   });
   renderShiftsList();
 }
