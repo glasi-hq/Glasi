@@ -1017,7 +1017,7 @@ const toISO = t => t ? new Date(`${today()}T${t}`).toISOString() : null;
 const uid = () => Date.now() + Math.random().toString(36).slice(2);
 
 async function sbGet(t,q='') { try { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{headers:H}); const d=await r.json(); return Array.isArray(d)?d:[]; } catch { return []; } }
-async function sbPost(t,b) { try { const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); } catch { return null; } }
+async function sbPost(t,b) { const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); if(!r.ok){ const err=await r.json().catch(()=>({message:r.statusText})); throw new Error(err.message||r.statusText); } return r.json(); }
 async function sbPatch(t,q,b) { try { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); } catch { return null; } }
 async function sbDelete(t,q) { try { await fetch(`${SB}/rest/v1/${t}${q}`,{method:'DELETE',headers:H}); } catch {} }
 
@@ -3032,7 +3032,7 @@ requested_at: w.requestTime ? (String(w.requestTime).includes('T') ? w.requestTi
       notes: w.notes||null,
       status:'completed'
     });
-  } catch(e) { console.log('Supabase save failed',e); }
+  } catch(e) { alert('Shift save failed: ' + (e.message||e) + '\n\nDo not close the session. Note the worker and time, then contact support.'); console.error('Supabase shift save failed',e); }
 }
 
 function setStar(n) { starRating=n; document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n)); }
