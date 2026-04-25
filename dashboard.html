@@ -1009,6 +1009,9 @@ const USERS = [
 
 let ZONES = []; // loaded from Supabase on login
 
+const VAT_RATE = 0.20;
+const VAT_NUMBER = 'Pending';
+
 let currentUser = null;
 let activeZone = null;
 let allWorkers = [];
@@ -4372,14 +4375,21 @@ function openBiEmail(shiftId, ref) {
   if(!s) return;
   const barName = s.bars?.name || 'the bar';
   const hours = parseFloat(s.shift_length_hours)||0;
-  const barTotal = (hours*30).toFixed(2);
+  const barNet = (hours*30).toFixed(2);
+  const barVat = (parseFloat(barNet)*VAT_RATE).toFixed(2);
+  const barTotal = (parseFloat(barNet)+parseFloat(barVat)).toFixed(2);
   const date = s.created_at ? s.created_at.split('T')[0] : '';
   const subject = encodeURIComponent('Glasi Invoice '+ref+' — '+barName+' — '+date);
   const body = encodeURIComponent(
     'Hi,\n\nPlease find attached your Glasi invoice '+ref+' for floor support on '+date+'.\n\n'
-    +hours+' hours floor support @ £30/hr = £'+barTotal+'\nReference: '+ref+'\n\n'
+    +hours+' hours floor support @ £30/hr\n'
+    +'Subtotal: £'+barNet+'\n'
+    +'VAT (20%): £'+barVat+'\n'
+    +'Total due: £'+barTotal+'\n\n'
+    +'Reference: '+ref+'\n'
+    +'VAT Number: '+VAT_NUMBER+'\n\n'
     +'Payment due within 7 days.\n\n'
-    +'Bank: Glasi Ltd\nSort code: [SORT CODE]\nAccount: [ACCOUNT NUMBER]\nReference: '+ref+'\n\n'
+    +'Bank: Glasi Ltd\nSort code: 04-06-05\nAccount: 31291275\nReference: '+ref+'\n\n'
     +'Thanks,\nSam\nGlasi Ltd\nsam@glasi.co.uk'
   );
   window.open('mailto:?subject='+subject+'&body='+body);
@@ -4402,14 +4412,21 @@ async function toggleBiSent(shiftId, checked, ref) {
   if(checked) {
     const barName = s?.bars?.name || 'the bar';
     const hours = parseFloat(s?.shift_length_hours)||0;
-    const barTotal = (hours*30).toFixed(2);
+    const barNet = (hours*30).toFixed(2);
+    const barVat = (parseFloat(barNet)*VAT_RATE).toFixed(2);
+    const barTotal = (parseFloat(barNet)+parseFloat(barVat)).toFixed(2);
     const date = s?.created_at ? s.created_at.split('T')[0] : '';
     const subject = encodeURIComponent('Glasi Invoice '+ref+' — '+barName+' — '+date);
     const body = encodeURIComponent(
       'Hi,\n\nPlease find attached your Glasi invoice '+ref+' for floor support on '+date+'.\n\n'
-      +hours+' hours floor support @ £30/hr = £'+barTotal+'\nReference: '+ref+'\n\n'
+      +hours+' hours floor support @ £30/hr\n'
+      +'Subtotal: £'+barNet+'\n'
+      +'VAT (20%): £'+barVat+'\n'
+      +'Total due: £'+barTotal+'\n\n'
+      +'Reference: '+ref+'\n'
+      +'VAT Number: '+VAT_NUMBER+'\n\n'
       +'Payment due within 7 days.\n\n'
-      +'Bank: Glasi Ltd\nSort code: [SORT CODE]\nAccount: [ACCOUNT NUMBER]\nReference: '+ref+'\n\n'
+      +'Bank: Glasi Ltd\nSort code: 04-06-05\nAccount: 31291275\nReference: '+ref+'\n\n'
       +'Thanks,\nSam\nGlasi Ltd\nsam@glasi.co.uk'
     );
     window.open('mailto:?subject='+subject+'&body='+body);
