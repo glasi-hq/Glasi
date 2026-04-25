@@ -1009,6 +1009,8 @@ const toISO = t => t ? new Date(`${today()}T${t}`).toISOString() : null;
 const uid = () => Date.now() + Math.random().toString(36).slice(2);
 
 async function sbGet(t,q='') { try { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{headers:H}); const d=await r.json(); return Array.isArray(d)?d:[]; } catch { return []; } }
+async function sbUpsert(t,b,conflict) { const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation,resolution=merge-duplicates','on-conflict':conflict},body:JSON.stringify(b)}); if(!r.ok){ const err=await r.json().catch(()=>({message:r.statusText})); throw new Error(err.message||r.statusText); } return r.json(); }
+
 async function sbPost(t,b) { const r=await fetch(`${SB}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); if(!r.ok){ const err=await r.json().catch(()=>({message:r.statusText})); throw new Error(err.message||r.statusText); } return r.json(); }
 async function sbPatch(t,q,b) { try { const r=await fetch(`${SB}/rest/v1/${t}${q}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)}); return r.json(); } catch { return null; } }
 async function sbDelete(t,q) { try { await fetch(`${SB}/rest/v1/${t}${q}`,{method:'DELETE',headers:H}); } catch {} }
@@ -1324,7 +1326,7 @@ async function saveChatData() {
     };
 
     // upsert to session_chat_log table
-    await sbPost('session_chat_log', payload);
+    await sbUpsert('session_chat_log', payload, 'session_id,application_id');
     saved++;
   }
 
@@ -1423,7 +1425,7 @@ async function saveSessionChatData() {
 
   for(const d of matched) {
     const bestResp = d.responses.filter(r=>r.responseSeconds!==null).sort((a,b)=>a.responseSeconds-b.responseSeconds)[0];
-    await sbPost('session_chat_log', {
+    await sbUpsert('session_chat_log', {
       session_id: activeSessionId,
       application_id: d.worker.id,
       zoom_display_name: d.sender,
@@ -3181,15 +3183,12 @@ async function calculateReliabilityScore(applicationId) {
     }
   }
 
-  // 3. Response rate (20%) — accepted / total responses
+  // 3. Response rate (20%) — shift_responded / total sessions from session_chat_log
   let responseScore = 1; // default full marks if no data
-  if(swIds.length) {
-    const idList = swIds.map(r=>r.id).join(',');
-    const responses = await sbGet('worker_responses', '?session_worker_id=in.('+idList+')&select=response');
-    if(responses.length) {
-      const accepted = responses.filter(r=>r.response==='accepted').length;
-      responseScore = accepted / responses.length;
-    }
+  const chatLog = await sbGet('session_chat_log', '?application_id=eq.'+applicationId+'&select=shift_responded');
+  if(chatLog.length) {
+    const responded = chatLog.filter(r => r.shift_responded).length;
+    responseScore = responded / chatLog.length;
   }
 
   // 4. Completion rate (10%) — completed shifts / accepted shifts
