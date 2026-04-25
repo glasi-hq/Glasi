@@ -1108,6 +1108,7 @@ async function goToWorker(workerId) {
 function goToShifts() {
   showScreen('shifts');
   setActiveNav('shifts');
+  if(!bars.length) loadBars();
   loadShiftsHistory();
 }
 
@@ -4013,7 +4014,7 @@ async function openShiftDetail(shiftId) {
 }
 
 async function downloadBiForShift(shiftId, ref) {
-  const s = allShiftsData.find(x=>x.id===shiftId);
+  const s = allShiftsData.find(x=>Number(x.id)===Number(shiftId));
   if(!s) return;
 
   const fin = s._fin;
@@ -4048,7 +4049,7 @@ async function downloadBiForShift(shiftId, ref) {
   }
 
   // load bar data for impact calc
-  const barData = bars.find(b=>b.id===s.bar_id);
+  const barData = bars.find(b=>Number(b.id)===Number(s.bar_id));
   if(barData && barData.bartenders && barData.drinks_per_hour && barData.avg_drink_value) {
     const FLOOR_REDUCTION = 0.75;
     const minsRecoveredPerHr = parseInt(barData.bartenders) * parseInt(barData.lost_minutes_per_bartender||10) * FLOOR_REDUCTION;
@@ -4236,7 +4237,7 @@ async function downloadShiftPack(shiftId, ref) {
   // impact calc
   let customersPerHr = null;
   let revenueProtected = null;
-  const barData = bars.find(b=>b.id===s.bar_id);
+  const barData = bars.find(b=>Number(b.id)===Number(s.bar_id));
   if(barData?.bartenders && barData?.drinks_per_hour && barData?.avg_drink_value) {
     const minsRecoveredPerHr = parseInt(barData.bartenders) * parseInt(barData.lost_minutes_per_bartender||10) * 0.75;
     const extraDrinksPerHr = (minsRecoveredPerHr/60) * parseInt(barData.drinks_per_hour);
