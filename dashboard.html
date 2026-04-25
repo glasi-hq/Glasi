@@ -3792,7 +3792,7 @@ function renderShiftsList() {
 }
 
 async function openShiftDetail(shiftId) {
-  const s = allShiftsData.find(x=>x.id===shiftId);
+  const s = allShiftsData.find(x=>Number(x.id)===Number(shiftId));
   if(!s) return;
 
   const fin = s._fin;
