@@ -4042,7 +4042,9 @@ async function downloadBiForShift(shiftId, ref) {
   const fin = s._fin;
   const barName = s.bars?.name || 'Unknown venue';
   const hours = parseFloat(s.shift_length_hours)||0;
-  const barTotal = (hours * 30).toFixed(2);
+  const barNet = (hours * 30).toFixed(2);
+  const barVat = (parseFloat(barNet) * VAT_RATE).toFixed(2);
+  const barTotal = (parseFloat(barNet) + parseFloat(barVat)).toFixed(2);
   const date = s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
   const shortDate = s.created_at ? s.created_at.split('T')[0] : '';
   const dueDate = s.created_at ? new Date(new Date(s.created_at).getTime() + 7*24*60*60*1000).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '';
@@ -4145,11 +4147,19 @@ ${customersPerHr ? `
 <div class="section">
   <div class="section-label">The Impact</div>
   <div class="impact-box">
-    <div class="impact-text">${onDutyName} using Glasi at the right time meant that approximately <strong>${customersPerHr} additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at, getting the level of service you strive to deliver.</div>
-    <div class="impact-text">As a result, those customers are more likely to come back. That's another benefit of using Glasi at the right moment.</div>
+    <div class="impact-text">${onDutyName} calling it early made a real difference. Approximately <strong>${customersPerHr} additional customers per hour</strong> didn't have to wait at a dirty table, didn't have to chase someone for a drink, and didn't leave with a bad impression of ${barName}. They had a good time. Those are the customers who come back.</div>
     <div class="two-col">
-      <div class="stat-box"><div class="stat-val">${customersPerHr}</div><div class="stat-label">extra customers per hour</div></div>
-      <div class="stat-box"><div class="stat-val" style="color:#2a7a4a;">£${revenueProtected}</div><div class="stat-label">revenue protected</div></div>
+      <div class="stat-box"><div class="stat-val">${customersPerHr}</div><div class="stat-label">extra customers per hour looked after</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:#2a7a4a;">£${revenueProtected}</div><div class="stat-label">estimated revenue protected</div></div>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #dde;font-size:12px;color:#666;display:flex;justify-content:space-between;">
+      <span>Revenue protected</span><span style="font-family:monospace;color:#2a7a4a;">£${revenueProtected}</span>
+    </div>
+    <div style="font-size:12px;color:#666;display:flex;justify-content:space-between;">
+      <span>Glasi cost (ex. VAT)</span><span style="font-family:monospace;">£${barNet}</span>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#2a7a4a;display:flex;justify-content:space-between;margin-top:4px;padding-top:8px;border-top:1px solid #dde;">
+      <span>Net benefit</span><span style="font-family:monospace;">£${(parseFloat(revenueProtected)-parseFloat(barNet)).toFixed(0)}</span>
     </div>
   </div>
 </div>
@@ -4158,17 +4168,25 @@ ${customersPerHr ? `
 <div class="section">
   <div class="section-label">Invoice</div>
   <table class="invoice-table">
-    <thead><tr><th>Description</th><th>Date</th><th>Hours</th><th>Rate</th><th>Amount</th></tr></thead>
+    <thead><tr><th>Description</th><th>Date</th><th>Hours</th><th>Rate</th><th>Net</th></tr></thead>
     <tbody>
       <tr>
         <td>Glasi floor support — glass collecting and table clearing</td>
         <td class="mono">${shortDate}</td>
         <td class="mono">${hours.toFixed(1)}</td>
         <td class="mono">£30.00/hr</td>
-        <td class="mono">£${barTotal}</td>
+        <td class="mono">£${barNet}</td>
+      </tr>
+      <tr style="font-size:12px;color:#888;">
+        <td colspan="4" style="text-align:right;">Subtotal</td>
+        <td class="mono">£${barNet}</td>
+      </tr>
+      <tr style="font-size:12px;color:#888;">
+        <td colspan="4" style="text-align:right;">VAT @ 20%</td>
+        <td class="mono">£${barVat}</td>
       </tr>
       <tr class="total-row">
-        <td colspan="4" style="text-align:right;">Total due</td>
+        <td colspan="4" style="text-align:right;">Total due (inc. VAT)</td>
         <td class="mono">£${barTotal}</td>
       </tr>
     </tbody>
@@ -4180,6 +4198,7 @@ ${customersPerHr ? `
     <div class="bank-row"><span class="bank-label">Sort code</span><span class="bank-value">04-06-05</span></div>
     <div class="bank-row"><span class="bank-label">Account number</span><span class="bank-value">31291275</span></div>
     <div class="bank-row"><span class="bank-label">Reference</span><span class="bank-value">${invoiceNum}</span></div>
+    <div class="bank-row"><span class="bank-label">VAT Number</span><span class="bank-value">${VAT_NUMBER}</span></div>
     <div class="bank-row"><span class="bank-label">Payment terms</span><span class="bank-value">7 days from receipt</span></div>
   </div>
 </div>
