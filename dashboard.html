@@ -4914,19 +4914,20 @@ const _reportStore = {};
 
 function copyWorkerReport(btn, reportId) {
   const html = _reportStore[reportId] || '';
-  const blob = new Blob([html], { type: 'text/html' });
-  const item = new ClipboardItem({ 'text/html': blob });
-  navigator.clipboard.write([item]).then(() => {
-    btn.textContent = 'Copied!';
+  if(!html) { btn.textContent = 'No report found'; return; }
+  // open in new tab -- select all, copy, paste into Gmail
+  const fullPage = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body>' + html + '<p style="margin-top:24px;font-family:Arial,sans-serif;font-size:12px;color:#999;text-align:center;">Select all (Ctrl+A), Copy (Ctrl+C), then paste into Gmail</p></body></html>';
+  const win = window.open('', '_blank');
+  if(win) {
+    win.document.write(fullPage);
+    win.document.close();
+    btn.textContent = 'Opened in new tab';
     btn.style.color = 'var(--green)';
     setTimeout(() => { btn.textContent = 'Copy Email Report'; btn.style.color = 'var(--ice)'; }, 2000);
-  }).catch(() => {
-    // fallback -- copy as text
-    navigator.clipboard.writeText(html).then(() => {
-      btn.textContent = 'Copied as text';
-      setTimeout(() => { btn.textContent = 'Copy Email Report'; }, 2000);
-    });
-  });
+  } else {
+    btn.textContent = 'Allow popups and try again';
+    setTimeout(() => { btn.textContent = 'Copy Email Report'; }, 3000);
+  }
 }
 
 </script>
