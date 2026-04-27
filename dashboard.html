@@ -4876,6 +4876,7 @@ ${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 16px;">Tier 
 </div>
 </div>`;
 
+    _reportStore['report_'+sw.application_id+'_'+sessionId] = emailSnippet;
     return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
         <div>
@@ -4908,7 +4909,6 @@ ${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 16px;">Tier 
       ${lines.length ? '<div style="margin-bottom:12px;">'+lines.map(l=>'<div style="font-size:12px;color:var(--grey);margin-bottom:2px;">'+l+'</div>').join('')+'</div>' : ''}
       <button onclick="copyWorkerReport(this,'report_${sw.application_id}_${sessionId}')" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Copy Email Report</button>
     </div>`;
-    _reportStore['report_'+sw.application_id+'_'+sessionId] = emailSnippet;
   }).join('');
 }
 
