@@ -293,6 +293,7 @@
       <button class="hdr-nav-btn" id="nav-zones" onclick="safeNavigate(goToZonesMgmt)">Zones</button>
       <button class="hdr-nav-btn" id="nav-workers" onclick="safeNavigate(goToWorkers)">Workers</button>
       <button class="hdr-nav-btn" id="nav-dispatch" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})">Dispatch</button>
+      <button class="hdr-nav-btn" id="nav-sessions" onclick="safeNavigate(goToSessions)">Sessions</button>
       <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
       <button class="hdr-nav-btn" id="nav-requests" onclick="safeNavigate(goToRequests)">Requests</button>
 
@@ -4353,6 +4354,26 @@ ${customersPerHr ? `
   Figures are estimates based on bar data provided at onboarding.
 </div>
 
+
+  <!-- SESSIONS SCREEN -->
+  <div id="screen-sessions" class="screen" style="display:none;padding:32px 24px;max-width:900px;margin:0 auto;">
+    <h2 style="font-family:'Raleway',sans-serif;font-weight:400;letter-spacing:4px;color:var(--ice);margin:0 0 4px 0;">SESSIONS</h2>
+    <p style="color:var(--grey);font-size:12px;letter-spacing:1px;margin:0 0 24px 0;">Click a session to view worker scores and copy reports</p>
+    <div id="sessions-list"></div>
+  </div>
+
+  <!-- SESSION DETAIL SCREEN -->
+  <div id="screen-session-detail" class="screen" style="display:none;padding:32px 24px;max-width:900px;margin:0 auto;">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+      <button class="ghost-btn" onclick="goToSessions()">Back to Sessions</button>
+      <div>
+        <h2 id="session-detail-title" style="font-family:'Raleway',sans-serif;font-weight:400;letter-spacing:4px;color:var(--ice);margin:0 0 2px 0;font-size:18px;"></h2>
+        <p id="session-detail-sub" style="color:var(--grey);font-size:12px;margin:0;"></p>
+      </div>
+    </div>
+    <div id="session-detail-workers"></div>
+  </div>
+
 </body>
 </html>`;
 
@@ -4703,6 +4724,196 @@ async function loadRequestsHistory() {
 // OVERLAYS
 function openOv(name) { document.getElementById(`ov-${name}`).classList.add('open'); }
 function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove('open'); }
+
+// ── SESSIONS ───────────────────────────────────────────────────────────────
+async function goToSessions() {
+  showScreen('sessions');
+  setActiveNav('sessions');
+  await loadSessionsList();
+}
+
+async function loadSessionsList() {
+  const list = document.getElementById('sessions-list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+
+  const sessions = await sbGet('sessions', '?select=*&order=session_date.desc,start_time.desc&end_time=not.is.null');
+  if(!sessions.length) { list.innerHTML = '<div class="empty">No closed sessions yet.</div>'; return; }
+
+  const zonesData = await sbGet('zones', '?select=id,name');
+
+  list.innerHTML = sessions.map(s => {
+    const zone = zonesData.find(z => Number(z.id) === Number(s.zone_id));
+    const date = s.session_date ? new Date(s.session_date).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Unknown date';
+    return `<div class="zone-card" style="margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;" onclick="openSessionDetail(${s.id})">
+      <div>
+        <div style="font-weight:600;color:var(--white);font-size:14px;margin-bottom:2px;">${date}</div>
+        <div style="color:var(--grey);font-size:12px;">${zone ? zone.name : 'Unknown zone'}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="color:var(--grey);font-size:11px;">${s.start_time ? s.start_time.slice(0,5) : ''} - ${s.end_time ? s.end_time.slice(0,5) : ''}</div>
+        <div style="color:var(--ice);font-size:11px;margin-top:2px;">View workers</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openSessionDetail(sessionId) {
+  showScreen('session-detail');
+  setActiveNav('sessions');
+
+  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=*');
+  const session = sessions[0];
+  if(!session) return;
+
+  const zonesData = await sbGet('zones', '?select=id,name');
+  const zone = zonesData.find(z => Number(z.id) === Number(session.zone_id));
+  const date = session.session_date ? new Date(session.session_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+
+  document.getElementById('session-detail-title').textContent = date.toUpperCase();
+  document.getElementById('session-detail-sub').textContent = (zone ? zone.name : '') + (session.start_time ? '  |  ' + session.start_time.slice(0,5) + ' - ' + (session.end_time ? session.end_time.slice(0,5) : 'open') : '');
+
+  const workers = document.getElementById('session-detail-workers');
+  workers.innerHTML = '<div class="empty">Loading workers...</div>';
+
+  const swRows = await sbGet('session_workers', '?session_id=eq.'+sessionId+'&select=*');
+  if(!swRows.length) { workers.innerHTML = '<div class="empty">No workers found for this session.</div>'; return; }
+
+  // load applications for each worker
+  const appIds = swRows.map(w => w.application_id).filter(Boolean);
+  const apps = appIds.length ? await sbGet('applications', '?id=in.('+appIds.join(',')+')&select=id,name,email,phone,tier,total_points,reliability_score') : [];
+
+  // load chat log for response data
+  const chatLogs = await sbGet('session_chat_log', '?session_id=eq.'+sessionId+'&select=*');
+
+  const tierRates = [12.71,13.71,14.71,15.71,16.71];
+
+  workers.innerHTML = swRows.map(sw => {
+    const app = apps.find(a => Number(a.id) === Number(sw.application_id));
+    const chat = chatLogs.find(c => Number(c.application_id) === Number(sw.application_id));
+    const name = app ? app.name : sw.worker_name || 'Unknown';
+    const joined = ['available','dispatched','completed'].includes(sw.status);
+    const dispatched = ['dispatched','completed'].includes(sw.status);
+    const completed = sw.status === 'completed';
+    const pts = sw.points_earned || 0;
+    const totalPts = app ? (parseInt(app.total_points) || 0) : 0;
+    const tier = app ? (parseInt(app.tier) || 1) : 1;
+    const reliability = app ? parseFloat(app.reliability_score || 0) : 0;
+    const multiplier = reliabilityMultiplier(reliability);
+    const toNext = pointsToNextTier(totalPts);
+    const nextThresholdPts = TIER_THRESHOLDS[tier] || null;
+    const prevThresholdPts = TIER_THRESHOLDS[tier-1] || 0;
+    const progress = nextThresholdPts ? Math.round(((totalPts - prevThresholdPts) / (nextThresholdPts - prevThresholdPts)) * 100) : 100;
+
+    // build breakdown
+    const lines = [];
+    if(joined) lines.push('Joined session: +'+POINTS.joined+'pts');
+    if(chat && chat.shift_responded) {
+      if(dispatched) {
+        lines.push('Accepted shift: +'+POINTS.accepted+'pts');
+        if(chat.shift_response_seconds != null) {
+          const s = chat.shift_response_seconds;
+          if(s < 30) lines.push('Speed bonus (<30s): +'+POINTS.speedBonus30+'pts');
+          else if(s < 60) lines.push('Speed bonus (<60s): +'+POINTS.speedBonus60+'pts');
+          else if(s < 120) lines.push('Speed bonus (<120s): +'+POINTS.speedBonus120+'pts');
+        }
+      } else {
+        lines.push('Responded (declined): +'+POINTS.declined+'pts');
+      }
+    }
+    if(completed) {
+      lines.push('Completed shift: +'+POINTS.completedShift+'pts');
+      if(sw.actual_arrival_minutes != null && sw.expected_arrival_minutes != null) {
+        const delta = sw.actual_arrival_minutes - sw.expected_arrival_minutes;
+        if(delta < 0) lines.push('Arrived early: +'+POINTS.arrivedEarly+'pts');
+        else if(delta <= 2) lines.push('Arrived on time: +'+POINTS.arrivedOnTime+'pts');
+      }
+    }
+
+    const statusColour = joined ? (completed ? 'var(--green)' : dispatched ? 'var(--ice)' : 'var(--amber)') : 'var(--grey)';
+    const statusLabel = completed ? 'COMPLETED' : dispatched ? 'DISPATCHED' : joined ? 'JOINED' : 'DID NOT JOIN';
+
+    // build HTML email snippet
+    const progressBar = '█'.repeat(Math.round(progress/10)) + '░'.repeat(10 - Math.round(progress/10));
+    const tierRate = tierRates[tier-1];
+    const nextTierRate = tier < 5 ? tierRates[tier] : null;
+
+    const emailSnippet = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+<div style="background:#0d1117;border-radius:16px 16px 0 0;padding:24px;text-align:center;">
+<div style="display:inline-block;border:1.5px solid #e6edf3;border-radius:6px;padding:8px 22px;">
+<span style="font-size:22px;letter-spacing:8px;color:#e6edf3;">GLASI</span>
+</div>
+</div>
+<div style="background:#fff;padding:28px 32px;">
+<p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${name},</p>
+<p style="margin:0 0 16px;font-size:15px;color:#374151;">Thanks for joining tonight. Here's your session update.</p>
+<div style="background:#f0f6fc;border-left:3px solid #a8c6e8;padding:16px 20px;border-radius:0 8px 8px 0;margin:0 0 20px;">
+<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#0d1117;letter-spacing:0.5px;text-transform:uppercase;">Tier ${tier} — ${totalPts} points</p>
+<p style="margin:0 0 8px;font-family:monospace;font-size:14px;color:#0d1117;">${progressBar} ${progress}%</p>
+<p style="margin:0;font-size:13px;color:#6b7280;">${toNext > 0 ? 'Next tier in '+toNext+' points' : 'Maximum tier reached'}</p>
+</div>
+<p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#0d1117;">Tonight you earned: +${pts} points</p>
+${lines.length ? '<ul style="margin:0 0 16px;padding-left:18px;color:#6b7280;font-size:13px;">'+lines.map(l=>'<li style="margin-bottom:4px;">'+l+'</li>').join('')+'</ul>' : '<p style="color:#6b7280;font-size:13px;margin:0 0 16px;">You were invited but did not join this session. Showing up counts — we hope to see you next time.</p>'}
+${multiplier !== 1.0 ? '<p style="font-size:12px;color:#6b7280;margin:0 0 16px;">Reliability multiplier applied: x'+multiplier+'</p>' : ''}
+<p style="font-size:14px;color:#374151;margin:0 0 4px;">Current rate: <strong>£${tierRate}/hr</strong></p>
+${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 16px;">Tier '+(tier+1)+' rate: £'+nextTierRate+'/hr — keep showing up</p>' : ''}
+<p style="font-size:14px;color:#374151;margin:16px 0 0;">Glasi<br><span style="color:#9ca3af;font-size:12px;">glasi.co.uk</span></p>
+</div>
+<div style="background:#0d1117;border-radius:0 0 16px 16px;padding:16px;text-align:center;">
+<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
+</div>
+</div>`;
+
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div style="font-weight:600;color:var(--white);font-size:15px;">${name}</div>
+          <div style="color:var(--grey);font-size:12px;margin-top:2px;">${app ? app.email || '' : ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:1px;color:${statusColour};">${statusLabel}</span>
+          <div style="color:var(--grey);font-size:11px;margin-top:2px;">Tier ${tier} &nbsp;·&nbsp; ${reliability ? reliability.toFixed(1)+'% reliability' : 'No score yet'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--ice);">+${pts}</div>
+          <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">PTS TONIGHT</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--white);">${totalPts}</div>
+          <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">TOTAL PTS</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--amber);">x${multiplier}</div>
+          <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">MULTIPLIER</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--green);">${toNext > 0 ? toNext : '—'}</div>
+          <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">TO NEXT TIER</div>
+        </div>
+      </div>
+      ${lines.length ? '<div style="margin-bottom:12px;">'+lines.map(l=>'<div style="font-size:12px;color:var(--grey);margin-bottom:2px;">'+l+'</div>').join('')+'</div>' : ''}
+      <button onclick="copyWorkerReport(this, \`${emailSnippet.replace(/`/g,'\`')}\`)" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Copy Email Report</button>
+    </div>`;
+  }).join('');
+}
+
+function copyWorkerReport(btn, html) {
+  const blob = new Blob([html], { type: 'text/html' });
+  const item = new ClipboardItem({ 'text/html': blob });
+  navigator.clipboard.write([item]).then(() => {
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = 'Copy Email Report'; btn.style.color = 'var(--ice)'; }, 2000);
+  }).catch(() => {
+    // fallback -- copy as text
+    navigator.clipboard.writeText(html).then(() => {
+      btn.textContent = 'Copied as text';
+      setTimeout(() => { btn.textContent = 'Copy Email Report'; }, 2000);
+    });
+  });
+}
+
 </script>
 </body>
 </html>
