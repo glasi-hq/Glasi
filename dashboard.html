@@ -3415,7 +3415,6 @@ function downloadSessionReports(reports) {
   reports.forEach(r => {
     const tierRate = [12.71,13.71,14.71,15.71,16.71][r.currentTier-1];
     const nextTierRate = r.currentTier < 5 ? [12.71,13.71,14.71,15.71,16.71][r.currentTier] : null;
-    const progressBar = '█'.repeat(Math.round(r.progress/10)) + '░'.repeat(10-Math.round(r.progress/10));
 
     let lines = [
       'GLASI SESSION REPORT',
@@ -3426,7 +3425,7 @@ function downloadSessionReports(reports) {
       "Thanks for joining tonight. Here's your update.",
       '',
       'TIER ' + r.currentTier + ' — ' + r.newTotal + ' points',
-      progressBar + '  ' + r.newTotal + ' / ' + (TIER_THRESHOLDS[r.currentTier] || r.newTotal) + ' points',
+      r.newTotal + ' / ' + (TIER_THRESHOLDS[r.currentTier] || r.newTotal) + ' points',
       r.toNext > 0 ? 'Next tier in ' + r.toNext + ' points' : 'Maximum tier reached',
       '',
       'TONIGHT YOU EARNED: +' + r.earned + ' points',
@@ -4845,7 +4844,7 @@ async function openSessionDetail(sessionId) {
     const statusLabel = completed ? 'COMPLETED' : dispatched ? 'DISPATCHED' : joined ? 'JOINED' : 'DID NOT JOIN';
 
     // build HTML email snippet
-    const progressBar = '█'.repeat(Math.round(progress/10)) + '░'.repeat(10 - Math.round(progress/10));
+    const progressBar = `<div style="background:#dce8f5;border-radius:999px;height:10px;width:100%;margin:4px 0;"><div style="background:#a8c6e8;border-radius:999px;height:10px;width:${progress}%;min-width:4px;"></div></div>`;
     const tierRate = tierRates[tier-1];
     const nextTierRate = tier < 5 ? tierRates[tier] : null;
 
@@ -4860,7 +4859,7 @@ async function openSessionDetail(sessionId) {
 <p style="margin:0 0 16px;font-size:15px;color:#374151;">Thanks for joining tonight. Here's your session update.</p>
 <div style="background:#f0f6fc;border-left:3px solid #a8c6e8;padding:16px 20px;border-radius:0 8px 8px 0;margin:0 0 20px;">
 <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#0d1117;letter-spacing:0.5px;text-transform:uppercase;">Tier ${tier}</p>
-<p style="margin:0 0 4px;font-family:monospace;font-size:14px;color:#0d1117;">${progressBar}</p>
+${progressBar}
 <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#0d1117;">${totalPts} / ${nextThresholdPts || totalPts} points</p>
 <p style="margin:0;font-size:13px;color:#6b7280;">${toNext > 0 ? 'Next tier in '+toNext+' points' : 'Maximum tier reached'}</p>
 </div>
