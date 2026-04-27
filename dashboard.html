@@ -1595,7 +1595,7 @@ function goToRequests() {
 let allWorkersData = [];
 let editingWorkerId = null;
 
-const TIER_THRESHOLDS = [
+const TIER_PROMOTION_LEGACY = [
   { tier: 2, minScore: 75, minShifts: 5 },
   { tier: 3, minScore: 82, minShifts: 15 },
   { tier: 4, minScore: 88, minShifts: 30 },
@@ -1641,7 +1641,7 @@ function renderPromotionBanner() {
     const currentTier = parseInt(w.tier||1);
     const score = parseFloat(w.reliability_score);
     const shifts = w._shiftsCompleted||0;
-    const nextThreshold = TIER_THRESHOLDS.find(t => t.tier > currentTier && score >= t.minScore && shifts >= t.minShifts);
+    const nextThreshold = TIER_PROMOTION_LEGACY.find(t => t.tier > currentTier && score >= t.minScore && shifts >= t.minShifts);
     if(nextThreshold) { w._suggestedTier = nextThreshold.tier; return true; }
     return false;
   });
@@ -3156,11 +3156,11 @@ function scorebadge(score) {
 }
 
 async function calculateReliabilityScore(applicationId) {
-  // 1. Commitment rate (40%) — sessions confirmed / sessions invited
+  // 1. Commitment rate (35%) — sessions joined / sessions invited
   const swData = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&select=status');
   const totalInvited = swData.length;
   if(!totalInvited) return null; // no data yet
-  const confirmed = swData.filter(r => !['invited','noshow'].includes(r.status)).length;
+  const confirmed = swData.filter(r => ['available','dispatched','completed'].includes(r.status)).length;
   const commitmentRate = confirmed / totalInvited;
 
   // 2. Arrival reliability (30%) — based on avg delta
@@ -3203,7 +3203,7 @@ async function calculateReliabilityScore(applicationId) {
   }
 
   // Weighted score
-  const score = (commitmentRate * 0.4 + arrivalScore * 0.3 + responseScore * 0.2 + completionScore * 0.1) * 100;
+  const score = (commitmentRate * 0.35 + responseScore * 0.30 + arrivalScore * 0.25 + completionScore * 0.10) * 100;
   return Math.round(score * 10) / 10; // 1 decimal place
 }
 
@@ -3221,7 +3221,214 @@ async function updateWorkerReliabilityScores() {
   }
 }
 
-function confirmCloseSession() {
+
+// ── POINTS SYSTEM CONSTANTS ────────────────────────────────────────────────
+const POINTS = {
+  joined:          5,
+  declined:        10,
+  accepted:        20,
+  speedBonus30:    20,   // responded in under 30s
+  speedBonus60:    15,   // responded in 30-60s
+  speedBonus120:   10,   // responded in 60-120s
+  completedShift:  60,
+  arrivedEarly:    40,
+  arrivedOnTime:   25
+};
+
+const TIER_THRESHOLDS = [0, 200, 650, 1500, 3500];
+
+function reliabilityMultiplier(score) {
+  if(score == null) return 1.0;
+  if(score >= 85) return 1.2;
+  if(score >= 70) return 1.1;
+  if(score >= 50) return 1.0;
+  return 0.8;
+}
+
+function pointsToTier(points) {
+  for(let i = TIER_THRESHOLDS.length - 1; i >= 0; i--) {
+    if(points >= TIER_THRESHOLDS[i]) return i + 1;
+  }
+  return 1;
+}
+
+function pointsToNextTier(points) {
+  for(let i = 0; i < TIER_THRESHOLDS.length; i++) {
+    if(points < TIER_THRESHOLDS[i]) return TIER_THRESHOLDS[i] - points;
+  }
+  return 0; // already at max tier
+}
+
+async function calculateSessionPoints(applicationId, sessionId) {
+  let base = 0;
+  const breakdown = [];
+
+  // Get session_workers row for this worker in this session
+  const swRows = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&session_id=eq.'+sessionId+'&select=status,expected_arrival_minutes,actual_arrival_minutes');
+  const sw = swRows[0];
+  if(!sw) return { points: 0, breakdown: [] };
+
+  const joined = ['available','dispatched','completed'].includes(sw.status);
+
+  // Joined session
+  if(joined) {
+    base += POINTS.joined;
+    breakdown.push({ action: 'Joined session', pts: POINTS.joined });
+  }
+
+  // Response from session_chat_log
+  const chatRows = await sbGet('session_chat_log', '?application_id=eq.'+applicationId+'&session_id=eq.'+sessionId+'&select=shift_responded,shift_response_seconds');
+  const chat = chatRows[0];
+  if(chat) {
+    if(chat.shift_responded) {
+      // Check if they were dispatched (accept) or not (decline)
+      const wasDispatched = sw.status === 'dispatched' || sw.status === 'completed';
+      if(wasDispatched) {
+        base += POINTS.accepted;
+        breakdown.push({ action: 'Accepted shift', pts: POINTS.accepted });
+        // Speed bonus
+        const secs = chat.shift_response_seconds;
+        if(secs != null) {
+          if(secs < 30)       { base += POINTS.speedBonus30;  breakdown.push({ action: 'Response under 30s', pts: POINTS.speedBonus30 }); }
+          else if(secs < 60)  { base += POINTS.speedBonus60;  breakdown.push({ action: 'Response under 60s', pts: POINTS.speedBonus60 }); }
+          else if(secs < 120) { base += POINTS.speedBonus120; breakdown.push({ action: 'Response under 120s', pts: POINTS.speedBonus120 }); }
+        }
+      } else {
+        base += POINTS.declined;
+        breakdown.push({ action: 'Responded (declined)', pts: POINTS.declined });
+      }
+    }
+  }
+
+  // Shift completion and arrival
+  const swIdRows = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&session_id=eq.'+sessionId+'&select=id');
+  if(swIdRows.length) {
+    const swId = swIdRows[0].id;
+    const shiftRows = await sbGet('shifts', '?session_worker_id=eq.'+swId+'&select=status,expected_arrival_minutes,clock_in_confirmed_at,accepted_at');
+    const shift = shiftRows[0];
+    if(shift && shift.status === 'completed') {
+      base += POINTS.completedShift;
+      breakdown.push({ action: 'Completed shift', pts: POINTS.completedShift });
+      // Arrival
+      if(shift.clock_in_confirmed_at && shift.accepted_at && shift.expected_arrival_minutes) {
+        const actualMins = Math.round((new Date(shift.clock_in_confirmed_at) - new Date(shift.accepted_at)) / 60000);
+        const delta = actualMins - shift.expected_arrival_minutes;
+        if(delta < 0) {
+          base += POINTS.arrivedEarly;
+          breakdown.push({ action: 'Arrived early', pts: POINTS.arrivedEarly });
+        } else if(delta <= 2) {
+          base += POINTS.arrivedOnTime;
+          breakdown.push({ action: 'Arrived on time', pts: POINTS.arrivedOnTime });
+        }
+      }
+    }
+  }
+
+  return { base, breakdown };
+}
+
+async function updateWorkerPoints() {
+  const appIds = [...new Set(sessionWorkers.map(w => w.applicationId).filter(Boolean))];
+  for(const appId of appIds) {
+    // Get current reliability score for multiplier
+    const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=reliability_score,total_points,tier');
+    const app = appRows[0];
+    if(!app) continue;
+
+    const multiplier = reliabilityMultiplier(app.reliability_score ? parseFloat(app.reliability_score) : null);
+    const { base, breakdown } = await calculateSessionPoints(appId, activeSessionId);
+    const earned = Math.round(base * multiplier);
+    const newTotal = (parseInt(app.total_points) || 0) + earned;
+    const newTier = pointsToTier(newTotal);
+
+    // Update session_workers points_earned
+    await sbPatch('session_workers', '?application_id=eq.'+appId+'&session_id=eq.'+activeSessionId, {
+      points_earned: earned
+    });
+
+    // Update applications total_points and tier if changed
+    const updates = { total_points: newTotal };
+    if(newTier !== parseInt(app.tier)) updates.tier = newTier;
+    await sbPatch('applications', '?id=eq.'+appId, updates);
+  }
+}
+
+async function generateSessionReports() {
+  const appIds = [...new Set(sessionWorkers.map(w => w.applicationId).filter(Boolean))];
+  const reports = [];
+
+  for(const appId of appIds) {
+    const sw = sessionWorkers.find(w => w.applicationId === appId);
+    if(!sw) continue;
+
+    const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=name,phone,reliability_score,total_points,tier');
+    const app = appRows[0];
+    if(!app) continue;
+
+    const multiplier = reliabilityMultiplier(app.reliability_score ? parseFloat(app.reliability_score) : null);
+    const { base, breakdown } = await calculateSessionPoints(appId, activeSessionId);
+    const earned = Math.round(base * multiplier);
+    const newTotal = (parseInt(app.total_points) || 0) + earned;
+    const currentTier = pointsToTier(newTotal);
+    const toNext = pointsToNextTier(newTotal);
+    const nextThreshold = TIER_THRESHOLDS[currentTier] || null;
+    const prevThreshold = TIER_THRESHOLDS[currentTier - 1] || 0;
+    const progress = nextThreshold ? Math.round(((newTotal - prevThreshold) / (nextThreshold - prevThreshold)) * 100) : 100;
+
+    reports.push({ name: app.name, phone: app.phone, earned, breakdown, newTotal, currentTier, toNext, progress, multiplier });
+  }
+
+  return reports;
+}
+
+function downloadSessionReports(reports) {
+  reports.forEach(r => {
+    const tierRate = [12.71,13.71,14.71,15.71,16.71][r.currentTier-1];
+    const nextTierRate = r.currentTier < 5 ? [12.71,13.71,14.71,15.71,16.71][r.currentTier] : null;
+    const progressBar = '█'.repeat(Math.round(r.progress/10)) + '░'.repeat(10-Math.round(r.progress/10));
+
+    let lines = [
+      'GLASI SESSION REPORT',
+      '====================',
+      '',
+      'Hi ' + r.name + ',',
+      '',
+      "Thanks for joining tonight. Here's your update.",
+      '',
+      'TIER ' + r.currentTier + ' — ' + r.newTotal + ' points',
+      progressBar + ' ' + r.progress + '%',
+      r.toNext > 0 ? 'Next tier in ' + r.toNext + ' points' : 'Maximum tier reached',
+      '',
+      'TONIGHT YOU EARNED: +' + r.earned + ' points',
+    ];
+
+    if(r.breakdown.length) {
+      r.breakdown.forEach(b => lines.push('  ' + b.action + ': +' + b.pts + 'pts'));
+      if(r.multiplier !== 1.0) lines.push('  Reliability multiplier: x' + r.multiplier);
+    } else {
+      lines.push('  You were invited but did not join this session.');
+    }
+
+    lines = lines.concat([
+      '',
+      'Current rate: £' + tierRate + '/hr',
+      nextTierRate ? ('Tier ' + (r.currentTier+1) + ' rate: £' + nextTierRate + '/hr') : '',
+      '',
+      'Keep showing up and the shifts will come.',
+      '',
+      'Glasi',
+      'glasi.co.uk'
+    ]);
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'glasi-report-' + r.name.replace(/\s+/g,'-').toLowerCase() + '.txt';
+    a.click();
+  });
+}
+
+async function confirmCloseSession() {
   // check if zoom chat has been logged
   const chatInput = document.getElementById('session-chat-input').value.trim();
   const chatSaved = document.getElementById('session-chat-results').style.display !== 'none';
@@ -3232,7 +3439,6 @@ function confirmCloseSession() {
     }
   }
   if(!confirm('Close this session? Make sure all shifts are completed first.')) return;
-  updateWorkerReliabilityScores();
   clearInterval(sessionTimerInterval);
   clearInterval(shiftCountdownInterval);
   clearInterval(requestTimerInterval);
@@ -3246,6 +3452,12 @@ function confirmCloseSession() {
   // write end_time to sessions table
   if(sessionId) sbPatch('sessions', '?id=eq.'+sessionId, { end_time: new Date().toLocaleTimeString('en-GB', {timeZone:'Europe/London', hour12:false}) });
 
+  // run reliability and points before clearing state
+  await updateWorkerReliabilityScores();
+  const reports = await generateSessionReports();
+  await updateWorkerPoints();
+
+  // clear session state
   activeSessionId = null;
   activeShiftRequests = [];
   selectedRequestId = null;
@@ -3255,6 +3467,13 @@ function confirmCloseSession() {
   showScreen('zones');
   setActiveNav('dispatch');
   renderZones();
+
+  // offer worker reports download
+  if(reports && reports.length) {
+    if(confirm('Session closed. Download worker session reports now?')) {
+      downloadSessionReports(reports);
+    }
+  }
 }
 
 function dismissReport() {
