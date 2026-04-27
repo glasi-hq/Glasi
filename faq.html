@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glasi | FAQ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0d1117;
+      --navy-mid: #0f1923;
+      --ice: #a8c6e8;
+      --ice-dim: rgba(168,198,232,0.12);
+      --white: #e6edf3;
+      --grey: #6b7280;
+      --border: rgba(168,198,232,0.15);
+      --amber: #c8a24a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--navy);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 20px;
+      letter-spacing: 8px;
+      color: var(--ice);
+      border: 1.5px solid var(--ice);
+      border-radius: 5px;
+      padding: 6px 16px;
+      text-decoration: none;
+    }
+
+    .nav-cta {
+      background: var(--ice);
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 64px 24px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 300;
+      font-size: clamp(28px, 5vw, 42px);
+      letter-spacing: 2px;
+      color: var(--white);
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 15px;
+      color: var(--grey);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* MAIN */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* SECTION */
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--ice);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* FAQ ITEM */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .faq-item.open {
+      border-color: rgba(168,198,232,0.3);
+    }
+
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 18px 20px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .faq-q-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--white);
+      line-height: 1.5;
+    }
+
+    .faq-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.2s, border-color 0.2s;
+      color: var(--ice);
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .faq-item.open .faq-icon {
+      transform: rotate(45deg);
+      border-color: var(--ice);
+    }
+
+    .faq-a {
+      display: none;
+      padding: 0 20px 18px;
+      font-size: 14px;
+      color: var(--grey);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    .faq-item.open .faq-a {
+      display: block;
+    }
+
+    .faq-a a {
+      color: var(--ice);
+      text-decoration: underline;
+    }
+
+    .faq-a strong {
+      color: var(--white);
+    }
+
+    /* CTA */
+    .cta-block {
+      background: var(--ice-dim);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      margin-top: 48px;
+    }
+
+    .cta-block h2 {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: var(--white);
+      margin-bottom: 10px;
+    }
+
+    .cta-block p {
+      font-size: 14px;
+      color: var(--grey);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .cta-btn {
+      display: inline-block;
+      background: var(--ice);
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--grey);
+      letter-spacing: 2px;
+      font-family: 'Raleway', sans-serif;
+      font-weight: 300;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="https://www.glasi.co.uk" class="wordmark">GLASI</a>
+    <a href="https://www.glasi.co.uk" class="nav-cta">Register</a>
+  </nav>
+
+  <div class="hero">
+    <p class="hero-label">Frequently Asked Questions</p>
+    <h1>Everything you need to know</h1>
+    <p>Can't find your answer here? Email us at <a href="mailto:hello@glasi.co.uk" style="color:var(--ice);">hello@glasi.co.uk</a></p>
+  </div>
+
+  <div class="container">
+
+    <!-- ABOUT GLASI -->
+    <div class="section">
+      <p class="section-title">About Glasi</p>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">What is Glasi?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Glasi is an on-demand floor support platform connecting busy bars with reliable local people. When a bar gets busy and needs extra hands, they contact Glasi and we send someone down within minutes to collect glasses, clear tables, and keep the floor moving.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">Where does Glasi operate?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">We are launching in Southampton first, with Portsmouth and Winchester to follow. If you are based in or near Southampton, now is the perfect time to register.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">Is Glasi legitimate?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Yes. Glasi Ltd is a registered UK company (Company No. 17147716). All workers are employed on a PAYE basis through a professional payroll partner. You receive payslips, your tax and National Insurance are handled correctly, and your employment is fully above board.</div>
+      </div>
+
+    </div>
+
+    <!-- THE WORK -->
+    <div class="section">
+      <p class="section-title">The Work</p>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">What does the work involve?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Glass collecting, clearing tables, and keeping the floor tidy. No till work, no stocking, nothing that needs training. Just wear plain black clothing and be ready to work hard for a few hours.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">Do I need experience?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Bar or hospitality experience is helpful but not essential. What matters most is reliability, a good attitude, and being comfortable in a fast-paced environment.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">How long are the shifts?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Shifts are typically 2 to 4 hours. The length is agreed before you head to the venue. When your time is up, you are done.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">When do sessions run?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Sessions run during the busiest hours at bars, typically Friday and Saturday evenings. You will receive a Zoom link in advance when a session is running in your area.</div>
+      </div>
+
+    </div>
+
+    <!-- PAY -->
+    <div class="section">
+      <p class="section-title">Pay</p>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">How much does it pay?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Starting pay is <strong>£12.71 per hour</strong>. As you build your reputation and move up through the tiers, your rate increases by £1 per hour at each level. The top tier pays <strong>£16.71 per hour</strong> for the same work.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">When do I get paid?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">We aim to get money to you as quickly as possible after your shift. You are paid via PAYE through our payroll partner, so your tax and National Insurance are handled automatically.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">Do I get paid for joining a session?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">No. You are only paid for shifts you complete. However, joining sessions and responding to shift posts earns you points toward your next tier, which means a higher hourly rate when you do get a shift.</div>
+      </div>
+
+    </div>
+
+    <!-- TIERS -->
+    <div class="section">
+      <p class="section-title">Tiers and Progression</p>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">What is the tier system?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Glasi has five tiers. Everyone starts at Tier 1 (£12.71/hr). As you build your track record you earn points and progress through the tiers. Tier 5 pays £16.71 per hour for the same work. The better you perform, the faster you move up.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">How do I earn points?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">You earn points for joining sessions, responding to shift posts, completing shifts, and arriving on time. After every session you will receive a personal update showing your points, your tier, and how close you are to the next level.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">What if I join a session but don't get a shift?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">We can't dispatch everyone, but we do notice. You still earn points just for showing up and responding. Those points build toward your next tier, so when you do get a shift you will already be earning more.</div>
+      </div>
+
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="section">
+      <p class="section-title">How It Works</p>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">How does a session work?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">When a session is running in your area you will receive a Zoom link. Join if you are ready to work that night. When a shift becomes available it is posted in the Zoom chat. You have a short window to respond with the keyword shown. We then select from everyone who responded, taking into account reliability, responsiveness, and tier. If you are assigned the shift, you will be sent the venue details on WhatsApp.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">What happens when I arrive at the venue?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Head to the bar or glass collection point. Tell them you are from Glasi and ask for the named contact in your WhatsApp. They will give you a clock-in code, which you send to us to start your shift.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">What if something goes wrong during a shift?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Contact us straight away. We only work with well run venues that want you there, and we are on your side. If anything feels off, let us know immediately.</div>
+      </div>
+
+    </div>
+
+    <!-- SIGNING UP -->
+    <div class="section">
+      <p class="section-title">Signing Up</p>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">How do I sign up?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Register at <a href="https://www.glasi.co.uk">glasi.co.uk</a>. You will receive an email with a link to complete your full application. Once your application is reviewed, selected applicants will be contacted by our payroll partner to complete onboarding so you can get paid.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">I've registered but haven't heard anything. What should I do?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Check your spam folder for the onboarding email. If you have completed your application and are waiting to hear back, we are reviewing applications and will be in touch as we get closer to going live. Sessions will be running soon.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggle(this)">
+          <span class="faq-q-text">Do I have to commit to regular shifts?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">No. You only join sessions when you are ready and available. There is no minimum commitment. The more you show up the more opportunities you receive, but there is no obligation.</div>
+      </div>
+
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-block">
+      <h2>READY TO GET STARTED?</h2>
+      <p>Register now and be part of Glasi from the start. Sessions are launching soon in Southampton.</p>
+      <a href="https://www.glasi.co.uk" class="cta-btn">Register at glasi.co.uk</a>
+    </div>
+
+  </div>
+
+  <footer>
+    GLASI LTD &nbsp;·&nbsp; hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk
+  </footer>
+
+  <script>
+    function toggle(btn) {
+      const item = btn.closest('.faq-item');
+      item.classList.toggle('open');
+    }
+  </script>
+
+</body>
+</html>
