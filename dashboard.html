@@ -4355,25 +4355,6 @@ ${customersPerHr ? `
 </div>
 
 
-  <!-- SESSIONS SCREEN -->
-  <div id="screen-sessions" class="screen" style="display:none;padding:32px 24px;max-width:900px;margin:0 auto;">
-    <h2 style="font-family:'Raleway',sans-serif;font-weight:400;letter-spacing:4px;color:var(--ice);margin:0 0 4px 0;">SESSIONS</h2>
-    <p style="color:var(--grey);font-size:12px;letter-spacing:1px;margin:0 0 24px 0;">Click a session to view worker scores and copy reports</p>
-    <div id="sessions-list"></div>
-  </div>
-
-  <!-- SESSION DETAIL SCREEN -->
-  <div id="screen-session-detail" class="screen" style="display:none;padding:32px 24px;max-width:900px;margin:0 auto;">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
-      <button class="ghost-btn" onclick="goToSessions()">Back to Sessions</button>
-      <div>
-        <h2 id="session-detail-title" style="font-family:'Raleway',sans-serif;font-weight:400;letter-spacing:4px;color:var(--ice);margin:0 0 2px 0;font-size:18px;"></h2>
-        <p id="session-detail-sub" style="color:var(--grey);font-size:12px;margin:0;"></p>
-      </div>
-    </div>
-    <div id="session-detail-workers"></div>
-  </div>
-
 </body>
 </html>`;
 
@@ -4915,5 +4896,24 @@ function copyWorkerReport(btn, html) {
 }
 
 </script>
+
+  <!-- SESSIONS SCREEN -->
+  <div id="screen-sessions" class="screen" style="display:none;padding:32px 24px;max-width:900px;margin:0 auto;">
+    <h2 style="font-family:'Raleway',sans-serif;font-weight:400;letter-spacing:4px;color:var(--ice);margin:0 0 4px 0;">SESSIONS</h2>
+    <p style="color:var(--grey);font-size:12px;letter-spacing:1px;margin:0 0 24px 0;">Click a session to view worker scores and copy reports</p>
+    <div id="sessions-list"></div>
+  </div>
+
+  <!-- SESSION DETAIL SCREEN -->
+  <div id="screen-session-detail" class="screen" style="display:none;padding:32px 24px;max-width:900px;margin:0 auto;">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+      <button class="ghost-btn" onclick="goToSessions()">Back to Sessions</button>
+      <div>
+        <h2 id="session-detail-title" style="font-family:'Raleway',sans-serif;font-weight:400;letter-spacing:4px;color:var(--ice);margin:0 0 2px 0;font-size:18px;"></h2>
+        <p id="session-detail-sub" style="color:var(--grey);font-size:12px;margin:0;"></p>
+      </div>
+    </div>
+    <div id="session-detail-workers"></div>
+  </div>
 </body>
 </html>
