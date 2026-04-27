@@ -4864,10 +4864,15 @@ ${progressBar}
 <p style="margin:0;font-size:13px;color:#6b7280;">${toNext > 0 ? 'Next tier in '+toNext+' points' : 'Maximum tier reached'}</p>
 </div>
 <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#0d1117;">Tonight you earned: +${pts} points</p>
-${lines.length ? '<ul style="margin:0 0 16px;padding-left:18px;color:#6b7280;font-size:13px;">'+lines.map(l=>'<li style="margin-bottom:4px;">'+l+'</li>').join('')+'</ul>' : '<p style="color:#6b7280;font-size:13px;margin:0 0 16px;">You were invited but did not join this session. Showing up counts — we hope to see you next time.</p>'}
+${lines.length
+  ? '<ul style="margin:0 0 12px;padding-left:18px;color:#6b7280;font-size:13px;">'+lines.map(l=>'<li style="margin-bottom:4px;">'+l+'</li>').join('')+'</ul>'
+    + (dispatched
+        ? '<p style="font-size:14px;color:#374151;margin:0 0 16px;">Every session you join moves you closer to a higher tier. Accepting shifts moves you further. And your performance on the night, how fast you respond and how promptly you arrive, has the biggest impact of all. Higher tiers mean higher pay. Keep performing like tonight and you will move through them quickly.</p>'
+        : '<p style="font-size:14px;color:#374151;margin:0 0 16px;">We know you were ready and wanted to work tonight. We cannot dispatch everyone, but we do notice. Making yourself available still earns you points toward your next tier. The more you show up, the higher your tier climbs. And a higher tier means higher pay when you do get a shift. Keep showing up.</p>')
+  : '<p style="font-size:14px;color:#374151;margin:0 0 16px;">We know you were ready and wanted to work tonight. We cannot dispatch everyone, but we do notice. Making yourself available still earns you points toward your next tier. The more you show up, the higher your tier climbs. And a higher tier means higher pay when you do get a shift. Keep showing up.</p>'}
 ${multiplier !== 1.0 ? '<p style="font-size:12px;color:#6b7280;margin:0 0 16px;">Reliability multiplier applied: x'+multiplier+'</p>' : ''}
 <p style="font-size:14px;color:#374151;margin:0 0 4px;">Current rate: <strong>£${tierRate}/hr</strong></p>
-${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 16px;">Tier '+(tier+1)+' rate: £'+nextTierRate+'/hr — keep showing up</p>' : ''}
+${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Tier '+(tier+1)+' pays £'+nextTierRate+'/hr.</p>' : ''}
 <p style="font-size:14px;color:#374151;margin:16px 0 0;">Glasi<br><span style="color:#9ca3af;font-size:12px;">glasi.co.uk</span></p>
 </div>
 <div style="background:#0d1117;border-radius:0 0 16px 16px;padding:16px;text-align:center;">
