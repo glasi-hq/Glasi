@@ -435,8 +435,8 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-1 block text-gray-600">When are you typically available? (Select all that apply)</label>
-            <p class="text-xs text-gray-400 mb-3">This helps us match you to shifts in your area. Not a commitment.</p>
+            <label class="text-sm font-medium mb-1 block text-gray-600">When are you typically available? (Select all that apply) *</label>
+            <p class="text-xs text-gray-400 mb-3">Required. This is how we know when to invite you to sessions.</p>
             <div style="overflow-x: auto;">
               <table class="hours-grid">
                 <thead>
@@ -572,6 +572,11 @@ form.addEventListener('submit', async (e) => {
 
   if (!email || !ageGroup || !hospitalityExperience || !ukWorkRight || !hasBlackClothing || !physicallyAble || !speaksEnglish || !agreesWorkStandard || !reliabilityNotes) {
     feedback.innerHTML = `<div class="text-red-500 text-sm">Please complete all required fields.</div>`;
+    return;
+  }
+
+  if (!availableHours) {
+    feedback.innerHTML = `<div class="text-red-500 text-sm">Please select at least one availability slot.</div>`;
     return;
   }
 
