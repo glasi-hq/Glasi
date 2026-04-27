@@ -4768,6 +4768,8 @@ async function loadSessionsList() {
 }
 
 async function openSessionDetail(sessionId) {
+  // clear report store for this session
+  Object.keys(_reportStore).forEach(k => delete _reportStore[k]);
   showScreen('session-detail');
   setActiveNav('sessions');
 
