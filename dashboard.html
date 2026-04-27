@@ -3005,6 +3005,9 @@ async function confirmComplete() {
   const ok = await saveShiftToSupabase(w);
   if(!ok) return;
 
+  // update session_workers status to completed
+  if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'completed'});
+
   w.status='completed';
   shifts.push({
     id: w.shiftId,
@@ -3422,7 +3425,7 @@ function downloadSessionReports(reports) {
       "Thanks for joining tonight. Here's your update.",
       '',
       'TIER ' + r.currentTier + ' — ' + r.newTotal + ' points',
-      progressBar + ' ' + r.progress + '%',
+      progressBar + '  ' + r.newTotal + ' / ' + (TIER_THRESHOLDS[r.currentTier] || r.newTotal) + ' points',
       r.toNext > 0 ? 'Next tier in ' + r.toNext + ' points' : 'Maximum tier reached',
       '',
       'TONIGHT YOU EARNED: +' + r.earned + ' points',
@@ -4853,8 +4856,9 @@ async function openSessionDetail(sessionId) {
 <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${name},</p>
 <p style="margin:0 0 16px;font-size:15px;color:#374151;">Thanks for joining tonight. Here's your session update.</p>
 <div style="background:#f0f6fc;border-left:3px solid #a8c6e8;padding:16px 20px;border-radius:0 8px 8px 0;margin:0 0 20px;">
-<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#0d1117;letter-spacing:0.5px;text-transform:uppercase;">Tier ${tier} — ${totalPts} points</p>
-<p style="margin:0 0 8px;font-family:monospace;font-size:14px;color:#0d1117;">${progressBar} ${progress}%</p>
+<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#0d1117;letter-spacing:0.5px;text-transform:uppercase;">Tier ${tier}</p>
+<p style="margin:0 0 4px;font-family:monospace;font-size:14px;color:#0d1117;">${progressBar}</p>
+<p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#0d1117;">${totalPts} / ${nextThresholdPts || totalPts} points</p>
 <p style="margin:0;font-size:13px;color:#6b7280;">${toNext > 0 ? 'Next tier in '+toNext+' points' : 'Maximum tier reached'}</p>
 </div>
 <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#0d1117;">Tonight you earned: +${pts} points</p>
@@ -4899,12 +4903,16 @@ ${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 16px;">Tier 
         </div>
       </div>
       ${lines.length ? '<div style="margin-bottom:12px;">'+lines.map(l=>'<div style="font-size:12px;color:var(--grey);margin-bottom:2px;">'+l+'</div>').join('')+'</div>' : ''}
-      <button onclick="copyWorkerReport(this, \`${emailSnippet.replace(/`/g,'\`')}\`)" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Copy Email Report</button>
+      <button onclick="copyWorkerReport(this,'report_${sw.application_id}_${sessionId}')" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Copy Email Report</button>
     </div>`;
+    _reportStore['report_'+sw.application_id+'_'+sessionId] = emailSnippet;
   }).join('');
 }
 
-function copyWorkerReport(btn, html) {
+const _reportStore = {};
+
+function copyWorkerReport(btn, reportId) {
+  const html = _reportStore[reportId] || '';
   const blob = new Blob([html], { type: 'text/html' });
   const item = new ClipboardItem({ 'text/html': blob });
   navigator.clipboard.write([item]).then(() => {
