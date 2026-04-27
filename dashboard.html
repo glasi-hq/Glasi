@@ -2900,7 +2900,8 @@ function confirmClockIn(wid) {
   w.status='onshift';
   w.clockInAt=new Date().toISOString();
   w.clockInCode=entered;
-  if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'onshift', clock_in_at: w.clockInAt});
+  const actualArrivalMins = w.dispatchedAt ? Math.round((new Date(w.clockInAt) - new Date(w.dispatchedAt)) / 60000) : null;
+  if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'onshift', clock_in_at: w.clockInAt, actual_arrival_minutes: actualArrivalMins});
   renderOnShift();
   updateCounts();
   startShiftCountdown();
