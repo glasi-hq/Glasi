@@ -2759,18 +2759,12 @@ function renderRoom() {
   } else {
     invitedSection.style.display='block';
     invitedGrid.innerHTML=invited.map(w=>{
-      const isNoShow=w.status==='noshow';
-      return '<div class="worker-card" style="border-color:'+(isNoShow?'var(--red)':'var(--amber)')+';opacity:'+(isNoShow?'0.5':'1')+'" id="wc-'+w.id+'">'+
-        '<div class="wc-status-dot" style="background:'+(isNoShow?'var(--red)':'var(--amber)')+'"></div>'+
+      return '<div class="worker-card" style="border-color:var(--amber);opacity:0.8;" id="wc-'+w.id+'">'+
+        '<div class="wc-status-dot" style="background:var(--amber);"></div>'+
         '<div class="wc-name">'+w.name+'</div>'+
-        '<div class="wc-phone">'+(w.phone||'')+'</div>'+
         '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
-        '<div class="wc-status-label" style="color:'+(isNoShow?'var(--red)':'var(--amber)')+'">'+( isNoShow?'No Show':'Invited')+'</div>'+
-        '<div class="wc-actions">'+
-        (!isNoShow?'<button class="wc-btn wc-btn-dispatch" style="background:var(--green);color:var(--navy);" onclick="confirmWorkerArrival(\''+w.id+'\')">Confirm</button>':'')+
-        (!isNoShow?'<button class="wc-btn wc-btn-left" onclick="markNoShow(\''+w.id+'\')">No Show</button>':'')+
-        (isNoShow?'<button class="wc-btn wc-btn-restore" onclick="restoreWorker(\''+w.id+'\')">Restore</button>':'')+
-        '</div></div>';
+        '<div class="wc-status-label" style="color:var(--amber);margin-top:6px;">Expected tonight</div>'+
+        '</div>';
     }).join('');
   }
 }
@@ -5198,15 +5192,20 @@ async function loadLiveSessionWorkers(sessionId) {
       if(!app) continue;
 
       let swRow = existingSW.find(sw => Number(sw.application_id) === Number(app.id));
+      const correctStatus = inv.joined_at ? 'available' : 'invited';
       if(!swRow) {
         const sw = await sbPost('session_workers', {
           session_id: sessionId,
           application_id: app.id,
           worker_name: app.name,
           worker_phone: app.phone || null,
-          status: inv.joined_at ? 'available' : 'invited'
+          status: correctStatus
         });
         swRow = sw?.[0] || null;
+      } else if(inv.joined_at && swRow.status === 'invited') {
+        // Worker has joined via portal -- update their status
+        await sbPatch('session_workers', '?id=eq.'+swRow.id, { status: 'available' });
+        swRow.status = 'available';
       }
 
       sessionWorkers.push({
@@ -5219,7 +5218,7 @@ async function loadLiveSessionWorkers(sessionId) {
         tier: app.tier || 1,
         hourly_rate: app.hourly_rate || 12.71,
         reliability_score: app.reliability_score || null,
-        status: inv.joined_at ? 'available' : 'invited',
+        status: correctStatus,
         joinedAt: inv.joined_at || null,
         code: gen4(),
         clockOutCode: gen4(),
