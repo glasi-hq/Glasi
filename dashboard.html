@@ -2634,7 +2634,7 @@ let dashboardRealtimeWs = null;
 function startDashboardRealtime(sessionId) {
   if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} }
 
-  const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+  const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY + '&vsn=1.0.0';
   dashboardRealtimeWs = new WebSocket(wsUrl);
 
   dashboardRealtimeWs.onopen = () => {
