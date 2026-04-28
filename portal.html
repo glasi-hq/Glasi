@@ -1248,23 +1248,36 @@
     const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
     const ws = new WebSocket(wsUrl);
     realtimeChannels.push(ws);
+    let hb = null;
 
     ws.onopen = () => {
       ws.send(JSON.stringify({
-        topic: 'realtime:public:shift_requests:session_id=eq.' + sessionId,
+        topic: 'realtime:public:shift_requests',
         event: 'phx_join',
-        payload: { config: { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }] } },
+        payload: { config: { postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }] } },
         ref: '1'
       }));
+      hb = setInterval(() => {
+        if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+      }, 30000);
     };
 
     ws.onmessage = async (e) => {
-      const msg = JSON.parse(e.data);
-      if(msg.event === 'postgres_changes' && msg.payload?.data?.type === 'INSERT') {
-        const record = msg.payload.data.record;
-        await showShiftPost(record);
-      }
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.event === 'postgres_changes') {
+          const record = msg.payload?.data?.record;
+          const type = msg.payload?.data?.type;
+          if(record && type === 'INSERT') await showShiftPost(record);
+        }
+        if(msg.event === 'INSERT' && msg.topic?.includes('shift_requests')) {
+          const record = msg.payload?.record || msg.payload;
+          if(record) await showShiftPost(record);
+        }
+      } catch(err) { console.error('shift_requests realtime error:', err); }
     };
+
+    ws.onclose = () => { if(hb) clearInterval(hb); };
   }
 
   function subscribeToSessionWorkers(sessionId) {
@@ -1272,25 +1285,36 @@
     const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
     const ws = new WebSocket(wsUrl);
     realtimeChannels.push(ws);
+    let hb = null;
 
     ws.onopen = () => {
       ws.send(JSON.stringify({
-        topic: 'realtime:public:session_workers:application_id=eq.' + currentWorker.id,
+        topic: 'realtime:public:session_workers',
         event: 'phx_join',
-        payload: { config: { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'application_id=eq.' + currentWorker.id }] } },
+        payload: { config: { postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'application_id=eq.' + currentWorker.id }] } },
         ref: '2'
       }));
+      hb = setInterval(() => {
+        if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+      }, 30000);
     };
 
     ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      if(msg.event === 'postgres_changes' && msg.payload?.data?.type === 'UPDATE') {
-        const record = msg.payload.data.record;
-        if(record.status === 'dispatched' || record.status === 'onshift') {
-          showDispatched(record);
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.event === 'postgres_changes') {
+          const record = msg.payload?.data?.record;
+          const type = msg.payload?.data?.type;
+          if(record && type === 'UPDATE' && (record.status === 'dispatched' || record.status === 'onshift')) showDispatched(record);
         }
-      }
+        if(msg.event === 'UPDATE' && msg.topic?.includes('session_workers')) {
+          const record = msg.payload?.record || msg.payload;
+          if(record && (record.status === 'dispatched' || record.status === 'onshift')) showDispatched(record);
+        }
+      } catch(err) { console.error('session_workers realtime error:', err); }
     };
+
+    ws.onclose = () => { if(hb) clearInterval(hb); };
   }
 
   async function showShiftPost(record) {
