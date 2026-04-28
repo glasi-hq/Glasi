@@ -324,13 +324,7 @@
           <div class="zone-card-meta">Worker pool and tiers</div>
         </button>
       </div>
-      <!-- Centre: Dispatch -->
-      <div style="margin-bottom:16px;">
-        <button class="zone-card" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})" style="text-align:center;padding:32px 24px;width:100%;">
-          <div class="zone-card-name" style="font-size:22px;letter-spacing:2px;">Dispatch</div>
-          <div class="zone-card-meta" style="margin-top:6px;">Start a session and manage live shifts</div>
-        </button>
-      </div>
+
       <!-- Bottom row: Shifts | Requests -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <button class="zone-card" onclick="goToShifts()" style="text-align:center;">
@@ -2640,7 +2634,7 @@ let dashboardRealtimeWs = null;
 function startDashboardRealtime(sessionId) {
   if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} }
 
-  const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+  const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
   dashboardRealtimeWs = new WebSocket(wsUrl);
 
   dashboardRealtimeWs.onopen = () => {
