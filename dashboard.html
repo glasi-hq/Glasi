@@ -292,7 +292,6 @@
       <button class="hdr-nav-btn" id="nav-bars" onclick="safeNavigate(goToBars)">Bars</button>
       <button class="hdr-nav-btn" id="nav-zones" onclick="safeNavigate(goToZonesMgmt)">Zones</button>
       <button class="hdr-nav-btn" id="nav-workers" onclick="safeNavigate(goToWorkers)">Workers</button>
-      <button class="hdr-nav-btn" id="nav-dispatch" onclick="safeNavigate(()=>{showScreen('zones');renderZones();setActiveNav('dispatch');})">Dispatch</button>
       <button class="hdr-nav-btn" id="nav-sessions" onclick="safeNavigate(goToSessions)">Sessions</button>
       <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
       <button class="hdr-nav-btn" id="nav-requests" onclick="safeNavigate(goToRequests)">Requests</button>
@@ -449,25 +448,46 @@
 <!-- SESSIONS SCREEN -->
 <div id="screen-sessions" class="screen">
   <div class="history-screen">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-      <div>
-        <div class="page-title">SESSIONS</div>
-        <div class="page-sub">Schedule and manage sessions</div>
+
+    <!-- Sessions tab switcher -->
+    <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;">
+      <button id="sessions-tab-schedule" onclick="switchSessionsTab('schedule')" style="background:var(--ice);color:var(--navy);border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Schedule</button>
+      <button id="sessions-tab-live" onclick="switchSessionsTab('live')" style="background:none;color:var(--grey);border:none;border-radius:7px;padding:8px 20px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">Live</button>
+    </div>
+
+    <!-- SCHEDULE TAB -->
+    <div id="sessions-schedule-tab">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="page-title">SESSIONS</div>
+          <div class="page-sub">Schedule and manage sessions</div>
+        </div>
+        <button class="small-ice-btn" onclick="openScheduleSession()">+ Schedule Session</button>
       </div>
-      <button class="small-ice-btn" onclick="openScheduleSession()">+ Schedule Session</button>
+
+      <div style="margin-bottom:32px;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">UPCOMING</div>
+        <div id="sessions-upcoming"></div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">PAST SESSIONS</div>
+        <div id="sessions-list"></div>
+      </div>
     </div>
 
-    <!-- UPCOMING SESSIONS -->
-    <div style="margin-bottom:32px;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">UPCOMING</div>
-      <div id="sessions-upcoming"></div>
+    <!-- LIVE TAB -->
+    <div id="sessions-live-tab" style="display:none;">
+      <div id="sessions-live-empty" style="text-align:center;padding:60px 24px;">
+        <div style="font-size:40px;margin-bottom:16px;opacity:0.4;">📡</div>
+        <div style="font-size:16px;font-weight:600;color:var(--white);margin-bottom:8px;">No active session</div>
+        <div style="font-size:13px;color:var(--grey);">Go live on a scheduled session to start dispatching.</div>
+      </div>
+      <div id="sessions-live-room" style="display:none;">
+        <!-- ROOM content injected here -->
+      </div>
     </div>
 
-    <!-- PAST SESSIONS -->
-    <div>
-      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">PAST SESSIONS</div>
-      <div id="sessions-list"></div>
-    </div>
   </div>
 </div>
 
@@ -1167,7 +1187,7 @@ function setActiveNav(name) {
 }
 
 function safeNavigate(fn) {
-  if(!activeSessionId) { fn(); return; }
+  if(!activeSessionId || document.getElementById('sessions-live-tab')?.style.display === 'none') { fn(); return; }
   if(!confirm('You have an active session in progress. Navigating away will lose all session state including dispatched workers and shift data. Are you sure?')) return;
   if(!confirm('This cannot be undone. All unsaved session data will be lost. Continue?')) return;
   clearInterval(sessionTimerInterval);
@@ -4892,6 +4912,36 @@ function openOv(name) { document.getElementById(`ov-${name}`).classList.add('ope
 function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove('open'); }
 
 // ── SESSIONS ───────────────────────────────────────────────────────────────
+function switchSessionsTab(tab) {
+  const isLive = tab === 'live';
+  document.getElementById('sessions-schedule-tab').style.display = isLive ? 'none' : 'block';
+  document.getElementById('sessions-live-tab').style.display = isLive ? 'block' : 'none';
+  document.getElementById('sessions-tab-schedule').style.background = isLive ? 'none' : 'var(--ice)';
+  document.getElementById('sessions-tab-schedule').style.color = isLive ? 'var(--grey)' : 'var(--navy)';
+  document.getElementById('sessions-tab-schedule').style.fontWeight = isLive ? '400' : '600';
+  document.getElementById('sessions-tab-live').style.background = isLive ? 'var(--ice)' : 'none';
+  document.getElementById('sessions-tab-live').style.color = isLive ? 'var(--navy)' : 'var(--grey)';
+  document.getElementById('sessions-tab-live').style.fontWeight = isLive ? '600' : '400';
+
+  if(isLive && activeSessionId) {
+    document.getElementById('sessions-live-empty').style.display = 'none';
+    document.getElementById('sessions-live-room').style.display = 'block';
+    renderLiveRoom();
+  } else if(isLive) {
+    document.getElementById('sessions-live-empty').style.display = 'block';
+    document.getElementById('sessions-live-room').style.display = 'none';
+  }
+}
+
+function renderLiveRoom() {
+  const room = document.getElementById('sessions-live-room');
+  if(!room) return;
+  // Render the full dispatch room inside the live tab
+  room.innerHTML = document.getElementById('tab-content-room') ?
+    document.getElementById('tab-content-room').outerHTML : '';
+  renderRoom();
+}
+
 async function goToSessions() {
   showScreen('sessions');
   setActiveNav('sessions');
@@ -5092,11 +5142,10 @@ async function goLiveSession(sessionId) {
     });
   }
 
-  // Navigate to dispatch screen
-  showScreen('zones');
-  setActiveNav('dispatch');
-  renderZones();
-  renderRoom();
+  // Navigate to Sessions Live tab
+  showScreen('sessions');
+  setActiveNav('sessions');
+  switchSessionsTab('live');
 }
 
 async function cancelScheduledSession(sessionId) {
