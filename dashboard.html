@@ -4060,7 +4060,7 @@ async function buildRecommendations(requestId) {
       + (s.worker.has_transport ? '<span style="color:var(--green);">Has transport</span>' : '')
       + '</div>'
       + '</div>'
-      + '<button onclick="dispatchWorker(\''+s.worker.id+'\','+requestId+')" style="background:'+(isTop?'var(--ice)':'none')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;">Dispatch</button>';
+      + '<button onclick="dispatchWorker('+s.worker.applicationId+','+requestId+')" style="background:'+(isTop?'var(--ice)':'none')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;">Dispatch</button>';
     feed.appendChild(el);
   });
 }
@@ -4159,11 +4159,53 @@ async function buildRecommendations(requestId) {
         + (transportStr ? '<span style="color:var(--green);">'+transportStr+'</span>' : '')
         + '</div>'
         + '</div>'
-        + '<button onclick="dispatchWorker(\''+s.worker.id+'\','+requestId+')" style="background:'+(isTop?'var(--ice)':'var(--navy-mid)')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:\'Inter\',sans-serif;">Dispatch</button>'
+        + '<button onclick="dispatchWorker('+s.worker.applicationId+','+requestId+')" style="background:'+(isTop?'var(--ice)':'var(--navy-mid)')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:\'Inter\',sans-serif;">Dispatch</button>'
         + '</div>';
     }).join('');
 
   feed.insertBefore(panel, feed.firstChild);
+}
+
+async function dispatchWorker(applicationId, requestId) {
+  const appId = Number(applicationId);
+  const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
+  const request = activeShiftRequests.find(r => r.id === requestId);
+  if(!worker || !request) { alert('Worker or request not found.'); return; }
+  if(!confirm('Dispatch ' + worker.name + ' to ' + (request._barName || 'the venue') + '?')) return;
+
+  const barId = request.bar_id;
+  const shiftLength = request.shift_length_hours;
+  const now = new Date().toISOString();
+
+  // 1. Update session_workers
+  await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
+    status: 'dispatched',
+    bar_id: barId,
+    shift_request_id: requestId,
+    shift_length_hours: shiftLength,
+    dispatched_at: now
+  });
+
+  // 2. Update shift_request status
+  await sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'dispatched' });
+
+  // 3. Update local state
+  worker.status = 'dispatched';
+  worker.bar = request._barName;
+  worker.barRecord = bars.find(b => b.id === barId) || null;
+  worker.dispatchedAt = now;
+  worker.shiftLength = shiftLength;
+
+  const req = activeShiftRequests.find(r => r.id === requestId);
+  if(req) req.status = 'dispatched';
+
+  // 4. Re-render
+  renderRequestCards();
+  renderRoom();
+
+  // 5. Clear recommendation panel for this request
+  const panel = document.getElementById('recommendations-panel-'+requestId);
+  if(panel) panel.remove();
 }
 
 function removeRequest(requestId) {
