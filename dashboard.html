@@ -453,7 +453,7 @@
     <div id="sessions-schedule-tab">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
         <div>
-          <div class="page-title">SESSIONS</div>
+          <div class="page-title">Sessions</div>
           <div class="page-sub">Schedule and manage sessions</div>
         </div>
         <button class="small-ice-btn" onclick="openScheduleSession()">+ Schedule Session</button>
@@ -2672,8 +2672,12 @@ function startDashboardRealtime(sessionId) {
         if(table === 'shift_responses' && type === 'INSERT') {
           await handleNewShiftResponse(record);
         }
-        if(table === 'session_invites' && type === 'UPDATE' && record.joined_at) {
-          await handleWorkerPortalJoin(record);
+        if(table === 'session_invites' && type === 'UPDATE') {
+          if(record.joined_at && !record.left_at) {
+            await handleWorkerPortalJoin(record);
+          } else if(record.left_at) {
+            await handleWorkerPortalLeave(record);
+          }
         }
       }
       // Also handle the newer format some Supabase versions use
@@ -2682,7 +2686,8 @@ function startDashboardRealtime(sessionId) {
       }
       if(msg.event === 'UPDATE' && msg.topic?.includes('session_invites')) {
         const record = msg.payload?.record || msg.payload;
-        if(record?.joined_at) await handleWorkerPortalJoin(record);
+        if(record?.joined_at && !record?.left_at) await handleWorkerPortalJoin(record);
+        else if(record?.left_at) await handleWorkerPortalLeave(record);
       }
     } catch(err) {
       console.error('Realtime message error:', err);
@@ -2723,6 +2728,17 @@ async function handleNewShiftResponse(record) {
 
   // Also reload the worker grid to reflect latest statuses
   await loadSessionWorkers();
+  renderRoom();
+}
+
+async function handleWorkerPortalLeave(record) {
+  if(!activeSessionId) return;
+  const appId = Number(record.application_id);
+  const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
+  if(worker) {
+    worker.status = 'invited';
+    worker.joinedAt = null;
+  }
   renderRoom();
 }
 
