@@ -5022,19 +5022,99 @@ async function createScheduledSession() {
 
 async function goLiveSession(sessionId) {
   if(!confirm('Go live with this session now? Workers with confirmed attendance will be able to join.')) return;
+
   await sbPatch('sessions', '?id=eq.'+sessionId, {
     status: 'live',
     start_time: new Date().toLocaleTimeString('en-GB', {hour12:false})
   });
+
   activeSessionId = sessionId;
   startDashboardRealtime(sessionId);
-  await loadSessionsList();
+
+  // Load session details
+  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=*,zones(id,name,postcodes)');
+  const session = sessions[0];
+  if(!session) { await loadSessionsList(); return; }
+
+  // Set active zone
+  activeZone = { dbId: session.zone_id, name: session.zones?.name || '', postcodes: session.zones?.postcodes || [] };
+  document.getElementById('session-zone-name').textContent = activeZone.name;
+
+  // Load bars
+  const barsResult = await sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword');
+  bars = Array.isArray(barsResult) ? barsResult : [];
+
+  // Load confirmed workers from session_invites into sessionWorkers
+  const invites = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&attendance_confirmed=eq.confirmed&select=application_id,applications(id,name,phone,postcode_full,tier,hourly_rate,reliability_score)');
+
+  sessionWorkers = [];
+  for(const inv of invites) {
+    const app = inv.applications;
+    if(!app) continue;
+
+    // Check if session_workers row exists, create if not
+    let swRows = await sbGet('session_workers', '?session_id=eq.'+sessionId+'&application_id=eq.'+app.id+'&select=id,status');
+    let swId = swRows[0]?.id || null;
+    if(!swId) {
+      const sw = await sbPost('session_workers', {
+        session_id: sessionId,
+        application_id: app.id,
+        worker_name: app.name,
+        worker_phone: app.phone || null,
+        status: 'invited'
+      });
+      swId = sw?.[0]?.id || null;
+    }
+
+    sessionWorkers.push({
+      id: uid(),
+      sessionWorkerId: swId,
+      applicationId: app.id,
+      name: app.name,
+      phone: app.phone || null,
+      postcode_full: app.postcode_full || null,
+      tier: app.tier || 1,
+      hourly_rate: app.hourly_rate || 12.71,
+      reliability_score: app.reliability_score || null,
+      status: swRows[0]?.status || 'invited',
+      code: gen4(),
+      clockOutCode: gen4(),
+      bar: null,
+      barRecord: null,
+      dispatchedAt: null,
+      clockInAt: null,
+      clockInCode: null,
+      shiftLength: null,
+      wage: null,
+      clockOutAt: null,
+      notes: null,
+      expectedArrivalMinutes: null,
+    });
+  }
+
+  // Navigate to dispatch screen
+  showScreen('zones');
+  setActiveNav('dispatch');
+  renderZones();
+  renderRoom();
 }
 
 async function cancelScheduledSession(sessionId) {
   if(!confirm('Cancel this session? This cannot be undone.')) return;
   await sbPatch('sessions', '?id=eq.'+sessionId, { status: 'closed', end_time: new Date().toLocaleTimeString('en-GB', {hour12:false}) });
   await loadSessionsList();
+}
+
+function checkAllCodesSent() {
+  const total = document.querySelectorAll('input[name="code-sent"]').length;
+  const ticked = document.querySelectorAll('input[name="code-sent"]:checked').length;
+  const doneBtn = document.getElementById('codes-done-btn');
+  if(!doneBtn) return;
+  if(ticked >= total && total > 0) {
+    doneBtn.disabled = false;
+    doneBtn.style.opacity = '1';
+    doneBtn.textContent = 'Done';
+  }
 }
 
 async function sendSessionCodes(sessionId) {
