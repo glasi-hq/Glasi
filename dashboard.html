@@ -2616,91 +2616,65 @@ function updateCounts() {
 // REALTIME
 let dashboardRealtimeWs = null;
 
-function startDashboardRealtime(sessionId) {
-  if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} }
+let dashboardRealtimeWs2 = null;
 
+function makeRealtimeWs(topic, pgChanges, onRecord) {
   const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY + '&vsn=1.0.0';
-  dashboardRealtimeWs = new WebSocket(wsUrl);
-  let heartbeatInterval = null;
+  const ws = new WebSocket(wsUrl);
+  let hb = null;
 
-  dashboardRealtimeWs.onopen = () => {
-    // Supabase realtime v1 protocol
-    // Channel 1: session_invites updates
-    dashboardRealtimeWs.send(JSON.stringify({
-      topic: 'realtime:public:session_invites',
+  ws.onopen = () => {
+    ws.send(JSON.stringify({
+      topic: topic,
       event: 'phx_join',
-      payload: {
-        config: {
-          postgres_changes: [
-            { event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId }
-          ]
-        }
-      },
+      payload: { config: { postgres_changes: pgChanges } },
       ref: '1'
     }));
-    // Channel 2: shift_responses inserts
-    dashboardRealtimeWs.send(JSON.stringify({
-      topic: 'realtime:public:shift_responses',
-      event: 'phx_join',
-      payload: {
-        config: {
-          postgres_changes: [
-            { event: 'INSERT', schema: 'public', table: 'shift_responses' }
-          ]
-        }
-      },
-      ref: '2'
-    }));
-    // Heartbeat to keep connection alive
-    heartbeatInterval = setInterval(() => {
-      if(dashboardRealtimeWs && dashboardRealtimeWs.readyState === WebSocket.OPEN) {
-        dashboardRealtimeWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
-      }
+    hb = setInterval(() => {
+      if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
     }, 30000);
   };
 
-  dashboardRealtimeWs.onmessage = async (e) => {
+  ws.onmessage = async (e) => {
     try {
       const msg = JSON.parse(e.data);
-      // Handle postgres_changes events
       if(msg.event === 'postgres_changes') {
         const record = msg.payload?.data?.record;
-        const table = msg.payload?.data?.table;
         const type = msg.payload?.data?.type;
-        if(!record || !table) return;
+        if(record) await onRecord(record, type);
+      }
+    } catch(err) { console.error('Realtime WS error:', err); }
+  };
 
-        if(table === 'shift_responses' && type === 'INSERT') {
-          await handleNewShiftResponse(record);
-        }
-        if(table === 'session_invites' && type === 'UPDATE') {
-          if(record.joined_at && !record.left_at) {
-            await handleWorkerPortalJoin(record);
-          } else if(record.left_at) {
-            await handleWorkerPortalLeave(record);
-          }
-        }
+  ws.onclose = () => { if(hb) clearInterval(hb); };
+  ws.onerror = (e) => { console.error('Realtime WS error:', e); };
+  return ws;
+}
+
+function startDashboardRealtime(sessionId) {
+  if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} }
+  if(dashboardRealtimeWs2) { try { dashboardRealtimeWs2.close(); } catch(e) {} }
+
+  // WS 1: session_invites -- worker joins/leaves
+  dashboardRealtimeWs = makeRealtimeWs(
+    'realtime:public:session_invites',
+    [{ event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId }],
+    async (record, type) => {
+      if(type === 'UPDATE') {
+        if(record.joined_at && !record.left_at) await handleWorkerPortalJoin(record);
+        else if(record.left_at) await handleWorkerPortalLeave(record);
       }
-      // Also handle the newer format some Supabase versions use
-      if(msg.event === 'INSERT' && msg.topic?.includes('shift_responses')) {
-        await handleNewShiftResponse(msg.payload?.record || msg.payload);
-      }
-      if(msg.event === 'UPDATE' && msg.topic?.includes('session_invites')) {
-        const record = msg.payload?.record || msg.payload;
-        if(record?.joined_at && !record?.left_at) await handleWorkerPortalJoin(record);
-        else if(record?.left_at) await handleWorkerPortalLeave(record);
-      }
-    } catch(err) {
-      console.error('Realtime message error:', err);
     }
-  };
+  );
 
-  dashboardRealtimeWs.onclose = () => {
-    if(heartbeatInterval) clearInterval(heartbeatInterval);
-  };
-
-  dashboardRealtimeWs.onerror = (e) => {
-    console.error('Dashboard realtime WebSocket error:', e);
-  };
+  // WS 2: shift_responses -- worker availability responses
+  dashboardRealtimeWs2 = makeRealtimeWs(
+    'realtime:public:shift_responses',
+    [{ event: 'INSERT', schema: 'public', table: 'shift_responses' }],
+    async (record, type) => {
+      if(type === 'INSERT') await handleNewShiftResponse(record);
+    }
+  );
 }
 
 async function handleNewShiftResponse(record) {
@@ -2760,6 +2734,7 @@ async function handleWorkerPortalJoin(record) {
 
 function stopDashboardRealtime() {
   if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} dashboardRealtimeWs = null; }
+  if(dashboardRealtimeWs2) { try { dashboardRealtimeWs2.close(); } catch(e) {} dashboardRealtimeWs2 = null; }
 }
 
 // ROOM
