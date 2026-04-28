@@ -2701,9 +2701,7 @@ async function handleNewShiftResponse(record) {
     feed.insertBefore(item, feed.firstChild);
   }
 
-  // Also reload the worker grid to reflect latest statuses
-  await loadLiveSessionWorkers(activeSessionId);
-  renderRoom();
+  // Response feed updated -- no need to re-render room
 }
 
 async function handleWorkerPortalLeave(record) {
