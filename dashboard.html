@@ -4936,9 +4936,62 @@ function switchSessionsTab(tab) {
 function renderLiveRoom() {
   const room = document.getElementById('sessions-live-room');
   if(!room) return;
-  // Render the full dispatch room inside the live tab
-  room.innerHTML = document.getElementById('tab-content-room') ?
-    document.getElementById('tab-content-room').outerHTML : '';
+
+  // If the room already has content, just re-render
+  if(room.querySelector('#worker-grid')) {
+    renderRoom();
+    return;
+  }
+
+  // Build the live room HTML
+  room.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="page-title" style="font-size:18px;" id="session-zone-name-live"></div>
+        <div class="page-sub">Live session - select a request then dispatch a worker</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="ghost-btn" onclick="openRequestReceived()">+ Request Received</button>
+        <button class="ghost-btn" style="color:var(--red);border-color:var(--red);" onclick="confirmCloseSession()">Close Session</button>
+      </div>
+    </div>
+
+    <!-- Request section -->
+    <div id="request-section">
+      <div class="req-no-request" id="req-empty-state">
+        <button class="req-big-btn" onclick="openRequestReceived()">+ Request Received</button>
+        <div style="margin-top:12px;font-size:12px;color:var(--grey);">Waiting for a request from a bar manager</div>
+      </div>
+      <div id="request-cards-container" style="display:none;">
+        <div class="request-section-label">Active Requests</div>
+        <div id="request-cards"></div>
+        <button class="ghost-btn" style="margin-bottom:20px;" onclick="openRequestReceived()">+ New Request</button>
+      </div>
+    </div>
+
+    <!-- Workers in session -->
+    <div id="available-section">
+      <div class="request-section-label" id="workers-label">Workers in Session</div>
+      <div class="worker-grid" id="worker-grid"></div>
+    </div>
+
+    <!-- Invited but not yet joined -->
+    <div id="invited-section" style="margin-top:24px;">
+      <div class="request-section-label" style="color:var(--amber);">Invited - awaiting portal join</div>
+      <div class="worker-grid" id="invited-grid"></div>
+    </div>
+
+    <!-- Live response feed -->
+    <div id="response-feed-section" style="margin-top:24px;display:none;">
+      <div class="request-section-label" style="color:var(--ice);">Live Responses</div>
+      <div id="response-feed" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+    </div>
+  `;
+
+  // Set zone name
+  const zoneEl = document.getElementById('session-zone-name-live');
+  if(zoneEl && activeZone) zoneEl.textContent = activeZone.name;
+
   renderRoom();
 }
 
@@ -5142,10 +5195,12 @@ async function goLiveSession(sessionId) {
     });
   }
 
-  // Navigate to Sessions Live tab
-  showScreen('sessions');
+  // Navigate to Live view -- show zones/dispatch screen with sessions active
+  document.getElementById('session-zone-name').textContent = activeZone.name || '';
+  showScreen('zones');
   setActiveNav('sessions');
-  switchSessionsTab('live');
+  renderZones();
+  renderRoom();
 }
 
 async function cancelScheduledSession(sessionId) {
