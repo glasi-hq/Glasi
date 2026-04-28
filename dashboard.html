@@ -493,6 +493,31 @@
   </div>
 </div>
 
+<!-- INVITE WORKERS OVERLAY -->
+<div id="ov-invite-workers" class="overlay">
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">Invite Workers</div>
+    <div class="modal-sub">Select workers to invite. Each receives a unique session code.</div>
+    <div id="invite-workers-list" style="margin:16px 0;"></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('invite-workers')">Cancel</button>
+      <button class="confirm-btn" onclick="generateInvites()">Generate Invites</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE MESSAGES OVERLAY -->
+<div id="ov-invite-messages" class="overlay">
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">Invite Messages</div>
+    <div class="modal-sub">Copy each message and send via WhatsApp or email.</div>
+    <div id="invite-messages-list" style="margin:16px 0;"></div>
+    <div class="modal-actions">
+      <button class="confirm-btn" onclick="closeOv('invite-messages');loadSessionsList();">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- SESSION DETAIL SCREEN -->
 <div id="screen-session-detail" class="screen">
   <div class="history-screen">
@@ -4416,31 +4441,6 @@ ${customersPerHr ? `
 <div class="footer">
   Glasi Ltd · Registered in England and Wales · hello@glasi.co.uk · glasi.co.uk<br>
   Figures are estimates based on bar data provided at onboarding.
-</div>
-
-<!-- INVITE WORKERS OVERLAY -->
-<div id="ov-invite-workers" class="overlay">
-  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
-    <div class="modal-title">Invite Workers</div>
-    <div class="modal-sub">Select workers to invite. Each receives a unique session code.</div>
-    <div id="invite-workers-list" style="margin:16px 0;"></div>
-    <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeOv('invite-workers')">Cancel</button>
-      <button class="confirm-btn" onclick="generateInvites()">Generate Invites</button>
-    </div>
-  </div>
-</div>
-
-<!-- INVITE MESSAGES OVERLAY -->
-<div id="ov-invite-messages" class="overlay">
-  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
-    <div class="modal-title">Invite Messages</div>
-    <div class="modal-sub">Copy each message and send via WhatsApp or email.</div>
-    <div id="invite-messages-list" style="margin:16px 0;"></div>
-    <div class="modal-actions">
-      <button class="confirm-btn" onclick="closeOv('invite-messages');loadSessionsList();">Done</button>
-    </div>
-  </div>
 </div>
 
 </body>
