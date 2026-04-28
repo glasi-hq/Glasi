@@ -473,31 +473,22 @@
 
 <!-- SCHEDULE SESSION OVERLAY -->
 <div id="ov-schedule" class="overlay">
-  <div class="ov-box" style="max-width:480px;">
-    <div class="ov-title">SCHEDULE SESSION</div>
-    <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;">
-      <div>
-        <label class="ov-label">Date</label>
-        <input type="date" id="sched-date" class="ov-input">
-      </div>
-      <div>
-        <label class="ov-label">Start Time</label>
-        <input type="time" id="sched-time" class="ov-input" value="18:00">
-      </div>
-      <div>
-        <label class="ov-label">Zone</label>
-        <select id="sched-zone" class="ov-input">
-          <option value="">Select zone</option>
-        </select>
-      </div>
-      <div>
-        <label class="ov-label">Late join cutoff (minutes after start)</label>
-        <input type="number" id="sched-cutoff" class="ov-input" value="30" min="0" max="120">
-      </div>
-    </div>
-    <div style="display:flex;gap:12px;margin-top:24px;">
-      <button class="ov-confirm-btn" onclick="createScheduledSession()">Schedule</button>
-      <button class="ov-cancel-btn" onclick="closeOv('schedule')">Cancel</button>
+  <div class="modal">
+    <div class="modal-title">Schedule Session</div>
+    <div class="modal-sub">Set the date, time and zone for the upcoming session.</div>
+    <label>Date</label>
+    <input type="date" id="sched-date" class="field" style="width:100%;">
+    <label>Start Time</label>
+    <input type="time" id="sched-time" class="field" style="width:100%;" value="18:00">
+    <label>Zone</label>
+    <select id="sched-zone" class="field" style="width:100%;background:var(--navy-mid);color:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;">
+      <option value="">Select zone</option>
+    </select>
+    <label>Late join cutoff (minutes after start)</label>
+    <input type="number" id="sched-cutoff" class="field" style="width:100%;" value="30" min="0" max="120">
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('schedule')">Cancel</button>
+      <button class="confirm-btn" onclick="createScheduledSession()">Schedule Session</button>
     </div>
   </div>
 </div>
@@ -4431,25 +4422,25 @@ ${customersPerHr ? `
 
 <!-- INVITE WORKERS OVERLAY -->
 <div id="ov-invite-workers" class="overlay">
-  <div class="ov-box" style="max-width:560px;max-height:80vh;overflow-y:auto;">
-    <div class="ov-title">INVITE WORKERS</div>
-    <div class="page-sub" style="margin-bottom:16px;">Select workers to invite. Each will receive a unique session code.</div>
-    <div id="invite-workers-list" style="margin-bottom:20px;"></div>
-    <div style="display:flex;gap:12px;">
-      <button class="ov-confirm-btn" onclick="generateInvites()">Generate Invites</button>
-      <button class="ov-cancel-btn" onclick="closeOv('invite-workers')">Cancel</button>
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">Invite Workers</div>
+    <div class="modal-sub">Select workers to invite. Each receives a unique session code.</div>
+    <div id="invite-workers-list" style="margin:16px 0;"></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('invite-workers')">Cancel</button>
+      <button class="confirm-btn" onclick="generateInvites()">Generate Invites</button>
     </div>
   </div>
 </div>
 
 <!-- INVITE MESSAGES OVERLAY -->
 <div id="ov-invite-messages" class="overlay">
-  <div class="ov-box" style="max-width:560px;max-height:80vh;overflow-y:auto;">
-    <div class="ov-title">INVITE MESSAGES</div>
-    <div class="page-sub" style="margin-bottom:16px;">Copy each message and send via WhatsApp or email.</div>
-    <div id="invite-messages-list"></div>
-    <div style="margin-top:20px;">
-      <button class="ov-cancel-btn" onclick="closeOv('invite-messages');loadSessionsList();">Done</button>
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">Invite Messages</div>
+    <div class="modal-sub">Copy each message and send via WhatsApp or email.</div>
+    <div id="invite-messages-list" style="margin:16px 0;"></div>
+    <div class="modal-actions">
+      <button class="confirm-btn" onclick="closeOv('invite-messages');loadSessionsList();">Done</button>
     </div>
   </div>
 </div>
