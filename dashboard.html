@@ -449,11 +449,56 @@
 <!-- SESSIONS SCREEN -->
 <div id="screen-sessions" class="screen">
   <div class="history-screen">
-    <div style="margin-bottom:24px;">
-      <div class="page-title">SESSIONS</div>
-      <div class="page-sub">Click a session to view worker scores and copy reports</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="page-title">SESSIONS</div>
+        <div class="page-sub">Schedule and manage sessions</div>
+      </div>
+      <button class="small-ice-btn" onclick="openScheduleSession()">+ Schedule Session</button>
     </div>
-    <div id="sessions-list"></div>
+
+    <!-- UPCOMING SESSIONS -->
+    <div style="margin-bottom:32px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">UPCOMING</div>
+      <div id="sessions-upcoming"></div>
+    </div>
+
+    <!-- PAST SESSIONS -->
+    <div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">PAST SESSIONS</div>
+      <div id="sessions-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE SESSION OVERLAY -->
+<div id="ov-schedule" class="overlay" style="display:none;">
+  <div class="ov-box" style="max-width:480px;">
+    <div class="ov-title">SCHEDULE SESSION</div>
+    <div style="display:flex;flex-direction:column;gap:16px;margin-top:16px;">
+      <div>
+        <label class="ov-label">Date</label>
+        <input type="date" id="sched-date" class="ov-input">
+      </div>
+      <div>
+        <label class="ov-label">Start Time</label>
+        <input type="time" id="sched-time" class="ov-input" value="18:00">
+      </div>
+      <div>
+        <label class="ov-label">Zone</label>
+        <select id="sched-zone" class="ov-input">
+          <option value="">Select zone</option>
+        </select>
+      </div>
+      <div>
+        <label class="ov-label">Late join cutoff (minutes after start)</label>
+        <input type="number" id="sched-cutoff" class="ov-input" value="30" min="0" max="120">
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:24px;">
+      <button class="ov-confirm-btn" onclick="createScheduledSession()">Schedule</button>
+      <button class="ov-cancel-btn" onclick="closeOv('schedule')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -4383,6 +4428,31 @@ ${customersPerHr ? `
 </div>
 
 
+
+<!-- INVITE WORKERS OVERLAY -->
+<div id="ov-invite-workers" class="overlay" style="display:none;">
+  <div class="ov-box" style="max-width:560px;max-height:80vh;overflow-y:auto;">
+    <div class="ov-title">INVITE WORKERS</div>
+    <div class="page-sub" style="margin-bottom:16px;">Select workers to invite. Each will receive a unique session code.</div>
+    <div id="invite-workers-list" style="margin-bottom:20px;"></div>
+    <div style="display:flex;gap:12px;">
+      <button class="ov-confirm-btn" onclick="generateInvites()">Generate Invites</button>
+      <button class="ov-cancel-btn" onclick="closeOv('invite-workers')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE MESSAGES OVERLAY -->
+<div id="ov-invite-messages" class="overlay" style="display:none;">
+  <div class="ov-box" style="max-width:560px;max-height:80vh;overflow-y:auto;">
+    <div class="ov-title">INVITE MESSAGES</div>
+    <div class="page-sub" style="margin-bottom:16px;">Copy each message and send via WhatsApp or email.</div>
+    <div id="invite-messages-list"></div>
+    <div style="margin-top:20px;">
+      <button class="ov-cancel-btn" onclick="closeOv('invite-messages');loadSessionsList();">Done</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>`;
 
@@ -4742,29 +4812,148 @@ async function goToSessions() {
 }
 
 async function loadSessionsList() {
-  const list = document.getElementById('sessions-list');
-  list.innerHTML = '<div class="empty">Loading...</div>';
+  const upcomingEl = document.getElementById('sessions-upcoming');
+  const pastEl = document.getElementById('sessions-list');
+  upcomingEl.innerHTML = '<div class="empty">Loading...</div>';
+  pastEl.innerHTML = '<div class="empty">Loading...</div>';
 
-  const sessions = await sbGet('sessions', '?select=*&order=session_date.desc,start_time.desc&end_time=not.is.null');
-  if(!sessions.length) { list.innerHTML = '<div class="empty">No closed sessions yet.</div>'; return; }
+  const [allSessions, zonesData] = await Promise.all([
+    sbGet('sessions', '?select=*&order=session_date.desc,start_time.desc'),
+    sbGet('zones', '?select=id,name')
+  ]);
 
-  const zonesData = await sbGet('zones', '?select=id,name');
+  const upcoming = allSessions.filter(s => s.status === 'scheduled');
+  const past = allSessions.filter(s => s.status === 'closed' || s.end_time !== null);
 
-  list.innerHTML = sessions.map(s => {
-    const zone = zonesData.find(z => Number(z.id) === Number(s.zone_id));
-    const date = s.session_date ? new Date(s.session_date).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Unknown date';
-    return `<div class="zone-card" style="margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;" onclick="openSessionDetail(${s.id})">
-      <div>
-        <div style="font-weight:600;color:var(--white);font-size:14px;margin-bottom:2px;">${date}</div>
-        <div style="color:var(--grey);font-size:12px;">${zone ? zone.name : 'Unknown zone'}</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="color:var(--grey);font-size:11px;">${s.start_time ? s.start_time.slice(0,5) : ''} - ${s.end_time ? s.end_time.slice(0,5) : ''}</div>
-        <div style="color:var(--ice);font-size:11px;margin-top:2px;">View workers</div>
-      </div>
-    </div>`;
-  }).join('');
+  // Load invite counts for upcoming sessions
+  const inviteCounts = {};
+  if(upcoming.length) {
+    const ids = upcoming.map(s => s.id).join(',');
+    const invites = await sbGet('session_invites', '?session_id=in.('+ids+')&select=session_id,attendance_confirmed');
+    invites.forEach(inv => {
+      if(!inviteCounts[inv.session_id]) inviteCounts[inv.session_id] = { invited: 0, confirmed: 0, declined: 0, pending: 0 };
+      inviteCounts[inv.session_id].invited++;
+      inviteCounts[inv.session_id][inv.attendance_confirmed]++;
+    });
+  }
+
+  // Render upcoming
+  if(!upcoming.length) {
+    upcomingEl.innerHTML = '<div class="empty">No scheduled sessions. Click Schedule Session to plan one.</div>';
+  } else {
+    upcomingEl.innerHTML = upcoming.map(s => {
+      const zone = zonesData.find(z => Number(z.id) === Number(s.zone_id));
+      const dt = s.scheduled_start ? new Date(s.scheduled_start) : (s.session_date ? new Date(s.session_date + 'T' + (s.start_time || '18:00:00')) : null);
+      const dateStr = dt ? dt.toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'}) : 'TBC';
+      const timeStr = dt ? dt.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '';
+      const counts = inviteCounts[s.id] || { invited: 0, confirmed: 0, declined: 0, pending: 0 };
+      return `<div class="zone-card" style="margin-bottom:12px;padding:16px 20px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+          <div>
+            <div style="font-weight:600;color:var(--white);font-size:14px;margin-bottom:2px;">${dateStr} at ${timeStr}</div>
+            <div style="color:var(--grey);font-size:12px;">${zone ? zone.name : 'Unknown zone'}</div>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:1px;color:var(--amber);background:rgba(200,162,74,0.1);border:1px solid rgba(200,162,74,0.3);padding:3px 8px;border-radius:4px;">SCHEDULED</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="font-size:12px;color:var(--grey);">Invited: <strong style="color:var(--white);">${counts.invited}</strong></div>
+          <div style="font-size:12px;color:var(--grey);">Confirmed: <strong style="color:#4ade80;">${counts.confirmed}</strong></div>
+          <div style="font-size:12px;color:var(--grey);">Declined: <strong style="color:var(--amber);">${counts.declined}</strong></div>
+          <div style="font-size:12px;color:var(--grey);">No response: <strong style="color:var(--grey);">${counts.pending}</strong></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="small-ice-btn" onclick="openInviteWorkers(${s.id})">Invite Workers</button>
+          <button class="small-ice-btn" onclick="goLiveSession(${s.id})">Go Live</button>
+          <button style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;" onclick="cancelScheduledSession(${s.id})">Cancel</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Render past
+  if(!past.length) {
+    pastEl.innerHTML = '<div class="empty">No closed sessions yet.</div>';
+  } else {
+    pastEl.innerHTML = past.map(s => {
+      const zone = zonesData.find(z => Number(z.id) === Number(s.zone_id));
+      const date = s.session_date ? new Date(s.session_date).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Unknown date';
+      return `<div class="zone-card" style="margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;" onclick="openSessionDetail(${s.id})">
+        <div>
+          <div style="font-weight:600;color:var(--white);font-size:14px;margin-bottom:2px;">${date}</div>
+          <div style="color:var(--grey);font-size:12px;">${zone ? zone.name : 'Unknown zone'}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:var(--grey);font-size:11px;">${s.start_time ? s.start_time.slice(0,5) : ''} - ${s.end_time ? s.end_time.slice(0,5) : ''}</div>
+          <div style="color:var(--ice);font-size:11px;margin-top:2px;">View workers</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
+
+async function openScheduleSession() {
+  // populate zone dropdown
+  const zonesData = await sbGet('zones', '?select=id,name');
+  const zoneSelect = document.getElementById('sched-zone');
+  zoneSelect.innerHTML = '<option value="">Select zone</option>' + zonesData.map(z => `<option value="${z.id}">${z.name}</option>`).join('');
+  // default date to next Friday
+  const d = new Date();
+  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
+  document.getElementById('sched-date').value = d.toISOString().split('T')[0];
+  openOv('schedule');
+}
+
+async function createScheduledSession() {
+  const date = document.getElementById('sched-date').value;
+  const time = document.getElementById('sched-time').value;
+  const zoneId = document.getElementById('sched-zone').value;
+  const cutoff = document.getElementById('sched-cutoff').value;
+
+  if(!date || !time || !zoneId) { alert('Please fill in all fields.'); return; }
+
+  const scheduledStart = new Date(date + 'T' + time + ':00').toISOString();
+
+  const result = await sbPost('sessions', {
+    session_date: date,
+    start_time: time + ':00',
+    zone_id: parseInt(zoneId),
+    status: 'scheduled',
+    scheduled_start: scheduledStart,
+    cutoff_minutes: parseInt(cutoff) || 30
+  });
+
+  if(result && result[0]) {
+    closeOv('schedule');
+    await loadSessionsList();
+  } else {
+    alert('Failed to create session. Please try again.');
+  }
+}
+
+async function goLiveSession(sessionId) {
+  if(!confirm('Go live with this session now? Workers with confirmed attendance will be able to join.')) return;
+  await sbPatch('sessions', '?id=eq.'+sessionId, {
+    status: 'live',
+    start_time: new Date().toLocaleTimeString('en-GB', {hour12:false})
+  });
+  await loadSessionsList();
+}
+
+async function cancelScheduledSession(sessionId) {
+  if(!confirm('Cancel this session? This cannot be undone.')) return;
+  await sbPatch('sessions', '?id=eq.'+sessionId, { status: 'closed', end_time: new Date().toLocaleTimeString('en-GB', {hour12:false}) });
+  await loadSessionsList();
+}
+
+async function openInviteWorkers(sessionId) {
+  // Store session ID and open invite overlay
+  currentInviteSessionId = sessionId;
+  await loadInviteWorkers(sessionId);
+}
+
+let currentInviteSessionId = null;
 
 async function openSessionDetail(sessionId) {
   // clear report store for this session
@@ -4934,6 +5123,134 @@ function copyWorkerReport(btn, reportId) {
     btn.textContent = 'Allow popups and try again';
     setTimeout(() => { btn.textContent = 'Copy Email Report'; }, 3000);
   }
+}
+
+
+async function loadInviteWorkers(sessionId) {
+  openOv('invite-workers');
+  const listEl = document.getElementById('invite-workers-list');
+  listEl.innerHTML = '<div class="empty">Loading workers...</div>';
+
+  // Get session zone
+  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=zone_id,session_date');
+  const session = sessions[0];
+  if(!session) return;
+
+  // Get zone postcodes
+  const zones = await sbGet('zones', '?id=eq.'+session.zone_id+'&select=postcodes');
+  const zone = zones[0];
+  const postcodes = zone ? zone.postcodes : [];
+
+  // Get already invited workers for this session
+  const existing = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&select=application_id');
+  const existingIds = existing.map(e => Number(e.application_id));
+
+  // Get onboarded workers
+  const workers = await sbGet('applications', '?worker_status=eq.onboarded&active=not.eq.false&select=id,name,postcode_full,tier,hourly_rate,has_transport');
+
+  if(!workers.length) {
+    listEl.innerHTML = '<div class="empty">No onboarded workers available.</div>';
+    return;
+  }
+
+  // Get day of week for session to check availability
+  const sessionDay = session.session_date ? new Date(session.session_date).toLocaleDateString('en-GB', {weekday:'short'}).toLowerCase() : null;
+
+  const inZoneWorkers = workers.filter(w => postcodes.some(p => w.postcode_full && w.postcode_full.startsWith(p)));
+  const outZoneWorkers = workers.filter(w => !postcodes.some(p => w.postcode_full && w.postcode_full.startsWith(p)));
+
+  function renderWorker(w) {
+    const alreadyInvited = existingIds.includes(Number(w.id));
+    const inZone = postcodes.some(p => w.postcode_full && w.postcode_full.startsWith(p));
+    return `<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;background:${alreadyInvited ? 'rgba(168,198,232,0.08)' : 'transparent'};">
+      <input type="checkbox" name="invite-worker" value="${w.id}" ${alreadyInvited ? 'checked disabled' : ''} style="accent-color:var(--ice);width:16px;height:16px;flex-shrink:0;">
+      <div style="flex:1;">
+        <div style="font-size:14px;color:var(--white);font-weight:500;">${w.name}</div>
+        <div style="font-size:11px;color:var(--grey);margin-top:2px;">${w.postcode_full || ''} &nbsp;·&nbsp; Tier ${w.tier || 1} &nbsp;·&nbsp; ${w.has_transport ? 'Has transport' : 'No transport'}</div>
+      </div>
+      ${alreadyInvited ? '<span style="font-size:10px;color:var(--ice);letter-spacing:1px;">INVITED</span>' : ''}
+    </label>`;
+  }
+
+  listEl.innerHTML = `
+    <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);margin-bottom:8px;">IN ZONE (${inZoneWorkers.length})</div>
+    ${inZoneWorkers.length ? inZoneWorkers.map(renderWorker).join('') : '<div class="empty" style="margin-bottom:12px;">No onboarded workers in this zone yet.</div>'}
+    ${outZoneWorkers.length ? `
+      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin:16px 0 8px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';">
+        OTHER WORKERS (${outZoneWorkers.length}) <span style="font-size:10px;font-weight:400;">tap to show</span>
+      </div>
+      <div style="display:none;">${outZoneWorkers.map(renderWorker).join('')}</div>
+    ` : ''}
+  `;
+}
+
+async function generateInvites() {
+  const checked = [...document.querySelectorAll('input[name="invite-worker"]:checked:not(:disabled)')];
+  if(!checked.length) { alert('Select at least one worker to invite.'); return; }
+
+  const sessionId = currentInviteSessionId;
+  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=session_date,scheduled_start,start_time,zones(name)');
+  const session = sessions[0];
+
+  const dateStr = session.scheduled_start
+    ? new Date(session.scheduled_start).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long'})
+    : (session.session_date ? new Date(session.session_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long'}) : 'TBC');
+  const timeStr = session.scheduled_start
+    ? new Date(session.scheduled_start).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
+    : (session.start_time ? session.start_time.slice(0,5) : '');
+
+  const messages = [];
+
+  for(const cb of checked) {
+    const appId = parseInt(cb.value);
+    // Generate unique 6 digit code
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+
+    // Write session_invite row
+    await sbPost('session_invites', {
+      session_id: sessionId,
+      application_id: appId,
+      session_code: code,
+      attendance_confirmed: 'pending',
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    });
+
+    // Get worker name
+    const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=name,phone');
+    const app = appRows[0];
+    if(!app) continue;
+
+    const confirmYes = 'glasi.co.uk/confirm?code='+code+'&response=yes';
+    const confirmNo = 'glasi.co.uk/confirm?code='+code+'&response=no';
+
+    const msg = `Hi ${app.name.split(' ')[0]}, Glasi session on ${dateStr} at ${timeStr}. Are you available?\n\nYes, I am in: ${confirmYes}\nCannot make it: ${confirmNo}`;
+
+    messages.push({ name: app.name, phone: app.phone, msg });
+  }
+
+  closeOv('invite-workers');
+
+  // Show messages overlay
+  const messagesEl = document.getElementById('invite-messages-list');
+  messagesEl.innerHTML = messages.map((m, i) => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">${m.name} &nbsp;<span style="color:var(--grey);font-weight:400;">${m.phone || ''}</span></div>
+      <div style="font-size:12px;color:var(--grey);line-height:1.6;background:rgba(255,255,255,0.04);padding:10px;border-radius:6px;white-space:pre-wrap;margin-bottom:8px;">${m.msg}</div>
+      <button onclick="copyInviteMessage(this, '${encodeURIComponent(m.msg)}')" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">Copy Message</button>
+    </div>
+  `).join('');
+
+  openOv('invite-messages');
+  await loadSessionsList();
+}
+
+function copyInviteMessage(btn, encoded) {
+  const msg = decodeURIComponent(encoded);
+  navigator.clipboard.writeText(msg).then(() => {
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = 'Copy Message'; btn.style.color = 'var(--ice)'; }, 2000);
+  });
 }
 
 </script>
