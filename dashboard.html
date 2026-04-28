@@ -2704,8 +2704,18 @@ async function handleNewShiftResponse(record) {
 }
 
 async function handleWorkerPortalJoin(record) {
-  // Worker joined via portal -- reload worker grid
-  await loadSessionWorkers();
+  // Worker joined via portal -- update their status in sessionWorkers and re-render
+  if(!activeSessionId) return;
+  const appId = Number(record.application_id);
+  const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
+  if(worker) {
+    worker.status = 'available';
+    worker.joinedAt = record.joined_at;
+  } else {
+    // Worker not in list yet -- reload all
+    await loadLiveSessionWorkers(activeSessionId);
+    return;
+  }
   renderRoom();
 }
 
@@ -2722,9 +2732,9 @@ function renderRoom() {
   const available = sessionWorkers.filter(w => w.status==='available'||w.status==='left');
   const invited = sessionWorkers.filter(w => w.status==='invited'||w.status==='noshow');
 
-  // Available section
+  // Available section -- workers who joined via portal
   if(!available.length) {
-    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">No confirmed workers yet. Confirm workers as they join the Zoom.</div>';
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">No workers in the room yet. Workers will appear here as they join via the portal.</div>';
   } else {
     grid.innerHTML=available.map(w=>{
       const isLeft=w.status==='left';
@@ -2749,7 +2759,7 @@ function renderRoom() {
     }).join('');
   }
 
-  // Invited section
+  // Expected section -- confirmed but not yet joined
   if(!invited.length) {
     invitedSection.style.display='none';
   } else {
@@ -4933,26 +4943,35 @@ function switchSessionsTab(tab) {
   }
 }
 
+let liveSessionTimer = null;
+let liveSessionStart = null;
+
 function renderLiveRoom() {
   const room = document.getElementById('sessions-live-room');
   if(!room) return;
 
-  // If the room already has content, just re-render
-  if(room.querySelector('#worker-grid')) {
-    renderRoom();
-    return;
-  }
+  document.getElementById('sessions-live-empty').style.display = 'none';
+  document.getElementById('sessions-live-room').style.display = 'block';
 
-  // Build the live room HTML
+  const zoneName = activeZone?.name || '';
+  const sessionDate = new Date().toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
+
   room.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-      <div>
-        <div class="page-title" style="font-size:18px;" id="session-zone-name-live"></div>
-        <div class="page-sub">Live session - select a request then dispatch a worker</div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="ghost-btn" onclick="openRequestReceived()">+ Request Received</button>
-        <button class="ghost-btn" style="color:var(--red);border-color:var(--red);" onclick="confirmCloseSession()">Close Session</button>
+    <!-- Session header -->
+    <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--white);">${zoneName}</div>
+            <div style="font-size:11px;color:var(--grey);margin-top:2px;">${sessionDate} &nbsp;·&nbsp; Session #${activeSessionId}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:12px;color:var(--ice);" id="live-session-elapsed">00:00</div>
+          <button class="ghost-btn" onclick="openRequestReceived()">+ Request Received</button>
+          <button class="ghost-btn" style="color:var(--red);border-color:rgba(248,113,113,0.3);" onclick="confirmCloseSession()">Close</button>
+        </div>
       </div>
     </div>
 
@@ -4969,15 +4988,15 @@ function renderLiveRoom() {
       </div>
     </div>
 
-    <!-- Workers in session -->
-    <div id="available-section">
-      <div class="request-section-label" id="workers-label">Workers in Session</div>
+    <!-- In the room -->
+    <div id="available-section" style="margin-bottom:24px;">
+      <div class="request-section-label" id="workers-label">In the Room</div>
       <div class="worker-grid" id="worker-grid"></div>
     </div>
 
-    <!-- Invited but not yet joined -->
-    <div id="invited-section" style="margin-top:24px;">
-      <div class="request-section-label" style="color:var(--amber);">Invited - awaiting portal join</div>
+    <!-- Expected but not joined -->
+    <div id="invited-section">
+      <div class="request-section-label" style="color:var(--amber);">Expected Tonight</div>
       <div class="worker-grid" id="invited-grid"></div>
     </div>
 
@@ -4988,9 +5007,16 @@ function renderLiveRoom() {
     </div>
   `;
 
-  // Set zone name
-  const zoneEl = document.getElementById('session-zone-name-live');
-  if(zoneEl && activeZone) zoneEl.textContent = activeZone.name;
+  // Start elapsed timer
+  if(liveSessionTimer) clearInterval(liveSessionTimer);
+  liveSessionStart = liveSessionStart || Date.now();
+  liveSessionTimer = setInterval(() => {
+    const secs = Math.floor((Date.now() - liveSessionStart) / 1000);
+    const m = Math.floor(secs / 60).toString().padStart(2,'0');
+    const s = (secs % 60).toString().padStart(2,'0');
+    const el = document.getElementById('live-session-elapsed');
+    if(el) el.textContent = m + ':' + s;
+  }, 1000);
 
   renderRoom();
 }
@@ -5126,6 +5152,15 @@ async function createScheduledSession() {
 async function goLiveSession(sessionId) {
   if(!confirm('Go live with this session now? Workers with confirmed attendance will be able to join.')) return;
 
+  // 1. Close any other live sessions first
+  try {
+    const otherLive = await sbGet('sessions', '?status=eq.live&id=not.eq.'+sessionId+'&select=id');
+    for(const s of otherLive) {
+      await sbPatch('sessions', '?id=eq.'+s.id, { status: 'closed', end_time: new Date().toLocaleTimeString('en-GB', {hour12:false}) });
+    }
+  } catch(e) {}
+
+  // 2. Set this session live
   await sbPatch('sessions', '?id=eq.'+sessionId, {
     status: 'live',
     start_time: new Date().toLocaleTimeString('en-GB', {hour12:false})
@@ -5134,73 +5169,78 @@ async function goLiveSession(sessionId) {
   activeSessionId = sessionId;
   startDashboardRealtime(sessionId);
 
-  // Load session details
+  // 3. Load session details
   const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=*,zones(id,name,postcodes)');
   const session = sessions[0];
-  if(!session) { await loadSessionsList(); return; }
 
-  // Set active zone
-  activeZone = { dbId: session.zone_id, name: session.zones?.name || '', postcodes: session.zones?.postcodes || [] };
-  document.getElementById('session-zone-name').textContent = activeZone.name;
-
-  // Load bars
-  const barsResult = await sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword');
-  bars = Array.isArray(barsResult) ? barsResult : [];
-
-  // Load confirmed workers from session_invites into sessionWorkers
-  const invites = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&attendance_confirmed=eq.confirmed&select=application_id,applications(id,name,phone,postcode_full,tier,hourly_rate,reliability_score)');
-
-  sessionWorkers = [];
-  for(const inv of invites) {
-    const app = inv.applications;
-    if(!app) continue;
-
-    // Check if session_workers row exists, create if not
-    let swRows = await sbGet('session_workers', '?session_id=eq.'+sessionId+'&application_id=eq.'+app.id+'&select=id,status');
-    let swId = swRows[0]?.id || null;
-    if(!swId) {
-      const sw = await sbPost('session_workers', {
-        session_id: sessionId,
-        application_id: app.id,
-        worker_name: app.name,
-        worker_phone: app.phone || null,
-        status: 'invited'
-      });
-      swId = sw?.[0]?.id || null;
-    }
-
-    sessionWorkers.push({
-      id: uid(),
-      sessionWorkerId: swId,
-      applicationId: app.id,
-      name: app.name,
-      phone: app.phone || null,
-      postcode_full: app.postcode_full || null,
-      tier: app.tier || 1,
-      hourly_rate: app.hourly_rate || 12.71,
-      reliability_score: app.reliability_score || null,
-      status: swRows[0]?.status || 'invited',
-      code: gen4(),
-      clockOutCode: gen4(),
-      bar: null,
-      barRecord: null,
-      dispatchedAt: null,
-      clockInAt: null,
-      clockInCode: null,
-      shiftLength: null,
-      wage: null,
-      clockOutAt: null,
-      notes: null,
-      expectedArrivalMinutes: null,
-    });
+  if(session) {
+    activeZone = { dbId: session.zone_id, name: session.zones?.name || '', postcodes: session.zones?.postcodes || [] };
+    // Load bars
+    try {
+      const barsResult = await sbGet('bars','?order=name.asc&select=id,name,address,google_maps_link,zone_id,status,notes,zoom_keyword');
+      bars = Array.isArray(barsResult) ? barsResult : [];
+    } catch(e) {}
   }
 
-  // Navigate to Live view -- show zones/dispatch screen with sessions active
-  document.getElementById('session-zone-name').textContent = activeZone.name || '';
-  showScreen('zones');
+  // 4. Navigate to live tab immediately -- don't wait for worker loading
+  showScreen('sessions');
   setActiveNav('sessions');
-  renderZones();
-  renderRoom();
+  switchSessionsTab('live');
+
+  // 5. Load workers in background
+  await loadLiveSessionWorkers(sessionId);
+}
+
+async function loadLiveSessionWorkers(sessionId) {
+  try {
+    const invites = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&attendance_confirmed=eq.confirmed&select=application_id,joined_at,applications(id,name,phone,postcode_full,tier,hourly_rate,reliability_score)');
+
+    sessionWorkers = [];
+    // Batch create session_workers rows
+    const existingSW = await sbGet('session_workers', '?session_id=eq.'+sessionId+'&select=id,application_id,status');
+
+    for(const inv of invites) {
+      const app = inv.applications;
+      if(!app) continue;
+
+      let swRow = existingSW.find(sw => Number(sw.application_id) === Number(app.id));
+      if(!swRow) {
+        const sw = await sbPost('session_workers', {
+          session_id: sessionId,
+          application_id: app.id,
+          worker_name: app.name,
+          worker_phone: app.phone || null,
+          status: inv.joined_at ? 'available' : 'invited'
+        });
+        swRow = sw?.[0] || null;
+      }
+
+      sessionWorkers.push({
+        id: uid(),
+        sessionWorkerId: swRow?.id || null,
+        applicationId: app.id,
+        name: app.name,
+        phone: app.phone || null,
+        postcode_full: app.postcode_full || null,
+        tier: app.tier || 1,
+        hourly_rate: app.hourly_rate || 12.71,
+        reliability_score: app.reliability_score || null,
+        status: inv.joined_at ? 'available' : 'invited',
+        joinedAt: inv.joined_at || null,
+        code: gen4(),
+        clockOutCode: gen4(),
+        bar: null, barRecord: null,
+        dispatchedAt: null, clockInAt: null,
+        clockInCode: null, shiftLength: null,
+        wage: null, clockOutAt: null,
+        notes: null, expectedArrivalMinutes: null,
+      });
+    }
+
+    renderLiveRoom();
+  } catch(e) {
+    console.error('Failed to load live session workers:', e);
+  }
 }
 
 async function cancelScheduledSession(sessionId) {
