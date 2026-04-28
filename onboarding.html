@@ -272,7 +272,7 @@
           <p class="section-heading">How Glasi works</p>
           <p>Glasi connects busy bars with reliable local people when they need extra hands at short notice. The work is simple. Glass collecting, clearing tables, and keeping the floor tidy. No till work, no stocking, nothing that needs training. Just wear plain black clothing, be ready to move, and show up with a good attitude.</p>
 
-          <p class="section-heading">Sessions (your chance to get shifts)</p>
+          <p class="section-heading">Sessions</p>
           <p>When we are running a session in your area, you will receive a Zoom link for that evening. Sessions run during the busiest hours, usually between 2 and 4 hours. Only join if you are genuinely ready to work that night. By joining, you are confirming that you are available, presentable, and able to leave immediately if we assign you a shift. You do not need your camera or mic on. Everything happens in the chat.</p>
 
           <p class="section-heading">Staying alert</p>
@@ -339,6 +339,15 @@
           <div>
             <label class="text-sm font-medium mb-2 block text-gray-600">Do you have plain black clothing suitable for bar work? *</label>
             <select id="has_black_clothing" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
+              <option value="">Select an option</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium mb-2 block text-gray-600">Do you have access to a car or e-scooter? *</label>
+            <select id="has_transport" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
@@ -481,6 +490,7 @@ form.addEventListener('submit', async (e) => {
   const hospitalityExperience = document.getElementById('hospitality_experience').value;
   const ukWorkRight = document.getElementById('uk_work_right').value;
   const hasBlackClothing = document.getElementById('has_black_clothing').value;
+  const hasTransport = document.getElementById('has_transport').value;
   const physicallyAble = document.getElementById('physically_able').value;
   const speaksEnglish = document.getElementById('speaks_english').value;
   const agreesWorkStandard = document.getElementById('agrees_work_standard').value;
@@ -493,7 +503,7 @@ form.addEventListener('submit', async (e) => {
   const q3 = document.querySelector('input[name="q3"]:checked')?.value;
   const q5 = document.querySelector('input[name="q5"]:checked')?.value;
 
-  if (!email || !ageGroup || !hospitalityExperience || !ukWorkRight || !hasBlackClothing || !physicallyAble || !speaksEnglish || !agreesWorkStandard || !reliabilityNotes) {
+  if (!email || !ageGroup || !hospitalityExperience || !ukWorkRight || !hasBlackClothing || !hasTransport || !physicallyAble || !speaksEnglish || !agreesWorkStandard || !reliabilityNotes) {
     feedback.innerHTML = `<div class="text-red-500 text-sm">Please complete all required fields.</div>`;
     return;
   }
@@ -521,6 +531,7 @@ form.addEventListener('submit', async (e) => {
     hospitality_experience: toBool(hospitalityExperience),
     uk_work_right: toBool(ukWorkRight),
     has_black_clothing: toBool(hasBlackClothing),
+    has_transport: toBool(hasTransport),
     physically_able: toBool(physicallyAble),
     speaks_english: toBool(speaksEnglish),
     agrees_work_standard: toBool(agreesWorkStandard),
