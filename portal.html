@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glasi | Worker Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0d1117;
+      --navy-mid: #0f1923;
+      --navy-light: #1a2535;
+      --ice: #a8c6e8;
+      --ice-dim: rgba(168,198,232,0.12);
+      --white: #e6edf3;
+      --grey: #6b7280;
+      --border: rgba(168,198,232,0.15);
+      --green: #4ade80;
+      --amber: #c8a24a;
+      --red: #f87171;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* SCREENS */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* LOGIN SCREEN */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .login-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .wordmark-wrap {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 24px;
+      letter-spacing: 10px;
+      color: var(--white);
+      border: 1.5px solid var(--white);
+      border-radius: 6px;
+      padding: 10px 24px;
+      display: inline-block;
+    }
+
+    .login-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--white);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .login-sub {
+      font-size: 12px;
+      color: var(--grey);
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      margin-top: 16px;
+    }
+
+    .field-label:first-of-type { margin-top: 0; }
+
+    .field {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 14px;
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field:focus { border-color: var(--ice); }
+
+    .primary-btn {
+      width: 100%;
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      margin-top: 24px;
+      letter-spacing: 0.5px;
+      transition: opacity 0.2s;
+    }
+
+    .primary-btn:hover { opacity: 0.9; }
+    .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .forgot-link {
+      display: block;
+      text-align: center;
+      font-size: 12px;
+      color: var(--grey);
+      margin-top: 16px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .error-msg {
+      font-size: 12px;
+      color: var(--red);
+      text-align: center;
+      margin-top: 12px;
+      min-height: 18px;
+    }
+
+    /* PORTAL SHELL */
+    .portal-header {
+      background: var(--navy-mid);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .portal-wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      letter-spacing: 6px;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      padding: 5px 12px;
+    }
+
+    .portal-nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .portal-nav-btn {
+      background: none;
+      border: none;
+      color: var(--grey);
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .portal-nav-btn.active {
+      color: var(--white);
+      background: var(--ice-dim);
+    }
+
+    .sign-out-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--grey);
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .portal-content {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    /* PROFILE TAB */
+    .profile-header {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    .profile-name {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .profile-tier {
+      font-size: 12px;
+      color: var(--ice);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .tier-names { font-size: 12px; color: var(--grey); }
+
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .stat-box {
+      flex: 1;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--grey);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* PROGRESS BAR */
+    .progress-wrap {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--grey);
+      margin-bottom: 10px;
+    }
+
+    .progress-bar-bg {
+      background: var(--navy);
+      border-radius: 999px;
+      height: 8px;
+      width: 100%;
+    }
+
+    .progress-bar-fill {
+      background: var(--ice);
+      border-radius: 999px;
+      height: 8px;
+      transition: width 0.6s ease;
+    }
+
+    .progress-next {
+      font-size: 12px;
+      color: var(--grey);
+      margin-top: 10px;
+      text-align: right;
+    }
+
+    .progress-next strong { color: var(--ice); }
+
+    /* TIER LADDER */
+    .tier-ladder {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .tier-ladder-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .tier-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .tier-row.current {
+      background: var(--ice-dim);
+      border: 1px solid rgba(168,198,232,0.2);
+    }
+
+    .tier-row-name { font-size: 13px; color: var(--white); }
+    .tier-row-rate { font-size: 13px; color: var(--ice); font-weight: 600; }
+    .tier-row-pts { font-size: 11px; color: var(--grey); }
+    .tier-current-badge {
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--ice);
+      background: rgba(168,198,232,0.15);
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    /* SESSIONS TAB */
+    .sessions-empty {
+      text-align: center;
+      padding: 60px 24px;
+    }
+
+    .sessions-empty-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .sessions-empty-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .sessions-empty-sub {
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.6;
+    }
+
+    /* SESSION CODE ENTRY */
+    .code-entry-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      text-align: center;
+    }
+
+    .code-entry-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .code-entry-sub {
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .code-input {
+      width: 100%;
+      background: var(--navy);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--ice);
+      font-family: 'Inter', sans-serif;
+      text-align: center;
+      letter-spacing: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 16px;
+    }
+
+    .code-input:focus { border-color: var(--ice); }
+
+    /* PRE-JOIN SCREEN */
+    .prejoin-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 16px;
+    }
+
+    .prejoin-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .prejoin-sub {
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .warning-box {
+      background: rgba(200,162,74,0.1);
+      border: 1px solid rgba(200,162,74,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .warning-box p {
+      font-size: 13px;
+      color: var(--amber);
+      line-height: 1.6;
+    }
+
+    .confirm-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .confirm-check input {
+      accent-color: var(--ice);
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .confirm-check span {
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.5;
+    }
+
+    /* LIVE SESSION */
+    .live-header {
+      background: rgba(74,222,128,0.08);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .live-text {
+      font-size: 13px;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .live-sub {
+      font-size: 12px;
+      color: var(--grey);
+      margin-left: auto;
+    }
+
+    .waiting-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 28px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .waiting-title {
+      font-size: 15px;
+      color: var(--white);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .waiting-sub {
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.6;
+    }
+
+    /* SHIFT POST */
+    .shift-post-card {
+      background: var(--navy-mid);
+      border: 2px solid var(--ice);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shift-post-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .shift-post-venue {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .shift-post-detail {
+      font-size: 13px;
+      color: var(--grey);
+      margin-bottom: 16px;
+    }
+
+    .shift-timer {
+      font-size: 13px;
+      color: var(--amber);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .shift-disclaimer {
+      font-size: 11px;
+      color: var(--grey);
+      margin-bottom: 20px;
+      line-height: 1.5;
+      font-style: italic;
+    }
+
+    .shift-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .available-btn {
+      flex: 2;
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .available-btn:hover { opacity: 0.9; }
+
+    .pass-btn {
+      flex: 1;
+      background: none;
+      color: var(--grey);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pass-btn:hover { border-color: var(--ice); color: var(--ice); }
+
+    /* DISPATCHED */
+    .dispatched-card {
+      background: rgba(74,222,128,0.06);
+      border: 2px solid rgba(74,222,128,0.3);
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .dispatched-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 12px;
+    }
+
+    .dispatched-venue {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .dispatched-address {
+      font-size: 14px;
+      color: var(--grey);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .maps-btn {
+      display: inline-block;
+      background: var(--ice);
+      color: var(--navy);
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* SHIFT FILLED */
+    .filled-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 13px;
+      color: var(--grey);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* SECTION HEADING */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* HISTORY */
+    .history-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-row:last-child { border-bottom: none; }
+
+    .history-date { font-size: 13px; color: var(--white); }
+    .history-zone { font-size: 11px; color: var(--grey); margin-top: 2px; }
+    .history-pts { font-size: 13px; color: var(--ice); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="wordmark-wrap">
+        <span class="wordmark">GLASI</span>
+      </div>
+      <div class="login-title">Worker Portal</div>
+      <div class="login-sub">Sign in with your registered email and password</div>
+
+      <label class="field-label">Email</label>
+      <input type="email" id="login-email" class="field" placeholder="you@example.com">
+
+      <label class="field-label">Password</label>
+      <input type="password" id="login-password" class="field" placeholder="Your password">
+
+      <button class="primary-btn" onclick="handleLogin()">Sign In</button>
+      <span class="forgot-link" onclick="handleForgot()">Forgot password?</span>
+      <div class="error-msg" id="login-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PORTAL SCREEN -->
+<div id="screen-portal" class="screen">
+
+  <div class="portal-header">
+    <span class="portal-wordmark">GLASI</span>
+    <div class="portal-nav">
+      <button class="portal-nav-btn active" id="nav-profile" onclick="showTab('profile')">Profile</button>
+      <button class="portal-nav-btn" id="nav-sessions" onclick="showTab('sessions')">Sessions</button>
+    </div>
+    <button class="sign-out-btn" onclick="handleSignOut()">Sign out</button>
+  </div>
+
+  <div class="portal-content">
+
+    <!-- PROFILE TAB -->
+    <div id="tab-profile">
+
+      <div class="profile-header">
+        <div class="profile-name" id="profile-name">Fran Leach</div>
+        <div class="profile-tier" id="profile-tier">Tier 1 · New</div>
+        <div style="font-size:13px;color:var(--grey);margin-bottom:8px;" id="profile-rate">Current rate: £12.71/hr</div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-value" id="profile-points">110</div>
+            <div class="stat-label">Total Points</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="profile-shifts">1</div>
+            <div class="stat-label">Shifts</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="profile-reliability">65%</div>
+            <div class="stat-label">Reliability</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="section-label">Tier Progress</div>
+        <div class="progress-label">
+          <span id="progress-tier-current">Tier 1</span>
+          <span id="progress-tier-next">Tier 2</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-bar" style="width:55%;"></div>
+        </div>
+        <div class="progress-next">
+          <strong id="progress-pts-to-next">90 points</strong> to next tier
+        </div>
+      </div>
+
+      <div class="tier-ladder">
+        <div class="tier-ladder-title">All Tiers</div>
+        <div class="tier-row current">
+          <div>
+            <div class="tier-row-name">Tier 1</div>
+            <div class="tier-row-pts">0 points</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="tier-current-badge">Current</span>
+            <span class="tier-row-rate">£12.71/hr</span>
+          </div>
+        </div>
+        <div class="tier-row">
+          <div>
+            <div class="tier-row-name">Tier 2</div>
+            <div class="tier-row-pts">200 points</div>
+          </div>
+          <span class="tier-row-rate">£13.71/hr</span>
+        </div>
+        <div class="tier-row">
+          <div>
+            <div class="tier-row-name">Tier 3</div>
+            <div class="tier-row-pts">650 points</div>
+          </div>
+          <span class="tier-row-rate">£14.71/hr</span>
+        </div>
+        <div class="tier-row">
+          <div>
+            <div class="tier-row-name">Tier 4</div>
+            <div class="tier-row-pts">1,500 points</div>
+          </div>
+          <span class="tier-row-rate">£15.71/hr</span>
+        </div>
+        <div class="tier-row">
+          <div>
+            <div class="tier-row-name">Tier 5</div>
+            <div class="tier-row-pts">3,500 points</div>
+          </div>
+          <span class="tier-row-rate">£16.71/hr</span>
+        </div>
+      </div>
+
+      <div class="tier-ladder">
+        <div class="tier-ladder-title">Session History</div>
+        <div id="profile-history">
+          <div class="history-row">
+            <div>
+              <div class="history-date">Mon 27 Apr 2026</div>
+              <div class="history-zone">Southampton City Centre</div>
+            </div>
+            <div class="history-pts">+110 pts</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SESSIONS TAB -->
+    <div id="tab-sessions" style="display:none;">
+
+      <!-- STATE: No active session -->
+      <div id="sessions-empty" class="sessions-empty">
+        <div class="sessions-empty-icon">🕐</div>
+        <div class="sessions-empty-title">No active session right now</div>
+        <div class="sessions-empty-sub">You will receive an email when a session is running in your area. Sessions run on Friday and Saturday evenings.</div>
+      </div>
+
+      <!-- STATE: Code entry -->
+      <div id="sessions-code-entry" style="display:none;">
+        <div class="code-entry-card">
+          <div class="code-entry-title">Session Live in Your Area</div>
+          <div class="code-entry-sub">Enter the 6-digit session code from your email to join tonight's session.</div>
+          <input type="text" id="session-code-input" class="code-input" maxlength="6" placeholder="000000" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          <button class="primary-btn" onclick="handleCodeEntry()">Enter Session</button>
+          <div class="error-msg" id="code-error"></div>
+        </div>
+      </div>
+
+      <!-- STATE: Pre-join confirmation -->
+      <div id="sessions-prejoin" style="display:none;">
+        <div class="prejoin-card">
+          <div class="prejoin-title">Before You Join</div>
+          <div class="prejoin-sub">Please read the following carefully before joining tonight's session.</div>
+
+          <div class="warning-box">
+            <p>You must not navigate away from this page while the session is open. If you cannot commit to keeping this page open and active, we recommend using a laptop or tablet. If you are using a phone, do not switch apps or lock your screen.</p>
+          </div>
+
+          <div class="section-label" style="margin-bottom:12px;">I confirm that:</div>
+
+          <label class="confirm-check">
+            <input type="checkbox" id="check-available" onchange="checkPreJoin()">
+            <span>I am available and ready to work tonight</span>
+          </label>
+          <label class="confirm-check">
+            <input type="checkbox" id="check-presentable" onchange="checkPreJoin()">
+            <span>I am wearing plain black clothing and am presentable</span>
+          </label>
+          <label class="confirm-check">
+            <input type="checkbox" id="check-leave" onchange="checkPreJoin()">
+            <span>I can leave immediately if assigned a shift</span>
+          </label>
+          <label class="confirm-check">
+            <input type="checkbox" id="check-identity" onchange="checkPreJoin()">
+            <span>I am <strong id="prejoin-worker-name">Fran Leach</strong>, the registered Glasi worker. I understand that allowing another person to use my login or attend a shift in my place is false representation under the Fraud Act 2006.</span>
+          </label>
+
+          <button class="primary-btn" id="join-session-btn" disabled style="opacity:0.4;" onclick="handleJoinSession()">Join Session</button>
+        </div>
+      </div>
+
+      <!-- STATE: Live session waiting -->
+      <div id="sessions-live" style="display:none;">
+
+        <div class="live-header">
+          <div class="live-dot"></div>
+          <span class="live-text">Session Live</span>
+          <span class="live-sub" id="live-zone">Southampton City Centre</span>
+        </div>
+
+        <!-- Waiting for shift -->
+        <div id="live-waiting" class="waiting-card">
+          <div class="waiting-title">You are in the session</div>
+          <div class="waiting-sub">Stay on this page. When a shift becomes available it will appear here. Respond as quickly as you can.</div>
+        </div>
+
+        <!-- Shift post (shown when a shift is available) -->
+        <div id="live-shift-post" style="display:none;">
+          <div class="shift-post-card">
+            <div class="shift-post-label">Shift Available</div>
+            <div class="shift-post-venue" id="shift-venue">The Woolhouse</div>
+            <div class="shift-post-detail" id="shift-detail">Dancing Man Brewery · 2 hours</div>
+            <div class="shift-timer" id="shift-timer">Respond within 30 seconds</div>
+            <div class="shift-disclaimer">Responding does not guarantee you will be selected. We will notify you immediately if you are chosen.</div>
+            <div class="shift-buttons">
+              <button class="available-btn" onclick="handleAvailable()">I'm available</button>
+              <button class="pass-btn" onclick="handlePass()">I'll pass</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Responded but not dispatched -->
+        <div id="live-responded" style="display:none;">
+          <div class="filled-card" id="live-responded-msg">Response recorded. Stand by.</div>
+        </div>
+
+        <!-- Shift filled (not selected) -->
+        <div id="live-filled" style="display:none;">
+          <div class="filled-card">Shift filled. Stand by for the next one.</div>
+        </div>
+
+        <!-- Dispatched! -->
+        <div id="live-dispatched" style="display:none;">
+          <div class="dispatched-card">
+            <div class="dispatched-title">You have been selected</div>
+            <div class="dispatched-venue" id="dispatched-venue">The Woolhouse</div>
+            <div class="dispatched-address" id="dispatched-address">1 Bugle Street, Southampton SO14 2AL<br>Ask for Wolf on arrival.</div>
+            <a href="#" id="dispatched-maps" class="maps-btn">Open in Maps</a>
+          </div>
+          <div class="warning-box" style="margin-top:12px;">
+            <p>Leave now and head straight to the venue. You will receive the venue details on WhatsApp. Share your live location with Sam and reply when you arrive.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://hweytbyrqvjsviydmacv.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3ZXl0YnlycXZqc3ZpeWRtYWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Njg1MTUsImV4cCI6MjA4OTQ0NDUxNX0.lVT4oSC10l6fX6l89lop3UseGclQmBThWPBqkAlQaSo";
+
+  const H = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+  };
+
+  // -- DEMO STATE (replace with real auth later) --
+  let currentWorker = null;
+  let currentSessionInvite = null;
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+  }
+
+  function showTab(tab) {
+    document.getElementById('tab-profile').style.display = tab === 'profile' ? 'block' : 'none';
+    document.getElementById('tab-sessions').style.display = tab === 'sessions' ? 'block' : 'none';
+    document.getElementById('nav-profile').classList.toggle('active', tab === 'profile');
+    document.getElementById('nav-sessions').classList.toggle('active', tab === 'sessions');
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+    const errorEl = document.getElementById('login-error');
+    errorEl.textContent = '';
+
+    if(!email || !password) { errorEl.textContent = 'Please enter your email and password.'; return; }
+
+    // For now -- check applications table directly
+    // Later this will use Supabase Auth
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score', { headers: H }).then(r => r.json());
+
+    if(!rows || !rows.length) {
+      errorEl.textContent = 'No account found. Please check your email or contact hello@glasi.co.uk.';
+      return;
+    }
+
+    // Temporary password check -- remove when Supabase Auth is wired up
+    if(password !== 'glasi2026') {
+      errorEl.textContent = 'Incorrect password.';
+      return;
+    }
+
+    currentWorker = rows[0];
+    loadPortal();
+    showScreen('portal');
+  }
+
+  function handleForgot() {
+    alert('Please email hello@glasi.co.uk to reset your password.');
+  }
+
+  function handleSignOut() {
+    currentWorker = null;
+    currentSessionInvite = null;
+    showScreen('login');
+    resetSessionStates();
+  }
+
+  function loadPortal() {
+    if(!currentWorker) return;
+    const w = currentWorker;
+
+    const TIER_THRESHOLDS = [0, 200, 650, 1500, 3500];
+    const TIER_RATES = [12.71, 13.71, 14.71, 15.71, 16.71];
+    const TIER_NAMES = ['New', 'Reliable', 'Trusted', 'Elite', 'Elite+'];
+
+    const pts = parseInt(w.total_points) || 0;
+    const tier = w.tier || 1;
+    const rate = TIER_RATES[tier - 1];
+
+    document.getElementById('profile-name').textContent = w.name;
+    document.getElementById('profile-tier').textContent = 'Tier ' + tier + ' · ' + TIER_NAMES[tier - 1];
+    document.getElementById('profile-rate').textContent = 'Current rate: £' + rate.toFixed(2) + '/hr';
+    document.getElementById('profile-points').textContent = pts;
+    document.getElementById('profile-reliability').textContent = w.reliability_score ? Math.round(w.reliability_score) + '%' : 'N/A';
+    document.getElementById('prejoin-worker-name').textContent = w.name;
+
+    // Progress bar
+    const prevThreshold = TIER_THRESHOLDS[tier - 1] || 0;
+    const nextThreshold = TIER_THRESHOLDS[tier] || null;
+    if(nextThreshold) {
+      const progress = Math.min(100, Math.round(((pts - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
+      document.getElementById('progress-bar').style.width = progress + '%';
+      document.getElementById('progress-tier-current').textContent = 'Tier ' + tier;
+      document.getElementById('progress-tier-next').textContent = 'Tier ' + (tier + 1);
+      document.getElementById('progress-pts-to-next').textContent = (nextThreshold - pts) + ' points';
+    } else {
+      document.getElementById('progress-bar').style.width = '100%';
+      document.getElementById('progress-pts-to-next').textContent = 'Max tier reached';
+    }
+
+    // Highlight current tier in ladder
+    document.querySelectorAll('.tier-row').forEach((row, i) => {
+      row.classList.toggle('current', i + 1 === tier);
+      const badge = row.querySelector('.tier-current-badge');
+      if(badge) badge.style.display = i + 1 === tier ? 'inline-block' : 'none';
+    });
+
+    // Load session history
+    loadSessionHistory();
+
+    // Check for live session
+    checkForLiveSession();
+  }
+
+  async function loadSessionHistory() {
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=points_earned,sessions(session_date,zones(name))&order=id.desc&limit=10', { headers: H }).then(r => r.json());
+    const historyEl = document.getElementById('profile-history');
+    if(!rows || !rows.length) {
+      historyEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No sessions yet.</div>';
+      return;
+    }
+    historyEl.innerHTML = rows.map(r => {
+      const date = r.sessions?.session_date ? new Date(r.sessions.session_date).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Unknown';
+      const zone = r.sessions?.zones?.name || '';
+      return `<div class="history-row">
+        <div>
+          <div class="history-date">${date}</div>
+          <div class="history-zone">${zone}</div>
+        </div>
+        <div class="history-pts">+${r.points_earned || 0} pts</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function checkForLiveSession() {
+    if(!currentWorker) return;
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_invites?application_id=eq.' + currentWorker.id + '&select=id,session_code,session_id,sessions(status,zone_id,zones(name),scheduled_start)', { headers: H }).then(r => r.json());
+    const liveInvite = rows ? rows.find(r => r.sessions?.status === 'live') : null;
+    if(liveInvite) {
+      // Show code entry if not yet joined
+      document.getElementById('sessions-empty').style.display = 'none';
+      document.getElementById('sessions-code-entry').style.display = 'block';
+    }
+  }
+
+  async function handleCodeEntry() {
+    const code = document.getElementById('session-code-input').value.trim();
+    const errorEl = document.getElementById('code-error');
+    errorEl.textContent = '';
+
+    if(code.length !== 6) { errorEl.textContent = 'Please enter your 6-digit session code.'; return; }
+
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_invites?session_code=eq.' + code + '&application_id=eq.' + currentWorker.id + '&select=id,session_id,sessions(status,zones(name))', { headers: H }).then(r => r.json());
+
+    if(!rows || !rows.length) {
+      errorEl.textContent = 'Code not recognised. Please check your email and try again.';
+      return;
+    }
+
+    const invite = rows[0];
+    if(invite.sessions?.status !== 'live') {
+      errorEl.textContent = 'This session is not live yet. Please try again at the session start time.';
+      return;
+    }
+
+    currentSessionInvite = invite;
+    document.getElementById('live-zone').textContent = invite.sessions?.zones?.name || '';
+    document.getElementById('sessions-code-entry').style.display = 'none';
+    document.getElementById('sessions-prejoin').style.display = 'block';
+  }
+
+  function checkPreJoin() {
+    const allChecked = ['check-available','check-presentable','check-leave','check-identity'].every(id => document.getElementById(id).checked);
+    const btn = document.getElementById('join-session-btn');
+    btn.disabled = !allChecked;
+    btn.style.opacity = allChecked ? '1' : '0.4';
+  }
+
+  async function handleJoinSession() {
+    if(!currentSessionInvite) return;
+    // Write joined_at to session_invites
+    await fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
+      method: 'PATCH',
+      headers: { ...H, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ joined_at: new Date().toISOString() })
+    });
+    document.getElementById('sessions-prejoin').style.display = 'none';
+    document.getElementById('sessions-live').style.display = 'block';
+    // Start real-time subscription (placeholder for now)
+    startLiveSession();
+  }
+
+  function startLiveSession() {
+    // Real-time subscription to shift_requests will go here
+    // For now just show the waiting state
+    document.getElementById('live-waiting').style.display = 'block';
+  }
+
+  function handleAvailable() {
+    document.getElementById('live-shift-post').style.display = 'none';
+    document.getElementById('live-responded').style.display = 'block';
+    document.getElementById('live-responded-msg').textContent = 'Response recorded. Stand by while we select.';
+  }
+
+  function handlePass() {
+    document.getElementById('live-shift-post').style.display = 'none';
+    document.getElementById('live-responded').style.display = 'block';
+    document.getElementById('live-responded-msg').textContent = 'No problem. Stand by for the next shift post.';
+  }
+
+  function resetSessionStates() {
+    ['sessions-empty','sessions-code-entry','sessions-prejoin','sessions-live'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = id === 'sessions-empty' ? 'block' : 'none';
+    });
+    ['check-available','check-presentable','check-leave','check-identity'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.checked = false;
+    });
+  }
+
+  // Demo: show shift post (remove when real-time is wired up)
+  window.demoShiftPost = function() {
+    document.getElementById('live-waiting').style.display = 'none';
+    document.getElementById('live-responded').style.display = 'none';
+    document.getElementById('live-filled').style.display = 'none';
+    document.getElementById('live-shift-post').style.display = 'block';
+  };
+
+  window.demoDispatched = function() {
+    document.getElementById('live-shift-post').style.display = 'none';
+    document.getElementById('live-responded').style.display = 'none';
+    document.getElementById('live-dispatched').style.display = 'block';
+  };
+</script>
+
+</body>
+</html>
