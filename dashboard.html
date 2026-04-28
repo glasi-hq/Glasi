@@ -2702,7 +2702,7 @@ async function handleNewShiftResponse(record) {
   }
 
   // Also reload the worker grid to reflect latest statuses
-  await loadSessionWorkers();
+  await loadLiveSessionWorkers(activeSessionId);
   renderRoom();
 }
 
