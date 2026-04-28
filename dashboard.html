@@ -3949,34 +3949,21 @@ function startResponseWindow(requestId) {
   responseWindowSeconds = 60;
   if(responseWindowInterval) clearInterval(responseWindowInterval);
 
-  // Show window timer in response feed section
+  // Response window is now shown on the request card itself
+  // Just show the response feed section for incoming responses
   const feedSection = document.getElementById('response-feed-section');
-  const feed = document.getElementById('response-feed');
   if(feedSection) feedSection.style.display = 'block';
-  if(feed) {
-    const timerEl = document.createElement('div');
-    timerEl.id = 'response-window-timer';
-    timerEl.style.cssText = 'padding:12px 16px;background:rgba(200,162,74,0.1);border:1px solid rgba(200,162,74,0.3);border-radius:8px;font-size:13px;color:var(--amber);font-weight:600;text-align:center;';
-    timerEl.textContent = 'Response window open -- 60 seconds remaining';
-    feed.insertBefore(timerEl, feed.firstChild);
-  }
+}
 
-  responseWindowInterval = setInterval(() => {
-    responseWindowSeconds--;
-    const timerEl = document.getElementById('response-window-timer');
-    if(timerEl) {
-      if(responseWindowSeconds > 0) {
-        timerEl.textContent = 'Response window open -- ' + responseWindowSeconds + ' seconds remaining';
-      } else {
-        timerEl.textContent = 'Response window closed';
-        timerEl.style.background = 'rgba(107,114,128,0.1)';
-        timerEl.style.borderColor = 'rgba(107,114,128,0.3)';
-        timerEl.style.color = 'var(--grey)';
-        clearInterval(responseWindowInterval);
-      }
-    }
-    if(responseWindowSeconds <= 0) clearInterval(responseWindowInterval);
-  }, 1000);
+function removeRequest(requestId) {
+  if(!confirm('Remove this request? This cannot be undone.')) return;
+  // Update status to cancelled in DB
+  sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'cancelled' });
+  // Remove from active requests
+  activeShiftRequests = activeShiftRequests.filter(r => r.id !== requestId);
+  if(selectedRequestId === requestId) selectedRequestId = null;
+  renderRequestCards();
+  renderRoom();
 }
 
 function openAddNotes(requestId) {
@@ -4020,18 +4007,28 @@ function renderRequestCards() {
     if(isDispatched) cardClass += ' dispatched';
     else if(isSelected) cardClass += ' selected';
 
+    const postedAt = r.posted_at ? new Date(r.posted_at) : null;
+    const windowSecs = postedAt ? Math.max(0, 60 - Math.floor((Date.now() - postedAt.getTime()) / 1000)) : null;
+    const windowOpen = windowSecs !== null && windowSecs > 0;
+
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
-      +(isDispatched?'<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-15deg);font-size:28px;font-weight:700;letter-spacing:6px;color:rgba(255,255,255,0.06);pointer-events:none;white-space:nowrap;font-family:\'Raleway\',sans-serif;">DISPATCHED</div>':'')
+      +(isDispatched?'<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-15deg);font-size:28px;font-weight:700;letter-spacing:6px;color:rgba(255,255,255,0.06);pointer-events:none;white-space:nowrap;">DISPATCHED</div>':'')
       +'<div class="req-card-top">'
       +'<div class="req-card-bar">'+barName+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +(windowSecs !== null ? '<div id="rwindow-'+r.id+'" style="font-size:13px;font-weight:700;color:'+(windowOpen?'var(--amber)':'var(--grey)')+';">'+(windowOpen ? windowSecs+'s' : 'Closed')+'</div>' : '')
       +'<div class="req-card-timer'+(urgent?' urgent':'')+'" id="rtimer-'+r.id+'">'+timerStr+'</div>'
+      +'</div>'
       +'</div>'
       +(r.raw_message?'<div class="req-card-message" style="font-size:12px;color:var(--grey);margin:6px 0;line-height:1.5;">'+r.raw_message+'</div>':'')
       +'<div class="req-card-meta">'
       +'<span>'+parseFloat(r.shift_length_hours||0)+'hr shift</span>'
       +'<span class="status-badge badge-'+(r.status||'pending')+'">'+(r.status||'pending')+'</span>'
       +'</div>'
-      +(!isDispatched?'<button onclick="event.stopPropagation();openAddNotes('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-top:8px;font-family:Inter,sans-serif;">'+(r.raw_message?'Edit Notes':'+ Add Notes')+'</button>':'')
+      +(!isDispatched?'<div style="display:flex;gap:6px;margin-top:8px;">'
+        +'<button onclick="event.stopPropagation();openAddNotes('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;flex:1;">'+(r.raw_message?'Edit Notes':'+ Add Notes')+'</button>'
+        +'<button onclick="event.stopPropagation();removeRequest('+r.id+')" style="background:none;border:1px solid rgba(248,113,113,0.3);color:var(--red);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Remove</button>'
+        +'</div>':'')
       +'</div>';
   }).join('');
 
@@ -4047,6 +4044,21 @@ function renderRequestCards() {
       const secs = totalSecs % 60;
       el.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
       if(mins >= 5) el.className = 'req-card-timer urgent';
+
+      // Update response window countdown
+      const windowEl = document.getElementById('rwindow-'+r.id);
+      if(windowEl && r.posted_at) {
+        const postedAt = new Date(r.posted_at);
+        const windowSecs = Math.max(0, 60 - Math.floor((Date.now() - postedAt.getTime()) / 1000));
+        if(windowSecs > 0) {
+          windowEl.textContent = windowSecs + 's';
+          windowEl.style.color = windowSecs <= 10 ? 'var(--red)' : 'var(--amber)';
+        } else {
+          windowEl.textContent = 'Window closed';
+          windowEl.style.color = 'var(--grey)';
+          windowEl.style.fontWeight = '400';
+        }
+      }
     });
   }, 1000);
 }
