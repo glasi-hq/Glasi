@@ -1400,13 +1400,33 @@
     document.getElementById('live-responded-msg').textContent = 'No problem. Stand by for the next shift post.';
   }
 
-  function showDispatched(swRecord) {
+  async function showDispatched(swRecord) {
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-waiting').style.display = 'none';
     document.getElementById('live-responded').style.display = 'none';
     document.getElementById('live-filled').style.display = 'none';
     document.getElementById('live-dispatched').style.display = 'block';
     stopRealtime();
+
+    // Fetch bar details
+    try {
+      if(swRecord.bar_id) {
+        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + swRecord.bar_id + '&select=name,address,google_maps_link', { headers: H }).then(r => r.json());
+        const bar = barRows?.[0];
+        if(bar) {
+          document.getElementById('dispatched-venue').textContent = bar.name || '';
+          document.getElementById('dispatched-address').textContent = bar.address || '';
+          const mapsBtn = document.getElementById('dispatched-maps');
+          if(mapsBtn && bar.google_maps_link) {
+            mapsBtn.href = bar.google_maps_link;
+            mapsBtn.style.display = 'inline-block';
+          } else if(mapsBtn) {
+            mapsBtn.style.display = 'none';
+          }
+        }
+      }
+    } catch(e) {}
+
     // Write left_at automatically for dispatched worker
     if(currentSessionInvite) {
       fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
