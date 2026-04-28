@@ -493,6 +493,18 @@
   </div>
 </div>
 
+<!-- SESSION CODES OVERLAY -->
+<div id="ov-session-codes" class="overlay">
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">Send Session Codes</div>
+    <div class="modal-sub">Send each confirmed worker their unique session code. Keep this page open while you send each one.</div>
+    <div id="session-codes-list" style="margin:16px 0;"></div>
+    <div class="modal-actions">
+      <button id="codes-done-btn" class="confirm-btn" disabled style="opacity:0.4;" onclick="closeOv('session-codes');loadSessionsList();">Done (tick all sent first)</button>
+    </div>
+  </div>
+</div>
+
 <!-- INVITE WORKERS OVERLAY -->
 <div id="ov-invite-workers" class="overlay">
   <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
@@ -4855,6 +4867,7 @@ async function loadSessionsList() {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="small-ice-btn" onclick="openInviteWorkers(${s.id})">Invite Workers</button>
+          <button class="small-ice-btn" onclick="sendSessionCodes(${s.id})">Send Session Codes</button>
           <button class="small-ice-btn" onclick="goLiveSession(${s.id})">Go Live</button>
           <button style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;" onclick="cancelScheduledSession(${s.id})">Cancel</button>
         </div>
@@ -4935,6 +4948,114 @@ async function cancelScheduledSession(sessionId) {
   if(!confirm('Cancel this session? This cannot be undone.')) return;
   await sbPatch('sessions', '?id=eq.'+sessionId, { status: 'closed', end_time: new Date().toLocaleTimeString('en-GB', {hour12:false}) });
   await loadSessionsList();
+}
+
+async function sendSessionCodes(sessionId) {
+  const listEl = document.getElementById('session-codes-list');
+  listEl.innerHTML = '<div class="empty">Loading confirmed workers...</div>';
+  openOv('session-codes');
+
+  // Get session details
+  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=session_date,scheduled_start,start_time,zone_id,zones(name)');
+  const session = sessions[0];
+  if(!session) return;
+
+  const dateStr = session.scheduled_start
+    ? new Date(session.scheduled_start).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long'})
+    : (session.session_date ? new Date(session.session_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long'}) : 'TBC');
+  const timeStr = session.scheduled_start
+    ? new Date(session.scheduled_start).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
+    : (session.start_time ? session.start_time.slice(0,5) : '');
+  const zoneName = session.zones ? session.zones.name : '';
+
+  // Get confirmed workers only
+  const invites = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&attendance_confirmed=eq.confirmed&select=application_id,session_code,applications(name,email)');
+
+  if(!invites.length) {
+    listEl.innerHTML = '<div class="empty">No confirmed workers yet. Workers need to confirm attendance first.</div>';
+    const doneBtn = document.getElementById('codes-done-btn');
+    doneBtn.disabled = false;
+    doneBtn.style.opacity = '1';
+    doneBtn.textContent = 'Close';
+    return;
+  }
+
+  const total = invites.length;
+
+  function checkAllCodesSent() {
+    const ticked = document.querySelectorAll('input[name="code-sent"]:checked').length;
+    const doneBtn = document.getElementById('codes-done-btn');
+    if(ticked >= total) {
+      doneBtn.disabled = false;
+      doneBtn.style.opacity = '1';
+      doneBtn.textContent = 'Done';
+    }
+  }
+
+  // Build email per confirmed worker
+  window._codeEmails = invites.map(inv => {
+    const name = inv.applications?.name || 'Worker';
+    const email = inv.applications?.email || '';
+    const code = inv.session_code;
+    const firstName = name.split(' ')[0];
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body>
+<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
+<div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
+<div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;">
+<span style="font-size:20px;letter-spacing:8px;color:#a8c6e8;">GLASI</span>
+</div>
+</div>
+<div style="background:#ffffff;padding:28px 32px;">
+<p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${firstName},</p>
+<p style="margin:0 0 20px;font-size:15px;color:#374151;">Your session is live tonight at <strong>${timeStr}</strong>. Here is your session code.</p>
+<div style="background:#0d1117;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+<div style="font-size:11px;letter-spacing:3px;color:#a8c6e8;margin-bottom:8px;">YOUR SESSION CODE</div>
+<div style="font-size:36px;font-weight:700;letter-spacing:12px;color:#a8c6e8;">${code}</div>
+</div>
+<p style="margin:0 0 12px;font-size:14px;color:#374151;">Log in at <strong>glasi.co.uk/portal</strong> at <strong>${timeStr}</strong> and enter this code in the Sessions tab.</p>
+<p style="margin:0 0 20px;font-size:13px;color:#6b7280;">Once you join the session, stay on the page. Do not navigate away. If you are not using a laptop, we recommend keeping this tab open on your phone and not switching apps.</p>
+<a href="https://glasi.co.uk/portal" style="display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:16px;">Log in to Glasi Portal</a>
+</div>
+<div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
+<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
+</div>
+</div>
+<p style="margin-top:24px;font-family:Arial,sans-serif;font-size:12px;color:#999;text-align:center;">Select all (Ctrl+A), Copy (Ctrl+C), then paste into Gmail</p>
+</body></html>`;
+
+    return { name, email, code, html };
+  });
+
+  listEl.innerHTML = window._codeEmails.map((w, i) => `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--white);">${w.name}</div>
+          <div style="font-size:11px;color:var(--grey);margin-top:2px;">${w.email}</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" name="code-sent" onchange="checkAllCodesSent()" style="accent-color:var(--ice);width:18px;height:18px;">
+          <span style="font-size:11px;color:var(--grey);">Sent</span>
+        </label>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;text-align:center;">
+        <div style="font-size:11px;letter-spacing:2px;color:var(--grey);margin-bottom:6px;">SESSION CODE</div>
+        <div style="font-size:24px;font-weight:700;letter-spacing:8px;color:var(--ice);">${w.code}</div>
+      </div>
+      <button onclick="openCodeEmail(${i})" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Open Email to Copy and Paste</button>
+    </div>
+  `).join('');
+}
+
+function openCodeEmail(index) {
+  const invite = window._codeEmails[index];
+  if(!invite) return;
+  const win = window.open('', '_blank');
+  if(win) {
+    win.document.write(invite.html);
+    win.document.close();
+  }
 }
 
 async function openInviteWorkers(sessionId) {
