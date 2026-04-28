@@ -820,7 +820,7 @@
   <div class="modal">
     <div class="modal-title">Request Received</div>
     <div class="modal-sub" id="req-timestamp"></div>
-    <label>Confirm Venue</label>
+    <label>Venue</label>
     <select class="field" id="req-venue"></select>
     <label>Shift Length</label>
     <select class="field" id="req-shift-length">
@@ -834,8 +834,6 @@
     </select>
     <label>Time of Request</label>
     <input class="field" type="time" id="req-time" />
-    <label style="color:var(--grey);">Message from Bar Manager (optional, for records)</label>
-    <textarea class="field" id="req-raw-message" rows="3" placeholder="Paste the message from the bar manager for your records..."></textarea>
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('request')">Cancel</button>
       <button class="confirm-btn" onclick="saveShiftRequest()">Post to Session</button>
@@ -3867,27 +3865,18 @@ let requestTimerInterval = null;
 
 function openRequestReceived() {
   currentRequestId = null;
-  zoomPostCopied = false;
-  document.getElementById('req-raw-message').value = '';
   document.getElementById('req-time').value = nowT();
-  document.getElementById('req-zoom-post').textContent = '';
-  document.getElementById('req-timestamp').textContent = `Received at ${nowT()}`;
+  document.getElementById('req-timestamp').textContent = 'Received at ' + nowT();
 
-  // populate venue dropdown from bars in this zone
-  const zoneBars = bars.filter(b => String(b.zone_id) === String(activeZone.dbId) && (b.status === 'active' || b.status === 'trial'));
+  // populate venue dropdown -- bars in this zone only
+  const zoneBars = bars.filter(b => String(b.zone_id) === String(activeZone?.dbId) && (b.status === 'active' || b.status === 'trial'));
   const venueSelect = document.getElementById('req-venue');
   if(zoneBars.length) {
-    venueSelect.innerHTML = zoneBars.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+    venueSelect.innerHTML = zoneBars.map(b => '<option value="'+b.id+'">'+b.name+'</option>').join('');
   } else {
     venueSelect.innerHTML = '<option value="">No active bars in this zone</option>';
   }
 
-  // auto-build zoom post when fields change
-  ['req-venue','req-shift-length'].forEach(id => {
-    document.getElementById(id).oninput = buildZoomPost;
-  });
-
-  buildZoomPost();
   openOv('request');
 }
 
@@ -3923,8 +3912,6 @@ async function saveShiftRequest() {
   const barId = venueEl.value;
   const requestTime = document.getElementById('req-time').value;
   const shiftLength = document.getElementById('req-shift-length').value;
-  const rawMessage = document.getElementById('req-raw-message').value.trim();
-
   if(!barId || !requestTime) {
     alert('Please select a venue and confirm the request time.');
     return;
@@ -3933,7 +3920,7 @@ async function saveShiftRequest() {
   const result = await sbPost('shift_requests', {
     session_id: activeSessionId,
     bar_id: parseInt(barId),
-    raw_message: rawMessage || null,
+    raw_message: null,
     request_time: toISO(requestTime),
     posted_at: new Date().toISOString(),
     shift_length_hours: parseFloat(shiftLength),
@@ -3992,6 +3979,16 @@ function startResponseWindow(requestId) {
   }, 1000);
 }
 
+function openAddNotes(requestId) {
+  const r = activeShiftRequests.find(x => x.id === requestId);
+  if(!r) return;
+  const notes = prompt('Add notes for this request (bar manager message, context etc):', r.raw_message || '');
+  if(notes === null) return; // cancelled
+  r.raw_message = notes;
+  sbPatch('shift_requests', '?id=eq.'+requestId, { raw_message: notes });
+  renderRequestCards();
+}
+
 function renderRequestCards() {
   const empty = document.getElementById('req-empty-state');
   const container = document.getElementById('request-cards-container');
@@ -4029,12 +4026,12 @@ function renderRequestCards() {
       +'<div class="req-card-bar">'+barName+'</div>'
       +'<div class="req-card-timer'+(urgent?' urgent':'')+'" id="rtimer-'+r.id+'">'+timerStr+'</div>'
       +'</div>'
-      +'<div class="req-card-message">'+r.raw_message+'</div>'
+      +(r.raw_message?'<div class="req-card-message" style="font-size:12px;color:var(--grey);margin:6px 0;line-height:1.5;">'+r.raw_message+'</div>':'')
       +'<div class="req-card-meta">'
       +'<span>'+parseFloat(r.shift_length_hours||0)+'hr shift</span>'
-      +(r.posted_at?'<span class="req-card-posted">Posted to Zoom</span>':'<span>Not posted</span>')
       +'<span class="status-badge badge-'+(r.status||'pending')+'">'+(r.status||'pending')+'</span>'
       +'</div>'
+      +(!isDispatched?'<button onclick="event.stopPropagation();openAddNotes('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-top:8px;font-family:'Inter',sans-serif;">'+(r.raw_message?'Edit Notes':'+ Add Notes')+'</button>':'')
       +'</div>';
   }).join('');
 
