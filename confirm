@@ -186,7 +186,7 @@
       // Check if already confirmed
       if (invite.attendance_confirmed !== 'pending') {
         const already = invite.attendance_confirmed === 'confirmed' ? 'attending' : 'unable to attend';
-        showResult('', 'status-error', 'ALREADY RESPONDED', `You have already confirmed that you are ${already} tonight. No further action needed.`);
+        showResult('', 'status-error', 'ALREADY RESPONDED', `You have already confirmed your response for this session. No further action needed.`);
         return;
       }
 
@@ -205,10 +205,21 @@
 
       const workerName = invite.applications?.name || 'there';
 
+      // Get session date
+      let sessionDateStr = 'the upcoming session';
+      try {
+        const sessionRows = await sbGet('sessions', '?id=eq.' + invite.session_id + '&select=session_date,scheduled_start');
+        if (sessionRows && sessionRows[0]) {
+          const s = sessionRows[0];
+          const d = s.scheduled_start ? new Date(s.scheduled_start) : (s.session_date ? new Date(s.session_date + 'T00:00:00') : null);
+          if (d) sessionDateStr = 'the session on ' + d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+      } catch(e) {}
+
       if (response === 'yes') {
-        showResult('', 'status-confirmed', 'SEE YOU TONIGHT', `Thanks ${workerName}. You are confirmed for tonight\'s session. You will receive a WhatsApp reminder when the session goes live with your session code. Make sure you log in at glasi.co.uk/portal at the session start time and keep the page open.`);
+        showResult('', 'status-confirmed', 'YOU ARE CONFIRMED', `Thanks ${workerName}. You are confirmed for ${sessionDateStr}. You will receive your session code shortly before it goes live. Log in at glasi.co.uk/portal at the session start time and keep the page open.`);
       } else {
-        showResult('', 'status-declined', 'NO PROBLEM', `Thanks for letting us know ${workerName}. We have noted that you cannot make tonight\'s session. We hope to see you at the next one.`);
+        showResult('', 'status-declined', 'NO PROBLEM', `Thanks for letting us know ${workerName}. We have noted that you cannot make ${sessionDateStr}. We hope to see you at the next one.`);
       }
     }
 
