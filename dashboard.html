@@ -2659,7 +2659,7 @@ async function handleNewShiftResponse(record) {
   // Get worker name
   const apps = await sbGet('applications', '?id=eq.'+record.application_id+'&select=name');
   const name = apps[0] ? apps[0].name : 'Unknown';
-  const responseLabel = record.response === 'available' ? 'I'm available' : record.response === 'pass' ? 'I'll pass' : 'No response';
+  const responseLabel = record.response === 'available' ? "I'm available" : record.response === 'pass' ? "I'll pass" : 'No response';
   const responseColor = record.response === 'available' ? 'var(--green)' : record.response === 'pass' ? 'var(--amber)' : 'var(--grey)';
   const secs = record.response_seconds ? record.response_seconds + 's' : '';
 
