@@ -740,13 +740,18 @@
       </div>
       <!-- Available workers -->
       <div id="available-section">
-        <div class="request-section-label" id="workers-label">Available Workers — select to dispatch</div>
+        <div class="request-section-label" id="workers-label">Workers in Session</div>
         <div class="worker-grid" id="worker-grid"></div>
       </div>
       <!-- Invited workers -->
       <div id="invited-section" style="margin-top:24px;">
-        <div class="request-section-label" style="color:var(--amber);">Invited — awaiting Zoom confirmation</div>
+        <div class="request-section-label" style="color:var(--amber);">Invited — awaiting confirmation</div>
         <div class="worker-grid" id="invited-grid"></div>
+      </div>
+      <!-- Live response feed -->
+      <div id="response-feed-section" style="margin-top:24px;display:none;">
+        <div class="request-section-label" style="color:var(--ice);">Live Responses</div>
+        <div id="response-feed" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
       </div>
     </div>
 
@@ -2371,6 +2376,7 @@ async function startSession() {
   }
 
   activeSessionId = sessionData[0].id;
+  startDashboardRealtime(activeSessionId);
 
   // write each worker to session_workers as invited
   for(const w of setupWorkers) {
@@ -2606,6 +2612,85 @@ function updateCounts() {
   document.getElementById('count-onshift').textContent=onshift;
   document.getElementById('count-log').textContent=done||'';
   document.getElementById('count-log').className='tab-count'+(done?' show':'');
+}
+
+// REALTIME
+let dashboardRealtimeWs = null;
+
+function startDashboardRealtime(sessionId) {
+  if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} }
+
+  const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+  dashboardRealtimeWs = new WebSocket(wsUrl);
+
+  dashboardRealtimeWs.onopen = () => {
+    // Subscribe to shift_responses for this session's requests
+    dashboardRealtimeWs.send(JSON.stringify({
+      topic: 'realtime:public:shift_responses',
+      event: 'phx_join',
+      payload: { config: { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'shift_responses' }] } },
+      ref: '1'
+    }));
+    // Subscribe to session_invites for portal joins
+    dashboardRealtimeWs.send(JSON.stringify({
+      topic: 'realtime:public:session_invites:session_id=eq.' + sessionId,
+      event: 'phx_join',
+      payload: { config: { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId }] } },
+      ref: '2'
+    }));
+  };
+
+  dashboardRealtimeWs.onmessage = async (e) => {
+    const msg = JSON.parse(e.data);
+    if(msg.event !== 'postgres_changes') return;
+    const data = msg.payload?.data;
+    if(!data) return;
+
+    if(data.table === 'shift_responses' && data.type === 'INSERT') {
+      await handleNewShiftResponse(data.record);
+    }
+    if(data.table === 'session_invites' && data.type === 'UPDATE' && data.record.joined_at) {
+      await handleWorkerPortalJoin(data.record);
+    }
+  };
+}
+
+async function handleNewShiftResponse(record) {
+  // Get worker name
+  const apps = await sbGet('applications', '?id=eq.'+record.application_id+'&select=name');
+  const name = apps[0] ? apps[0].name : 'Unknown';
+  const responseLabel = record.response === 'available' ? 'I'm available' : record.response === 'pass' ? 'I'll pass' : 'No response';
+  const responseColor = record.response === 'available' ? 'var(--green)' : record.response === 'pass' ? 'var(--amber)' : 'var(--grey)';
+  const secs = record.response_seconds ? record.response_seconds + 's' : '';
+
+  // Show response feed
+  const feedSection = document.getElementById('response-feed-section');
+  const feed = document.getElementById('response-feed');
+  if(feedSection) feedSection.style.display = 'block';
+  if(feed) {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:8px;';
+    item.innerHTML = '<div style="font-size:13px;color:var(--white);font-weight:500;">' + name + '</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+      (secs ? '<span style="font-size:11px;color:var(--grey);">' + secs + '</span>' : '') +
+      '<span style="font-size:12px;font-weight:600;color:' + responseColor + ';">' + responseLabel + '</span>' +
+      '</div>';
+    feed.insertBefore(item, feed.firstChild);
+  }
+
+  // Also reload the worker grid to reflect latest statuses
+  await loadSessionWorkers();
+  renderRoom();
+}
+
+async function handleWorkerPortalJoin(record) {
+  // Worker joined via portal -- reload worker grid
+  await loadSessionWorkers();
+  renderRoom();
+}
+
+function stopDashboardRealtime() {
+  if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} dashboardRealtimeWs = null; }
 }
 
 // ROOM
@@ -4941,6 +5026,8 @@ async function goLiveSession(sessionId) {
     status: 'live',
     start_time: new Date().toLocaleTimeString('en-GB', {hour12:false})
   });
+  activeSessionId = sessionId;
+  startDashboardRealtime(sessionId);
   await loadSessionsList();
 }
 
