@@ -757,33 +757,27 @@
 
       <!-- Hero points display -->
       <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;padding:28px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:12px;font-weight:600;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:4px;" id="profile-tier-label">TIER 1 · NEW</div>
-        <div id="profile-name" style="font-size:22px;font-weight:700;color:var(--white);margin-bottom:20px;">Fran Leach</div>
+        <div style="font-size:12px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;" id="profile-tier-label">TIER 1 &nbsp;·&nbsp; £12.71/hr</div>
+        <div id="profile-name" style="font-size:24px;font-weight:700;color:var(--white);margin-bottom:20px;">Fran Leach</div>
 
-        <!-- Big points number -->
-        <div style="position:relative;display:inline-block;margin-bottom:20px;">
-          <div id="profile-points" style="font-size:72px;font-weight:800;color:var(--ice);line-height:1;letter-spacing:-2px;">110</div>
-          <div style="font-size:12px;font-weight:600;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-top:4px;">TOTAL POINTS</div>
-        </div>
-
-        <!-- Rate highlight -->
-        <div style="background:rgba(168,198,232,0.08);border:1px solid rgba(168,198,232,0.2);border-radius:10px;padding:12px 20px;display:inline-block;margin-bottom:20px;">
-          <div style="font-size:11px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Current Hourly Rate</div>
-          <div id="profile-rate" style="font-size:26px;font-weight:800;color:var(--white);">£12.71<span style="font-size:14px;font-weight:400;color:var(--grey);">/hr</span></div>
+        <!-- Points -->
+        <div style="margin-bottom:24px;">
+          <div id="profile-points" style="font-size:64px;font-weight:800;color:var(--ice);line-height:1;letter-spacing:-2px;">110</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-top:6px;">TOTAL POINTS</div>
         </div>
 
         <!-- Stats row -->
         <div style="display:flex;gap:10px;">
           <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-            <div id="profile-shifts" style="font-size:22px;font-weight:700;color:var(--white);">0</div>
+            <div id="profile-shifts" style="font-size:20px;font-weight:700;color:var(--white);">0</div>
             <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Shifts</div>
           </div>
           <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-            <div id="profile-reliability" style="font-size:22px;font-weight:700;color:var(--white);">N/A</div>
+            <div id="profile-reliability" style="font-size:20px;font-weight:700;color:var(--white);">N/A</div>
             <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Reliability</div>
           </div>
           <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-            <div id="profile-sessions-count" style="font-size:22px;font-weight:700;color:var(--white);">0</div>
+            <div id="profile-sessions-count" style="font-size:20px;font-weight:700;color:var(--white);">0</div>
             <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Sessions</div>
           </div>
         </div>
@@ -1061,8 +1055,7 @@
     const rate = TIER_RATES[tier - 1];
 
     document.getElementById('profile-name').textContent = w.name;
-    document.getElementById('profile-tier-label').textContent = 'TIER ' + tier + ' · ' + TIER_NAMES[tier - 1].toUpperCase();
-    document.getElementById('profile-rate').textContent = '£' + rate.toFixed(2);
+    document.getElementById('profile-tier-label').textContent = 'TIER ' + tier + ' · £' + rate.toFixed(2) + '/hr';
     document.getElementById('profile-points').textContent = pts.toLocaleString();
     document.getElementById('profile-reliability').textContent = w.reliability_score ? Math.round(w.reliability_score) + '%' : 'N/A';
     document.getElementById('prejoin-worker-name').textContent = w.name;
