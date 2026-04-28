@@ -4031,7 +4031,7 @@ function renderRequestCards() {
       +'<span>'+parseFloat(r.shift_length_hours||0)+'hr shift</span>'
       +'<span class="status-badge badge-'+(r.status||'pending')+'">'+(r.status||'pending')+'</span>'
       +'</div>'
-      +(!isDispatched?'<button onclick="event.stopPropagation();openAddNotes('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-top:8px;font-family:'Inter',sans-serif;">'+(r.raw_message?'Edit Notes':'+ Add Notes')+'</button>':'')
+      +(!isDispatched?'<button onclick="event.stopPropagation();openAddNotes('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-top:8px;font-family:Inter,sans-serif;">'+(r.raw_message?'Edit Notes':'+ Add Notes')+'</button>':'')
       +'</div>';
   }).join('');
 
