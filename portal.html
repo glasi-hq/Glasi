@@ -928,8 +928,14 @@
 
         <!-- Waiting for shift -->
         <div id="live-waiting" class="waiting-card">
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;">
+            <div class="live-dot"></div>
+            <div style="font-size:13px;color:var(--green);font-weight:600;">Connected</div>
+          </div>
           <div class="waiting-title">You are in the session</div>
           <div class="waiting-sub">Stay on this page. When a shift becomes available it will appear here. Respond as quickly as you can.</div>
+          <div id="live-ticker" style="margin-top:20px;font-size:12px;color:var(--grey);font-style:italic;min-height:18px;transition:opacity 0.5s;"></div>
+          <div style="margin-top:16px;font-size:11px;color:var(--grey);">Session time: <span id="live-elapsed">00:00</span></div>
         </div>
 
         <!-- Shift post (shown when a shift is available) -->
@@ -1189,15 +1195,46 @@
   let shiftTimerInterval = null;
   let realtimeChannels = [];
 
+  let sessionStartTime = null;
+  let elapsedInterval = null;
+  let tickerTimeout = null;
+  const TICKER_MESSAGES = [
+    'Stay on this page. We will notify you the moment a shift comes in.',
+    'No shifts yet. Keep this page open and stay ready.',
+    'Session is live. You are being counted as present.',
+    'Responding quickly when a shift appears increases your chances.',
+    'Your attendance tonight is earning you points.',
+    'We notice who shows up. Keep going.',
+  ];
+  let tickerIndex = 0;
+
   function startLiveSession() {
     document.getElementById('live-waiting').style.display = 'block';
+    sessionStartTime = Date.now();
     const sessionId = currentSessionInvite.session_id;
 
-    // Subscribe to new shift_requests for this session
-    const shiftChannel = new EventSource(
-      SUPABASE_URL + '/rest/v1/shift_requests?session_id=eq.' + sessionId + '&select=id,bar_id,shift_length_hours,created_at,bars(name,address)',
-      { headers: H }
-    );
+    // Start elapsed timer
+    elapsedInterval = setInterval(() => {
+      const secs = Math.floor((Date.now() - sessionStartTime) / 1000);
+      const mins = Math.floor(secs / 60).toString().padStart(2, '0');
+      const s = (secs % 60).toString().padStart(2, '0');
+      const el = document.getElementById('live-elapsed');
+      if(el) el.textContent = mins + ':' + s;
+    }, 1000);
+
+    // Start ticker
+    function showNextTicker() {
+      const el = document.getElementById('live-ticker');
+      if(!el) return;
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.textContent = TICKER_MESSAGES[tickerIndex % TICKER_MESSAGES.length];
+        tickerIndex++;
+        el.style.opacity = '1';
+      }, 500);
+      tickerTimeout = setTimeout(showNextTicker, 35000);
+    }
+    setTimeout(showNextTicker, 3000);
 
     // Use Supabase real-time WebSocket
     subscribeToShiftRequests(sessionId);
@@ -1347,6 +1384,8 @@
     realtimeChannels.forEach(ws => { try { ws.close(); } catch(e) {} });
     realtimeChannels = [];
     if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    if(elapsedInterval) clearInterval(elapsedInterval);
+    if(tickerTimeout) clearTimeout(tickerTimeout);
   }
 
   function resetSessionStates() {
