@@ -513,7 +513,7 @@
     <div class="modal-sub">Copy each message and send via WhatsApp or email.</div>
     <div id="invite-messages-list" style="margin:16px 0;"></div>
     <div class="modal-actions">
-      <button class="confirm-btn" onclick="closeOv('invite-messages');loadSessionsList();">Done</button>
+      <button id="invites-done-btn" class="confirm-btn" disabled style="opacity:0.4;" onclick="closeOv('invite-messages');loadSessionsList();">Done (tick all sent first)</button>
     </div>
   </div>
 </div>
@@ -5179,7 +5179,7 @@ async function generateInvites() {
   if(!checked.length) { alert('Select at least one worker to invite.'); return; }
 
   const sessionId = currentInviteSessionId;
-  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=session_date,scheduled_start,start_time,zones(name)');
+  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=session_date,scheduled_start,start_time,zone_id,zones(name)');
   const session = sessions[0];
 
   const dateStr = session.scheduled_start
@@ -5206,7 +5206,7 @@ async function generateInvites() {
     });
 
     // Get worker name
-    const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=name,phone');
+    const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=name,phone,email');
     const app = appRows[0];
     if(!app) continue;
 
@@ -5215,32 +5215,103 @@ async function generateInvites() {
 
     const msg = `Hi ${app.name.split(' ')[0]}, Glasi session on ${dateStr} at ${timeStr}. Are you available?\n\nYes, I am in: ${confirmYes}\nCannot make it: ${confirmNo}`;
 
-    messages.push({ name: app.name, phone: app.phone, msg });
+    const zoneRows = await sbGet('zones', '?id=eq.'+session.zone_id+'&select=name');
+    const zoneName = zoneRows[0] ? zoneRows[0].name : '';
+    messages.push({ name: app.name, email: app.email, phone: app.phone, firstName: app.name.split(' ')[0], code, dateStr, timeStr, zone: zoneName });
   }
 
   closeOv('invite-workers');
 
-  // Show messages overlay
+  // Build HTML email snippets
   const messagesEl = document.getElementById('invite-messages-list');
-  messagesEl.innerHTML = messages.map((m, i) => `
-    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;">
-      <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">${m.name} &nbsp;<span style="color:var(--grey);font-weight:400;">${m.phone || ''}</span></div>
-      <div style="font-size:12px;color:var(--grey);line-height:1.6;background:rgba(255,255,255,0.04);padding:10px;border-radius:6px;white-space:pre-wrap;margin-bottom:8px;">${m.msg}</div>
-      <button onclick="copyInviteMessage(this, '${encodeURIComponent(m.msg)}')" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">Copy Message</button>
-    </div>
-  `).join('');
+  const total = messages.length;
+
+  function checkAllSent() {
+    const ticked = document.querySelectorAll('input[name="invite-sent"]:checked').length;
+    const doneBtn = document.getElementById('invites-done-btn');
+    if(ticked >= total) {
+      doneBtn.disabled = false;
+      doneBtn.style.opacity = '1';
+    } else {
+      doneBtn.disabled = true;
+      doneBtn.style.opacity = '0.4';
+    }
+  }
+
+  messagesEl.innerHTML = messages.map((m, i) => {
+    const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
+<div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
+<div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;">
+<span style="font-size:20px;letter-spacing:8px;color:#a8c6e8;">GLASI</span>
+</div>
+</div>
+<div style="background:#ffffff;padding:28px 32px;">
+<p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p>
+<p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p>
+<p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p>
+<div style="display:flex;gap:12px;margin-bottom:24px;">
+<a href="https://glasi.co.uk/confirm?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a>
+<a href="https://glasi.co.uk/confirm?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a>
+</div>
+<p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at glasi.co.uk/portal at the session start time.</p>
+</div>
+<div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
+<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
+</div>
+</div>`;
+
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;" id="invite-card-${i}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--white);">${m.name}</div>
+          <div style="font-size:11px;color:var(--grey);margin-top:2px;">${m.email || ''}</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" name="invite-sent" onchange="checkAllSent()" style="accent-color:var(--ice);width:18px;height:18px;">
+          <span style="font-size:11px;color:var(--grey);">Sent</span>
+        </label>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;font-size:11px;color:var(--grey);">
+        Preview: ${m.firstName}, invited to ${m.dateStr} at ${m.timeStr}
+      </div>
+      <button onclick="openInviteEmail(${i})" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Open Email to Copy and Paste</button>
+    </div>`;
+  }).join('');
+
+  // Store email HTML for each invite
+  window._inviteEmails = messages.map(m => ({
+    name: m.name,
+    email: m.email,
+    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body><div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;"><div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;"><div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;"><span style="font-size:20px;letter-spacing:8px;color:#a8c6e8;">GLASI</span></div></div><div style="background:#ffffff;padding:28px 32px;"><p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p><p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p><p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p><div style="display:flex;gap:12px;margin-bottom:24px;"><a href="https://glasi.co.uk/confirm?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a><a href="https://glasi.co.uk/confirm?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a></div><p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at glasi.co.uk/portal at the session start time.</p></div><div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;"><p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p></div></div><p style="margin-top:24px;font-family:Arial,sans-serif;font-size:12px;color:#999;text-align:center;">Select all (Ctrl+A), Copy (Ctrl+C), then paste into Gmail</p></body></html>`
+  }));
 
   openOv('invite-messages');
   await loadSessionsList();
+  checkAllSent();
 }
 
-function copyInviteMessage(btn, encoded) {
-  const msg = decodeURIComponent(encoded);
-  navigator.clipboard.writeText(msg).then(() => {
-    btn.textContent = 'Copied!';
-    btn.style.color = 'var(--green)';
-    setTimeout(() => { btn.textContent = 'Copy Message'; btn.style.color = 'var(--ice)'; }, 2000);
-  });
+function openInviteEmail(index) {
+  const invite = window._inviteEmails[index];
+  if(!invite) return;
+  const win = window.open('', '_blank');
+  if(win) {
+    win.document.write(invite.html);
+    win.document.close();
+  }
+}
+
+function checkAllSent() {
+  const total = document.querySelectorAll('input[name="invite-sent"]').length;
+  const ticked = document.querySelectorAll('input[name="invite-sent"]:checked').length;
+  const doneBtn = document.getElementById('invites-done-btn');
+  if(!doneBtn) return;
+  if(ticked >= total && total > 0) {
+    doneBtn.disabled = false;
+    doneBtn.style.opacity = '1';
+  } else {
+    doneBtn.disabled = true;
+    doneBtn.style.opacity = '0.4';
+  }
 }
 
 </script>
