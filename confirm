@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glasi | Session Confirmation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0d1117;
+      --ice: #a8c6e8;
+      --white: #e6edf3;
+      --green: #2a7a4a;
+      --amber: #c8a24a;
+      --grey: #6b7280;
+      --border: rgba(168,198,232,0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .wordmark-wrap {
+      display: inline-block;
+      border: 1.5px solid var(--white);
+      border-radius: 6px;
+      padding: 8px 20px;
+      margin-bottom: 32px;
+    }
+
+    .wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 22px;
+      letter-spacing: 8px;
+      color: var(--white);
+    }
+
+    .icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: var(--white);
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--grey);
+      margin-bottom: 12px;
+    }
+
+    .highlight {
+      color: var(--ice);
+      font-weight: 600;
+    }
+
+    .status-confirmed {
+      color: #4ade80;
+    }
+
+    .status-declined {
+      color: var(--amber);
+    }
+
+    .status-error {
+      color: #f87171;
+    }
+
+    .footer {
+      margin-top: 32px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(107,114,128,0.6);
+      font-family: 'Raleway', sans-serif;
+      font-weight: 300;
+    }
+
+    .loading {
+      color: var(--grey);
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="wordmark-wrap">
+      <span class="wordmark">GLASI</span>
+    </div>
+
+    <div id="loading">
+      <p class="loading">Confirming your response...</p>
+    </div>
+
+    <div id="result" style="display:none;"></div>
+
+    <div class="footer">GLASI LTD &nbsp;·&nbsp; glasi.co.uk</div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://hweytbyrqvjsviydmacv.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3ZXl0YnlycXZqc3ZpeWRtYWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Njg1MTUsImV4cCI6MjA4OTQ0NDUxNX0.lVT4oSC10l6fX6l89lop3UseGclQmBThWPBqkAlQaSo";
+
+    const H = {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+    };
+
+    async function sbGet(table, query) {
+      const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + query, { headers: H });
+      return r.json();
+    }
+
+    async function sbPatch(table, query, body) {
+      const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + query, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=representation' },
+        body: JSON.stringify(body)
+      });
+      return r.json();
+    }
+
+    function showResult(icon, titleClass, title, message) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result').innerHTML = `
+        <div class="icon">${icon}</div>
+        <h1 class="${titleClass}">${title}</h1>
+        <p>${message}</p>
+      `;
+    }
+
+    async function confirm() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const response = params.get('response');
+
+      if (!code || !response) {
+        showResult('', 'status-error', 'INVALID LINK', 'This confirmation link is not valid. Please use the link sent to you by Glasi.');
+        return;
+      }
+
+      if (!['yes', 'no'].includes(response)) {
+        showResult('', 'status-error', 'INVALID RESPONSE', 'This confirmation link is not valid. Please use the link sent to you by Glasi.');
+        return;
+      }
+
+      // Look up the session invite by code
+      const rows = await sbGet('session_invites', '?session_code=eq.' + code + '&select=id,attendance_confirmed,expires_at,application_id,session_id,applications(name)');
+
+      if (!rows || rows.length === 0) {
+        showResult('', 'status-error', 'CODE NOT FOUND', 'We could not find a session matching this code. Please check the link sent to you by Glasi.');
+        return;
+      }
+
+      const invite = rows[0];
+
+      // Check if already confirmed
+      if (invite.attendance_confirmed !== 'pending') {
+        const already = invite.attendance_confirmed === 'confirmed' ? 'attending' : 'unable to attend';
+        showResult('', 'status-error', 'ALREADY RESPONDED', `You have already confirmed that you are ${already} tonight. No further action needed.`);
+        return;
+      }
+
+      // Check expiry
+      if (invite.expires_at && new Date() > new Date(invite.expires_at)) {
+        showResult('', 'status-error', 'LINK EXPIRED', 'This confirmation link has expired. Please contact us at hello@glasi.co.uk if you need to update your response.');
+        return;
+      }
+
+      // Update attendance
+      const status = response === 'yes' ? 'confirmed' : 'declined';
+      await sbPatch('session_invites', '?id=eq.' + invite.id, {
+        attendance_confirmed: status,
+        attendance_confirmed_at: new Date().toISOString()
+      });
+
+      const workerName = invite.applications?.name || 'there';
+
+      if (response === 'yes') {
+        showResult('', 'status-confirmed', 'SEE YOU TONIGHT', `Thanks ${workerName}. You are confirmed for tonight\'s session. You will receive a WhatsApp reminder when the session goes live with your session code. Make sure you log in at glasi.co.uk/portal at the session start time and keep the page open.`);
+      } else {
+        showResult('', 'status-declined', 'NO PROBLEM', `Thanks for letting us know ${workerName}. We have noted that you cannot make tonight\'s session. We hope to see you at the next one.`);
+      }
+    }
+
+    confirm();
+  </script>
+</body>
+</html>
