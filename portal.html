@@ -1036,6 +1036,7 @@
   }
 
   function handleSignOut() {
+    stopRealtime();
     currentWorker = null;
     currentSessionInvite = null;
     showScreen('login');
@@ -1183,22 +1184,169 @@
     startLiveSession();
   }
 
+  let activeShiftRequestId = null;
+  let shiftPostedAt = null;
+  let shiftTimerInterval = null;
+  let realtimeChannels = [];
+
   function startLiveSession() {
-    // Real-time subscription to shift_requests will go here
-    // For now just show the waiting state
     document.getElementById('live-waiting').style.display = 'block';
+    const sessionId = currentSessionInvite.session_id;
+
+    // Subscribe to new shift_requests for this session
+    const shiftChannel = new EventSource(
+      SUPABASE_URL + '/rest/v1/shift_requests?session_id=eq.' + sessionId + '&select=id,bar_id,shift_length_hours,created_at,bars(name,address)',
+      { headers: H }
+    );
+
+    // Use Supabase real-time WebSocket
+    subscribeToShiftRequests(sessionId);
+    subscribeToSessionWorkers(sessionId);
   }
 
-  function handleAvailable() {
+  function subscribeToShiftRequests(sessionId) {
+    const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+    const ws = new WebSocket(wsUrl);
+    realtimeChannels.push(ws);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        topic: 'realtime:public:shift_requests:session_id=eq.' + sessionId,
+        event: 'phx_join',
+        payload: { config: { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }] } },
+        ref: '1'
+      }));
+    };
+
+    ws.onmessage = async (e) => {
+      const msg = JSON.parse(e.data);
+      if(msg.event === 'postgres_changes' && msg.payload?.data?.type === 'INSERT') {
+        const record = msg.payload.data.record;
+        await showShiftPost(record);
+      }
+    };
+  }
+
+  function subscribeToSessionWorkers(sessionId) {
+    if(!currentWorker) return;
+    const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+    const ws = new WebSocket(wsUrl);
+    realtimeChannels.push(ws);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        topic: 'realtime:public:session_workers:application_id=eq.' + currentWorker.id,
+        event: 'phx_join',
+        payload: { config: { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'application_id=eq.' + currentWorker.id }] } },
+        ref: '2'
+      }));
+    };
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if(msg.event === 'postgres_changes' && msg.payload?.data?.type === 'UPDATE') {
+        const record = msg.payload.data.record;
+        if(record.status === 'dispatched' || record.status === 'onshift') {
+          showDispatched(record);
+        }
+      }
+    };
+  }
+
+  async function showShiftPost(record) {
+    activeShiftRequestId = record.id;
+    shiftPostedAt = Date.now();
+
+    // Fetch bar details
+    let barName = 'Venue';
+    let barAddress = '';
+    try {
+      const bars = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + record.bar_id + '&select=name,address', { headers: H }).then(r => r.json());
+      if(bars && bars[0]) { barName = bars[0].name; barAddress = bars[0].address || ''; }
+    } catch(e) {}
+
+    document.getElementById('shift-venue').textContent = barName;
+    document.getElementById('shift-detail').textContent = barAddress + ' · ' + (record.shift_length_hours || 2) + ' hours';
+
+    // Show shift post
+    document.getElementById('live-waiting').style.display = 'none';
+    document.getElementById('live-responded').style.display = 'none';
+    document.getElementById('live-filled').style.display = 'none';
+    document.getElementById('live-shift-post').style.display = 'block';
+
+    // Start countdown timer
+    startShiftTimer(30);
+  }
+
+  function startShiftTimer(seconds) {
+    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    let remaining = seconds;
+    updateTimerDisplay(remaining);
+    shiftTimerInterval = setInterval(() => {
+      remaining--;
+      updateTimerDisplay(remaining);
+      if(remaining <= 0) {
+        clearInterval(shiftTimerInterval);
+        // No response -- record it and hide shift post
+        recordResponse('no_response');
+        document.getElementById('live-shift-post').style.display = 'none';
+        document.getElementById('live-responded').style.display = 'block';
+        document.getElementById('live-responded-msg').textContent = 'Time expired. Stand by for the next shift post.';
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay(secs) {
+    const el = document.getElementById('shift-timer');
+    if(el) el.textContent = 'Respond within ' + secs + ' second' + (secs !== 1 ? 's' : '');
+    if(secs <= 10 && el) el.style.color = 'var(--red)';
+  }
+
+  async function recordResponse(type) {
+    if(!activeShiftRequestId || !currentWorker) return;
+    const responseSecs = shiftPostedAt ? Math.round((Date.now() - shiftPostedAt) / 1000) : null;
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/shift_responses', {
+        method: 'POST',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          shift_request_id: activeShiftRequestId,
+          application_id: currentWorker.id,
+          response: type,
+          responded_at: new Date().toISOString(),
+          response_seconds: responseSecs
+        })
+      });
+    } catch(e) {}
+  }
+
+  async function handleAvailable() {
+    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    await recordResponse('available');
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-responded').style.display = 'block';
     document.getElementById('live-responded-msg').textContent = 'Response recorded. Stand by while we select.';
   }
 
-  function handlePass() {
+  async function handlePass() {
+    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    await recordResponse('pass');
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-responded').style.display = 'block';
     document.getElementById('live-responded-msg').textContent = 'No problem. Stand by for the next shift post.';
+  }
+
+  function showDispatched(swRecord) {
+    document.getElementById('live-shift-post').style.display = 'none';
+    document.getElementById('live-waiting').style.display = 'none';
+    document.getElementById('live-responded').style.display = 'none';
+    document.getElementById('live-dispatched').style.display = 'block';
+  }
+
+  function stopRealtime() {
+    realtimeChannels.forEach(ws => { try { ws.close(); } catch(e) {} });
+    realtimeChannels = [];
+    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
   }
 
   function resetSessionStates() {
