@@ -1961,7 +1961,7 @@ async function loadWorkerFunnel() {
 
 async function tryRestoreSession() {
   // check for open session today
-  const openSessions = await sbGet('sessions', '?session_date=eq.'+today()+'&end_time=is.null&order=id.desc&limit=1');
+  const openSessions = await sbGet('sessions', '?status=eq.live&order=id.desc&limit=1');
   if(!openSessions.length) return false;
 
   const session = openSessions[0];
@@ -2063,24 +2063,16 @@ async function tryRestoreSession() {
   }));
 
   // restore UI
-  document.getElementById('session-zone-name').textContent = zone.name;
   document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-
-  // start timer
-  sessionStartTime = new Date(session.start_time ? today()+'T'+session.start_time : Date.now());
-  startTimer();
 
   // start shift countdown for any onshift workers
   if(sessionWorkers.some(w=>w.status==='onshift')) startShiftCountdown();
 
-  showScreen('session');
-  setActiveNav('dispatch');
-  switchTab('room');
-  renderRoom();
-  renderRequestCards();
-  renderOnShift();
-  updateCounts();
-  renderLog();
+  // Navigate to Sessions Live tab
+  startDashboardRealtime(session.id);
+  showScreen('sessions');
+  setActiveNav('sessions');
+  switchSessionsTab('live');
 
   console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers');
   return true;
