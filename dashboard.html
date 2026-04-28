@@ -3663,15 +3663,6 @@ function downloadSessionReports(reports) {
 }
 
 async function confirmCloseSession() {
-  // check if zoom chat has been logged
-  const chatInput = document.getElementById('session-chat-input').value.trim();
-  const chatSaved = document.getElementById('session-chat-results').style.display !== 'none';
-  if(!chatInput && !chatSaved) {
-    if(!confirm('You haven\'t pasted the Zoom chat log yet. Response time data won\'t be recorded. Close anyway?')) {
-      switchTab('zoom');
-      return;
-    }
-  }
   if(!confirm('Close this session? Make sure all shifts are completed first.')) return;
   clearInterval(sessionTimerInterval);
   clearInterval(shiftCountdownInterval);
@@ -3683,8 +3674,8 @@ async function confirmCloseSession() {
   const sessionId = activeSessionId;
   const sessionRequests = [...activeShiftRequests];
 
-  // write end_time to sessions table
-  if(sessionId) sbPatch('sessions', '?id=eq.'+sessionId, { end_time: new Date().toLocaleTimeString('en-GB', {timeZone:'Europe/London', hour12:false}) });
+  // write end_time and status to sessions table
+  if(sessionId) await sbPatch('sessions', '?id=eq.'+sessionId, { end_time: new Date().toLocaleTimeString('en-GB', {timeZone:'Europe/London', hour12:false}), status: 'closed' });
 
   // run reliability and points before clearing state
   await updateWorkerReliabilityScores();
@@ -3698,15 +3689,14 @@ async function confirmCloseSession() {
   selectedWorkerId = null;
   setupWorkers=[]; sessionWorkers=[]; shifts=[];
 
-  showScreen('zones');
-  setActiveNav('dispatch');
-  renderZones();
+  showScreen('sessions');
+  setActiveNav('sessions');
+  switchSessionsTab('schedule');
+  await loadSessionsList();
 
   // offer worker reports download
   if(reports && reports.length) {
-    if(confirm('Session closed. Download worker session reports now?')) {
-      downloadSessionReports(reports);
-    }
+    // Session reports available in portal and shifts screen
   }
 }
 
