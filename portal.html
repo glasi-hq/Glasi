@@ -936,6 +936,9 @@
           <div class="waiting-sub">Stay on this page. When a shift becomes available it will appear here. Respond as quickly as you can.</div>
           <div id="live-ticker" style="margin-top:20px;font-size:12px;color:var(--grey);font-style:italic;min-height:18px;transition:opacity 0.5s;"></div>
           <div style="margin-top:16px;font-size:11px;color:var(--grey);">Session time: <span id="live-elapsed">00:00</span></div>
+          <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">
+            <button onclick="openLeaveSession()" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:8px;padding:10px 20px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;width:100%;">Leave Session</button>
+          </div>
         </div>
 
         <!-- Shift post (shown when a shift is available) -->
@@ -1377,7 +1380,57 @@
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-waiting').style.display = 'none';
     document.getElementById('live-responded').style.display = 'none';
+    document.getElementById('live-filled').style.display = 'none';
     document.getElementById('live-dispatched').style.display = 'block';
+    stopRealtime();
+    // Write left_at automatically for dispatched worker
+    if(currentSessionInvite) {
+      fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ left_at: new Date().toISOString(), rejoin_reason: 'Dispatched to shift' })
+      }).catch(()=>{});
+    }
+  }
+
+  function openLeaveSession() {
+    const overlay = document.getElementById('leave-overlay');
+    overlay.style.display = 'flex';
+  }
+
+  function closeLeaveSession() {
+    const overlay = document.getElementById('leave-overlay');
+    overlay.style.display = 'none';
+    // Clear radio selection
+    document.querySelectorAll('input[name="leave-reason"]').forEach(r => r.checked = false);
+  }
+
+  async function confirmLeaveSession() {
+    const selected = document.querySelector('input[name="leave-reason"]:checked');
+    const reason = selected ? selected.value : 'No reason given';
+
+    // Write left_at and reason to session_invites
+    if(currentSessionInvite) {
+      try {
+        await fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
+          method: 'PATCH',
+          headers: { ...H, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ left_at: new Date().toISOString(), rejoin_reason: reason })
+        });
+      } catch(e) {}
+    }
+
+    stopRealtime();
+    closeLeaveSession();
+
+    // Show goodbye message
+    document.getElementById('sessions-live').style.display = 'none';
+    document.getElementById('sessions-empty').style.display = 'block';
+    document.getElementById('sessions-empty').innerHTML = `
+      <div class="sessions-empty-icon">👋</div>
+      <div class="sessions-empty-title">Thanks for joining tonight</div>
+      <div class="sessions-empty-sub">Your attendance has been noted and your points have been updated. We hope to see you at the next session.</div>
+    `;
   }
 
   function stopRealtime() {
@@ -1413,6 +1466,36 @@
     document.getElementById('live-dispatched').style.display = 'block';
   };
 </script>
+
+<!-- LEAVE SESSION OVERLAY -->
+<div id="leave-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;display:none;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:400px;width:100%;">
+    <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:8px;">Leave Session</div>
+    <div style="font-size:13px;color:var(--grey);margin-bottom:20px;line-height:1.6;">We are sorry to see you go. Please let us know why you are leaving so we can improve.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;" id="leave-reasons">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+        <input type="radio" name="leave-reason" value="I have somewhere to be" style="accent-color:var(--ice);">
+        <span style="font-size:13px;color:var(--grey);">I have somewhere to be</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+        <input type="radio" name="leave-reason" value="I am not feeling well" style="accent-color:var(--ice);">
+        <span style="font-size:13px;color:var(--grey);">I am not feeling well</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+        <input type="radio" name="leave-reason" value="Something has come up" style="accent-color:var(--ice);">
+        <span style="font-size:13px;color:var(--grey);">Something has come up</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+        <input type="radio" name="leave-reason" value="Other" style="accent-color:var(--ice);">
+        <span style="font-size:13px;color:var(--grey);">Other</span>
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeLeaveSession()" style="flex:1;background:none;border:1px solid var(--border);color:var(--grey);border-radius:10px;padding:12px;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;">Stay in Session</button>
+      <button onclick="confirmLeaveSession()" style="flex:2;background:var(--ice);color:var(--navy);border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Leave</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
