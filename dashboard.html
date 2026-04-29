@@ -447,6 +447,7 @@
     <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--navy-mid);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;">
       <button id="sessions-tab-schedule" onclick="switchSessionsTab('schedule')" style="background:var(--ice);color:var(--navy);border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Schedule</button>
       <button id="sessions-tab-live" onclick="switchSessionsTab('live')" style="background:none;color:var(--grey);border:none;border-radius:7px;padding:8px 20px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">Live</button>
+      <button id="sessions-tab-history" onclick="switchSessionsTab('history')" style="background:none;color:var(--grey);border:none;border-radius:7px;padding:8px 20px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">Sessions</button>
     </div>
 
     <!-- SCHEDULE TAB -->
@@ -463,11 +464,6 @@
         <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">UPCOMING</div>
         <div id="sessions-upcoming"></div>
       </div>
-
-      <div>
-        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">PAST SESSIONS</div>
-        <div id="sessions-list"></div>
-      </div>
     </div>
 
     <!-- LIVE TAB -->
@@ -479,6 +475,35 @@
       </div>
       <div id="sessions-live-room" style="display:none;">
         <!-- ROOM content injected here -->
+      </div>
+    </div>
+
+    <!-- SESSIONS (HISTORY) TAB -->
+    <div id="sessions-history-tab" style="display:none;">
+      <!-- Summary stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;" id="sessions-stats-grid">
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:var(--white);" id="stat-total-sessions">--</div>
+          <div style="font-size:10px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-top:4px;">Sessions</div>
+        </div>
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:var(--white);" id="stat-total-requests">--</div>
+          <div style="font-size:10px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-top:4px;">Requests</div>
+        </div>
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:var(--white);" id="stat-total-shifts">--</div>
+          <div style="font-size:10px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-top:4px;">Shifts</div>
+        </div>
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:var(--ice);" id="stat-avg-response">--</div>
+          <div style="font-size:10px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-top:4px;">Avg Response</div>
+        </div>
+      </div>
+
+      <!-- Past sessions list -->
+      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">PAST SESSIONS</div>
+      <div id="sessions-history-list">
+        <div style="font-size:13px;color:var(--grey);padding:24px 0;text-align:center;">No completed sessions yet.</div>
       </div>
     </div>
 
@@ -5537,6 +5562,80 @@ async function loadRequestsHistory() {
   </table>`;
 }
 
+async function loadSessionsHistory() {
+  const listEl = document.getElementById('sessions-history-list');
+  listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:24px 0;text-align:center;">Loading...</div>';
+
+  // Fetch all closed sessions
+  const sessions = await sbGet('sessions', '?status=eq.closed&order=id.desc&select=id,session_date,start_time,end_time,zone_id,zones(name)');
+
+  if(!sessions.length) {
+    listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:24px 0;text-align:center;">No completed sessions yet.</div>';
+    document.getElementById('stat-total-sessions').textContent = '0';
+    return;
+  }
+
+  const sessionIds = sessions.map(s => s.id).join(',');
+
+  // Fetch aggregated data in parallel
+  const [requests, shifts] = await Promise.all([
+    sbGet('shift_requests', '?session_id=in.('+sessionIds+')&select=id,session_id,status,created_at,bar_id,bars(name)'),
+    sbGet('shifts', '?session_id=in.('+sessionIds+')&select=id,session_id,clock_in_confirmed_at,clock_out_confirmed_at,shift_length_hours,total_earned,glasi_ref,session_worker_id,session_workers(worker_name,application_id,dispatched_at,departed_at)')
+  ]);
+
+  // Calculate summary stats
+  const totalSessions = sessions.length;
+  const totalRequests = requests.length;
+  const totalShifts = shifts.filter(s => s.clock_out_confirmed_at).length;
+
+  // Average response time -- dispatched_at minus request created_at
+  const responseTimes = [];
+  shifts.forEach(s => {
+    const req = requests.find(r => r.session_id === s.session_id);
+    const dispatchedAt = s.session_workers?.dispatched_at;
+    if(req?.created_at && dispatchedAt) {
+      const mins = Math.round((new Date(dispatchedAt) - new Date(req.created_at)) / 60000);
+      if(mins > 0 && mins < 120) responseTimes.push(mins);
+    }
+  });
+  const avgResponse = responseTimes.length ? Math.round(responseTimes.reduce((a,b) => a+b, 0) / responseTimes.length) : null;
+
+  document.getElementById('stat-total-sessions').textContent = totalSessions;
+  document.getElementById('stat-total-requests').textContent = totalRequests;
+  document.getElementById('stat-total-shifts').textContent = totalShifts;
+  document.getElementById('stat-avg-response').textContent = avgResponse ? avgResponse + ' min' : '--';
+
+  // Render session list
+  listEl.innerHTML = sessions.map(s => {
+    const sessionReqs = requests.filter(r => r.session_id === s.id);
+    const sessionShifts = shifts.filter(sh => sh.session_id === s.id);
+    const date = s.session_date ? new Date(s.session_date).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',year:'numeric'}) : '';
+    const time = s.start_time ? s.start_time.slice(0,5) : '';
+    const zoneName = s.zones?.name || '';
+    const completed = sessionShifts.filter(sh => sh.clock_out_confirmed_at).length;
+    const totalEarned = sessionShifts.reduce((sum, sh) => sum + (parseFloat(sh.total_earned) || 0), 0);
+
+    return '<div onclick="loadSessionDetail('+s.id+')" style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:10px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor=\'var(--ice)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+      + '<div>'
+      + '<div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:2px;">'+zoneName+' &nbsp;·&nbsp; <span style="color:var(--grey);font-weight:400;">Session #'+s.id+'</span></div>'
+      + '<div style="font-size:12px;color:var(--grey);">'+date+(time?' at '+time:'')+'</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:20px;text-align:right;">'
+      + '<div><div style="font-size:14px;font-weight:700;color:var(--white);">'+sessionReqs.length+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Requests</div></div>'
+      + '<div><div style="font-size:14px;font-weight:700;color:var(--green);">'+completed+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Shifts</div></div>'
+      + (totalEarned > 0 ? '<div><div style="font-size:14px;font-weight:700;color:var(--amber);">£'+totalEarned.toFixed(2)+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Paid out</div></div>' : '')
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function loadSessionDetail(sessionId) {
+  // For now -- log to console, full detail view coming next
+  console.log('Load session detail:', sessionId);
+}
+
 // OVERLAYS
 function openOv(name) { document.getElementById(`ov-${name}`).classList.add('open'); }
 function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove('open'); }
@@ -5544,14 +5643,24 @@ function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove(
 // ── SESSIONS ───────────────────────────────────────────────────────────────
 function switchSessionsTab(tab) {
   const isLive = tab === 'live';
-  document.getElementById('sessions-schedule-tab').style.display = isLive ? 'none' : 'block';
+  const isHistory = tab === 'history';
+  const isSchedule = tab === 'schedule';
+
+  document.getElementById('sessions-schedule-tab').style.display = isSchedule ? 'block' : 'none';
   document.getElementById('sessions-live-tab').style.display = isLive ? 'block' : 'none';
-  document.getElementById('sessions-tab-schedule').style.background = isLive ? 'none' : 'var(--ice)';
-  document.getElementById('sessions-tab-schedule').style.color = isLive ? 'var(--grey)' : 'var(--navy)';
-  document.getElementById('sessions-tab-schedule').style.fontWeight = isLive ? '400' : '600';
-  document.getElementById('sessions-tab-live').style.background = isLive ? 'var(--ice)' : 'none';
-  document.getElementById('sessions-tab-live').style.color = isLive ? 'var(--navy)' : 'var(--grey)';
-  document.getElementById('sessions-tab-live').style.fontWeight = isLive ? '600' : '400';
+  document.getElementById('sessions-history-tab').style.display = isHistory ? 'block' : 'none';
+
+  // Tab button styles
+  ['schedule','live','history'].forEach(t => {
+    const btn = document.getElementById('sessions-tab-'+t);
+    if(!btn) return;
+    const active = t === tab;
+    btn.style.background = active ? 'var(--ice)' : 'none';
+    btn.style.color = active ? 'var(--navy)' : 'var(--grey)';
+    btn.style.fontWeight = active ? '600' : '400';
+  });
+
+  if(isHistory) loadSessionsHistory();
 
   if(isLive && activeSessionId) {
     document.getElementById('sessions-live-empty').style.display = 'none';
