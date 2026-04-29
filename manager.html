@@ -748,9 +748,11 @@
         el.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
         el.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
       } else {
-        el.textContent = 'Shift time elapsed';
-        el.style.color = 'var(--red)';
+        el.textContent = 'Shift complete';
+        el.style.color = 'var(--grey)';
         clearInterval(managerShiftInterval);
+        revealStatusClockOut();
+        const subText2 = document.getElementById('status-shift-countdown'); if(subText2) { subText2.textContent = 'Shift is complete. Please give your Glasi the clock-out code.'; subText2.style.color = 'var(--grey)'; subText2.style.fontSize = '13px'; subText2.style.fontWeight = '400'; }
       }
     }
     update();
@@ -834,9 +836,11 @@
         el.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
         el.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
       } else {
-        el.textContent = 'Shift time elapsed';
-        el.style.color = 'var(--red)';
+        el.textContent = 'Shift complete';
+        el.style.color = 'var(--grey)';
         clearInterval(managerShiftInterval);
+        revealStatusClockOut();
+        const subText2 = document.getElementById('status-shift-countdown'); if(subText2) { subText2.textContent = 'Shift is complete. Please give your Glasi the clock-out code.'; subText2.style.color = 'var(--grey)'; subText2.style.fontSize = '13px'; subText2.style.fontWeight = '400'; }
       }
     }
     update();
