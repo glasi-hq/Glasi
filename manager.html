@@ -574,6 +574,52 @@
 
     // Load past requests
     loadPastRequests();
+
+    // Subscribe to new dispatches to this bar in real time
+    startBarRealtime();
+  }
+
+  function startBarRealtime() {
+    stopWorkerWatch();
+    const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+    dispatchedWorkerWs = new WebSocket(wsUrl);
+    let hb = null;
+
+    dispatchedWorkerWs.onopen = () => {
+      dispatchedWorkerWs.send(JSON.stringify({
+        topic: 'realtime:public:session_workers',
+        event: 'phx_join',
+        payload: { config: { postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'bar_id=eq.' + currentBar.id }] } },
+        ref: '1'
+      }));
+      hb = setInterval(() => {
+        if(dispatchedWorkerWs?.readyState === WebSocket.OPEN) {
+          dispatchedWorkerWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+        }
+      }, 30000);
+    };
+
+    dispatchedWorkerWs.onmessage = async (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.event === 'postgres_changes') {
+          const record = msg.payload?.data?.record;
+          const type = msg.payload?.data?.type;
+          if(record && type === 'UPDATE') {
+            if(record.status === 'dispatched') {
+              // New worker dispatched to this bar -- refresh
+              await checkForDispatchedWorker();
+            } else if(record.status === 'onshift') {
+              document.getElementById('worker-eta-display').textContent = 'Clocked in';
+            } else if(record.status === 'completed') {
+              document.getElementById('worker-en-route').style.display = 'none';
+            }
+          }
+        }
+      } catch(e) {}
+    };
+
+    dispatchedWorkerWs.onclose = () => { if(hb) clearInterval(hb); };
   }
 
   async function checkForDispatchedWorker() {
