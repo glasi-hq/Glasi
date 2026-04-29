@@ -477,7 +477,12 @@
           </div>
         </div>
 
-        <button class="request-btn" id="request-btn" disabled onclick="submitRequest()">Request Staff</button>
+        <div style="margin-bottom:16px;" id="name-confirm-section" style="display:none;">
+          <div style="font-size:12px;color:var(--grey);line-height:1.7;margin-bottom:10px;padding:12px;background:rgba(168,198,232,0.06);border:1px solid var(--border);border-radius:8px;">By typing your name below you confirm you have read and agree to the <a href="https://glasi.co.uk/terms.html" target="_blank" style="color:var(--ice);">Glasi terms of service</a> and that this request is binding. The agreed shift rate will apply in full.</div>
+          <label class="field-label">Type your full name to confirm</label>
+          <input type="text" id="manager-name-confirm" class="field" placeholder="Your full name" oninput="checkNameConfirm()">
+        </div>
+        <button class="request-btn" id="request-btn" disabled onclick="submitRequest()">Request a Glasi</button>
         <div class="error-msg" id="request-error"></div>
       </div>
     </div>
@@ -646,7 +651,24 @@
     selectedShiftLength = hours;
     document.querySelectorAll('.shift-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
-    document.getElementById('request-btn').disabled = false;
+    // Show name confirm section
+    const nameSection = document.getElementById('name-confirm-section');
+    if(nameSection) nameSection.style.display = 'block';
+    // Clear name field and disable button
+    const nameInput = document.getElementById('manager-name-confirm');
+    if(nameInput) nameInput.value = '';
+    document.getElementById('request-btn').disabled = true;
+  }
+
+  function checkNameConfirm() {
+    const name = document.getElementById('manager-name-confirm')?.value.trim();
+    const expectedName = currentBar?.manager_name || '';
+    const btn = document.getElementById('request-btn');
+    if(name && name.toLowerCase() === expectedName.toLowerCase()) {
+      btn.disabled = false;
+    } else {
+      btn.disabled = true;
+    }
   }
 
   async function submitRequest() {
@@ -685,7 +707,11 @@
     selectedShiftLength = null;
     document.querySelectorAll('.shift-option').forEach(o => o.classList.remove('selected'));
     document.getElementById('request-btn').disabled = true;
-    document.getElementById('request-btn').textContent = 'Request Staff';
+    document.getElementById('request-btn').textContent = 'Request a Glasi';
+    const nameSection = document.getElementById('name-confirm-section');
+    if(nameSection) nameSection.style.display = 'none';
+    const nameInput = document.getElementById('manager-name-confirm');
+    if(nameInput) nameInput.value = '';
     document.getElementById('request-form').style.display = 'block';
     document.getElementById('request-confirmed').style.display = 'none';
   }
