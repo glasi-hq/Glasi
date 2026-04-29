@@ -811,8 +811,6 @@
     if(dispatchedWorkerWs) { try { dispatchedWorkerWs.close(); } catch(e) {} dispatchedWorkerWs = null; }
   }
 
-  let managerShiftInterval = null;
-  let managerClockOutCode = null;
 
   function showManagerClockOut(clockOutCode, shiftLengthHours, clockInAt) {
     managerClockOutCode = clockOutCode;
