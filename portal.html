@@ -947,7 +947,7 @@
             <div class="shift-post-label">Shift Available</div>
             <div class="shift-post-venue" id="shift-venue">The Woolhouse</div>
             <div class="shift-post-detail" id="shift-detail">Dancing Man Brewery · 2 hours</div>
-            <div class="shift-timer" id="shift-timer">Respond within 30 seconds</div>
+            <div class="shift-timer" id="shift-timer">Respond within 60 seconds</div>
             <div class="shift-disclaimer">Responding does not guarantee you will be selected. We will notify you immediately if you are chosen.</div>
             <div class="shift-buttons">
               <button class="available-btn" onclick="handleAvailable()">I'm available</button>
@@ -972,7 +972,7 @@
             <div class="dispatched-title">Leave now. You have been selected.</div>
             <div class="dispatched-venue" id="dispatched-venue">The Woolhouse</div>
             <div class="dispatched-address" id="dispatched-address">1 Bugle Street, Southampton SO14 2AL<br>Ask for Wolf on arrival.</div>
-            <a href="#" id="dispatched-maps" class="maps-btn">Open in Maps</a>
+            <a href="#" id="dispatched-maps" class="maps-btn" target="_blank" rel="noopener">Open in Maps</a>
           </div>
           <div class="warning-box" style="margin-top:12px;">
             <p>Share your live location with the Glasi team on WhatsApp now, then leave for the venue immediately. Do not delay.</p>
@@ -1467,7 +1467,7 @@
     document.getElementById('live-shift-post').style.display = 'block';
 
     // Start countdown timer
-    startShiftTimer(30);
+    startShiftTimer(60);
   }
 
   function startShiftTimer(seconds) {
