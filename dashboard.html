@@ -2710,6 +2710,8 @@ async function handleWorkerPortalLeave(record) {
   const appId = Number(record.application_id);
   const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
   if(worker) {
+    // Don't overwrite if already dispatched or onshift
+    if(worker.status === 'dispatched' || worker.status === 'onshift') return;
     worker.status = 'invited';
     worker.joinedAt = null;
   }
@@ -5585,7 +5587,7 @@ async function loadLiveSessionWorkers(sessionId) {
       if(!app) continue;
 
       let swRow = existingSW.find(sw => Number(sw.application_id) === Number(app.id));
-      const correctStatus = inv.joined_at ? 'available' : 'invited';
+      const correctStatus = swRow ? swRow.status : (inv.joined_at ? 'available' : 'invited');
       if(!swRow) {
         const sw = await sbPost('session_workers', {
           session_id: sessionId,
