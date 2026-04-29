@@ -2655,6 +2655,7 @@ let dashboardRealtimeWs = null;
 
 let dashboardRealtimeWs2 = null;
 let dashboardRealtimeWs3 = null;
+let dashboardRealtimeWs4 = null;
 
 function makeRealtimeWs(topic, pgChanges, onRecord) {
   const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY + '&vsn=1.0.0';
@@ -2728,6 +2729,22 @@ function startDashboardRealtime(sessionId) {
       }
     }
   );
+
+  // WS 4: shift_requests -- new requests from bar manager portal
+  dashboardRealtimeWs4 = makeRealtimeWs(
+    'realtime:public:shift_requests',
+    [{ event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }],
+    async (record, type) => {
+      if(type === 'INSERT') {
+        const barName = bars.find(b => b.id === record.bar_id)?.name || 'Unknown';
+        record._barName = barName;
+        activeShiftRequests.push(record);
+        startResponseWindow(record.id);
+        renderRequestCards();
+        renderRoom();
+      }
+    }
+  );
 }
 
 async function handleNewShiftResponse(record) {
@@ -2790,6 +2807,7 @@ function stopDashboardRealtime() {
   if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} dashboardRealtimeWs = null; }
   if(dashboardRealtimeWs2) { try { dashboardRealtimeWs2.close(); } catch(e) {} dashboardRealtimeWs2 = null; }
   if(dashboardRealtimeWs3) { try { dashboardRealtimeWs3.close(); } catch(e) {} dashboardRealtimeWs3 = null; }
+  if(dashboardRealtimeWs4) { try { dashboardRealtimeWs4.close(); } catch(e) {} dashboardRealtimeWs4 = null; }
 }
 
 // ROOM
