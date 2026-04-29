@@ -1529,6 +1529,11 @@
     // Show confirmed state
     document.getElementById('clockin-input-section').style.display = 'none';
     document.getElementById('clockin-confirmed-section').style.display = 'block';
+    // Hide the venue card and WhatsApp instruction -- not needed after clock-in
+    const dispCard = document.querySelector('.dispatched-card');
+    if(dispCard) dispCard.style.display = 'none';
+    const warningBox = document.querySelector('#live-dispatched .warning-box');
+    if(warningBox) warningBox.style.display = 'none';
   }
 
   function openLeavingConfirm() {
