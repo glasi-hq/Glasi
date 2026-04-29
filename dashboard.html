@@ -2729,6 +2729,16 @@ function startDashboardRealtime(sessionId) {
           if(record.departed_at) worker.departedAt = record.departed_at;
           if(record.status) worker.status = record.status;
           if(record.clock_in_at) worker.clockInAt = record.clock_in_at;
+          if(record.status === 'completed') {
+            // Fetch total_earned from shifts for display
+            try {
+              const shiftRows = await sbGet('shifts', '?session_worker_id=eq.'+worker.sessionWorkerId+'&select=total_earned,clock_out_confirmed_at');
+              if(shiftRows?.[0]) {
+                worker.totalEarned = shiftRows[0].total_earned;
+                worker.clockOutAt = shiftRows[0].clock_out_confirmed_at;
+              }
+            } catch(e) {}
+          }
           renderRequestCards();
         }
       }
@@ -4490,11 +4500,13 @@ function renderRequestCards() {
           '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-top:4px;">'+(dispWorker.gsRef||'')+'</div>'
-          +(dispWorker.status === 'onshift' 
-            ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">On shift</div>'
-            : dispWorker.departedAt 
-              ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">En route</div>' 
-              : '<div style="font-size:12px;color:var(--amber);margin-top:4px;">Awaiting departure confirmation</div>')
+          +(dispWorker.status === 'completed'
+            ? '<div style="font-size:12px;color:var(--grey);font-weight:600;margin-top:4px;">Shift complete'+(dispWorker.totalEarned ? ' · £'+parseFloat(dispWorker.totalEarned).toFixed(2)+' earned' : '')+'</div>'
+            : dispWorker.status === 'onshift'
+              ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">On shift</div>'
+              : dispWorker.departedAt
+                ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">En route</div>'
+                : '<div style="font-size:12px;color:var(--amber);margin-top:4px;">Awaiting departure confirmation</div>')
           +(dispWorker.clockInCode ? '<div style="font-size:11px;color:var(--grey);margin-top:6px;">Clock-in code: <span style="color:var(--white);font-weight:600;letter-spacing:2px;">'+dispWorker.clockInCode+'</span></div>' : '')
           +(etaMins !== null
             ?'<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';" id="eta-'+r.id+'">'+( etaMins>0?'ETA: '+etaMins+' min':'Should have arrived')+'</div>'
