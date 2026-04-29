@@ -311,8 +311,20 @@
     <!-- Worker funnel -->
     <div id="worker-funnel" style="display:flex;gap:24px;margin-top:20px;padding:16px 20px;background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;"></div>
     <div style="margin-top:20px;">
-      <!-- Top row: Bars | Workers -->
+      <!-- Top row: Sessions | Zones -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <button class="zone-card" onclick="goToSessions()" style="text-align:center;">
+          <div class="zone-card-name">Sessions</div>
+          <div class="zone-card-meta">Schedule, live and history</div>
+        </button>
+        <button class="zone-card" onclick="goToZonesMgmt()" style="text-align:center;">
+          <div class="zone-card-name">Zones</div>
+          <div class="zone-card-meta">Coverage and postcodes</div>
+        </button>
+      </div>
+
+      <!-- Bottom row: Bars | Workers -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <button class="zone-card" onclick="goToBars()" style="text-align:center;">
           <div class="zone-card-name">Bars</div>
           <div class="zone-card-meta">Pipeline, contacts and venues</div>
@@ -320,18 +332,6 @@
         <button class="zone-card" onclick="goToWorkers()" style="text-align:center;">
           <div class="zone-card-name">Workers</div>
           <div class="zone-card-meta">Worker pool and tiers</div>
-        </button>
-      </div>
-
-      <!-- Bottom row: Shifts | Requests -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <button class="zone-card" onclick="goToShifts()" style="text-align:center;">
-          <div class="zone-card-name">Shifts</div>
-          <div class="zone-card-meta">All completed shifts</div>
-        </button>
-        <button class="zone-card" onclick="goToRequests()" style="text-align:center;">
-          <div class="zone-card-name">Requests</div>
-          <div class="zone-card-meta">All shift requests</div>
         </button>
       </div>
     </div>
@@ -5721,141 +5721,203 @@ function timelineCell(label, value) {
 }
 
 async function downloadTimesheet(shiftId) {
-  const shifts = await sbGet('shifts', '?id=eq.'+shiftId+'&select=*,session_workers(worker_name,application_id,dispatched_at,departed_at),bars(name,address)');
-  const s = shifts[0];
+  const shiftArr = await sbGet('shifts', '?id=eq.'+shiftId+'&select=*,session_workers(worker_name,application_id,dispatched_at,departed_at),bars(name,address)');
+  const s = shiftArr[0];
   if(!s) return;
 
   const workerName = s.session_workers?.worker_name || 'Unknown';
   const barName = s.bars?.name || 'Unknown';
   const barAddress = s.bars?.address || '';
-  const fmt = t => t ? new Date(t).toLocaleString('en-GB', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '--';
-  const fmtT = t => t ? new Date(t).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '--';
-  const shiftDate = s.clock_in_confirmed_at ? new Date(s.clock_in_confirmed_at).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '--';
+  const fmtDT = t => t ? new Date(t).toLocaleString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+  const fmtD = t => t ? new Date(t).toLocaleDateString('en-GB') : '';
+
   const hours = parseFloat(s.shift_length_hours || 0);
   const rate = parseFloat(s.hourly_rate || 12.71);
-  const earned = parseFloat(s.total_earned || (hours * rate)).toFixed(2);
+  const earned = (hours * rate).toFixed(2);
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; color: #1a1a2e; font-size: 13px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 2px solid #0F1F3D; padding-bottom: 16px; }
-    .wordmark { font-size: 18px; letter-spacing: 6px; font-weight: 400; border: 1.5px solid #0F1F3D; border-radius: 4px; padding: 6px 14px; display: inline-block; }
-    .title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; margin-top: 4px; }
-    h2 { font-size: 16px; margin: 0 0 4px; }
-    .section { margin-bottom: 24px; }
-    .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px; }
-    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f4f8; }
-    .row:last-child { border-bottom: none; }
-    .total-row { display: flex; justify-content: space-between; padding: 12px 0; font-size: 15px; font-weight: 700; border-top: 2px solid #0F1F3D; margin-top: 8px; }
-    .footer { margin-top: 40px; font-size: 11px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; }
-  </style></head><body>
-  <div class="header">
-    <div><div class="wordmark">GLASI</div><div class="title">Timesheet</div></div>
-    <div style="text-align:right;"><div style="font-size:13px;font-weight:600;">${s.glasi_ref}</div><div style="font-size:11px;color:#6b7280;">${shiftDate}</div></div>
-  </div>
-  <div class="section">
-    <div class="label">Worker</div>
-    <h2>${workerName}</h2>
-  </div>
-  <div class="section">
-    <div class="label">Venue</div>
-    <div style="font-weight:600;">${barName}</div>
-    <div style="color:#6b7280;">${barAddress}</div>
-  </div>
-  <div class="section">
-    <div class="label">Shift Details</div>
-    <div class="row"><span>Date</span><span>${shiftDate}</span></div>
-    <div class="row"><span>Clock In</span><span>${fmtT(s.clock_in_confirmed_at)}</span></div>
-    <div class="row"><span>Clock Out</span><span>${fmtT(s.clock_out_confirmed_at)}</span></div>
-    <div class="row"><span>Hours Worked</span><span>${hours}hr</span></div>
-    <div class="row"><span>Hourly Rate</span><span>£${rate.toFixed(2)}/hr</span></div>
-    <div class="total-row"><span>Total Earned</span><span>£${earned}</span></div>
-  </div>
-  <div class="footer">Glasi Ltd &nbsp;·&nbsp; hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk<br>This timesheet is generated automatically from shift data recorded on the Glasi platform.</div>
-  </body></html>`;
+  const rows = [
+    ['Glasi Timesheet'],
+    ['Reference', s.glasi_ref || ''],
+    [''],
+    ['Worker', workerName],
+    ['Venue', barName],
+    ['Address', barAddress],
+    [''],
+    ['Date', fmtD(s.clock_in_confirmed_at)],
+    ['Clock In', fmtDT(s.clock_in_confirmed_at)],
+    ['Clock Out', fmtDT(s.clock_out_confirmed_at)],
+    ['Hours Worked', hours],
+    ['Hourly Rate', '£'+rate.toFixed(2)],
+    ['Total Earned', '£'+earned],
+    [''],
+    ['Status', s.status || ''],
+    ['Session ID', s.session_id || ''],
+  ];
 
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
-  setTimeout(() => win.print(), 500);
+  const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (s.glasi_ref || 'timesheet') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function downloadBI(shiftId) {
-  const shifts = await sbGet('shifts', '?id=eq.'+shiftId+'&select=*,session_workers(worker_name,dispatched_at,departed_at,clock_in_at),bars(name,address,bartenders,drinks_per_hour,avg_drink_value,typical_rush_minutes)');
-  const s = shifts[0];
+  const shiftArr = await sbGet('shifts', '?id=eq.'+shiftId+'&select=*,session_workers(worker_name,dispatched_at,departed_at,clock_in_at),bars(name,address,manager_name,bartenders,drinks_per_hour,avg_drink_value,avg_customer_spend,typical_rush_minutes,lost_minutes_per_bartender)');
+  const s = shiftArr[0];
   if(!s) return;
 
   const workerName = s.session_workers?.worker_name || 'Unknown';
-  const barName = s.bars?.name || 'Unknown';
+  const bar = s.bars || {};
+  const barName = bar.name || 'Unknown';
+  const barAddress = bar.address || '';
+  const managerName = bar.manager_name || 'Bar Manager';
+
   const fmtT = t => t ? new Date(t).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '--';
-  const fmt = t => t ? new Date(t).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '--';
+  const fmtD = t => t ? new Date(t).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '--';
 
-  // Response time calcs
-  const reqRows = await sbGet('shift_requests', '?shift_request_id=eq.'+s.shift_request_id+'&select=created_at');
-  const reqTime = reqRows?.[0]?.created_at;
-  const dispatchedAt = s.session_workers?.dispatched_at;
-  const departedAt = s.session_workers?.departed_at;
-  const clockIn = s.clock_in_confirmed_at;
-  const clockOut = s.clock_out_confirmed_at;
+  const reqArr = await sbGet('shift_requests', '?id=eq.'+s.shift_request_id+'&select=created_at');
+  const reqTime = reqArr?.[0]?.created_at;
 
-  const minsBetween = (a, b) => (a && b) ? Math.round((new Date(b) - new Date(a)) / 60000) : '--';
-
-  // Impact calc
-  const bartenders = parseFloat(s.bars?.bartenders || 0);
-  const dph = parseFloat(s.bars?.drinks_per_hour || 0);
-  const adv = parseFloat(s.bars?.avg_drink_value || 0);
-  const rushMins = parseFloat(s.bars?.typical_rush_minutes || 0);
+  const shiftDate = fmtD(s.clock_in_confirmed_at);
   const hours = parseFloat(s.shift_length_hours || 0);
-  const revenueProtected = bartenders * dph * adv * (rushMins / 60) * hours;
+  const rate = 30;
+  const subtotal = hours * rate;
+  const vat = Math.round(subtotal * 0.20 * 100) / 100;
+  const total = subtotal + vat;
 
-  const shiftDate = clockIn ? new Date(clockIn).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '--';
+  // Impact calculation
+  const bartenders = parseFloat(bar.bartenders || 3);
+  const lostMinsPerBartender = parseFloat(bar.lost_minutes_per_bartender || 10);
+  const drinksPerMin = 2;
+  const drinkValue = parseFloat(bar.avg_drink_value || 6.50);
+
+  const recoveredMinsPerHour = bartenders * lostMinsPerBartender;
+  const extraDrinksPerHour = recoveredMinsPerHour * drinksPerMin;
+  const totalExtraDrinks = Math.round(extraDrinksPerHour * hours);
+  const revenueProtected = Math.round(totalExtraDrinks * drinkValue);
+
+  // Invoice number -- GS ref or date based
+  const invoiceNum = s.glasi_ref || ('GS-'+new Date().toLocaleDateString('en-GB').replace(/\//g,''));
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 640px; margin: 40px auto; color: #1a1a2e; font-size: 13px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 2px solid #0F1F3D; padding-bottom: 16px; }
-    .wordmark { font-size: 18px; letter-spacing: 6px; font-weight: 400; border: 1.5px solid #0F1F3D; border-radius: 4px; padding: 6px 14px; display: inline-block; }
-    .title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; margin-top: 4px; }
-    .section { margin-bottom: 24px; }
-    .section-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #9ca3af; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
-    .row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f4f8; }
-    .row:last-child { border-bottom: none; }
-    .highlight { font-size: 22px; font-weight: 800; color: #0F1F3D; }
-    .impact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
-    .impact-card { background: #f8fafc; border-radius: 8px; padding: 16px; text-align: center; }
-    .impact-value { font-size: 20px; font-weight: 700; color: #0F1F3D; }
-    .impact-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; margin-top: 4px; }
-    .footer { margin-top: 40px; font-size: 11px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', Arial, sans-serif; max-width: 680px; margin: 40px auto; color: #1a1a2e; font-size: 13px; line-height: 1.6; padding: 0 20px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #0F1F3D; }
+    .wordmark { font-size: 20px; letter-spacing: 8px; font-weight: 400; border: 1.5px solid #0F1F3D; border-radius: 4px; padding: 8px 16px; display: inline-block; margin-bottom: 4px; }
+    .invoice-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: #9ca3af; }
+    .invoice-meta { text-align: right; font-size: 12px; color: #6b7280; }
+    .invoice-meta strong { color: #1a1a2e; font-size: 14px; display: block; margin-bottom: 4px; }
+    .to-from { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 36px; }
+    .to-from-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px; }
+    .to-from-name { font-size: 14px; font-weight: 600; color: #1a1a2e; margin-bottom: 2px; }
+    .to-from-detail { font-size: 12px; color: #6b7280; }
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #9ca3af; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+    .narrative { font-size: 13px; color: #374151; line-height: 1.8; margin-bottom: 16px; }
+    .impact-box { background: #f0f7ff; border-left: 3px solid #0F1F3D; border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 16px 0; }
+    .impact-box strong { font-size: 15px; color: #0F1F3D; }
+    .impact-note { font-size: 11px; color: #9ca3af; margin-top: 8px; }
+    .tagline { font-size: 12px; font-style: italic; color: #6b7280; margin-top: 12px; }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f4f8; font-size: 13px; }
+    .detail-row:last-child { border-bottom: none; }
+    .total-section { margin-top: 24px; }
+    .total-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; }
+    .total-final { display: flex; justify-content: space-between; padding: 14px 0; font-size: 16px; font-weight: 700; border-top: 2px solid #0F1F3D; margin-top: 4px; }
+    .vat-note { font-size: 11px; color: #9ca3af; margin-top: 8px; font-style: italic; }
+    .payment-box { background: #f8fafc; border-radius: 8px; padding: 16px 20px; margin-top: 8px; }
+    .payment-box .label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #9ca3af; margin-bottom: 4px; }
+    .payment-box .value { font-size: 13px; color: #1a1a2e; font-weight: 500; }
+    .footer { margin-top: 48px; font-size: 11px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+    @media print { body { margin: 20px; } }
   </style></head><body>
+
   <div class="header">
-    <div><div class="wordmark">GLASI</div><div class="title">BI Report</div></div>
-    <div style="text-align:right;"><div style="font-size:13px;font-weight:600;">${s.glasi_ref}</div><div style="font-size:11px;color:#6b7280;">${shiftDate}</div></div>
-  </div>
-  <div class="section">
-    <div class="section-title">Operational Timeline</div>
-    <div class="row"><span>Request received</span><span>${fmt(reqTime)}</span></div>
-    <div class="row"><span>Worker selected</span><span>${fmtT(dispatchedAt)}</span></div>
-    <div class="row"><span>Worker en route</span><span>${fmtT(departedAt)}</span></div>
-    <div class="row"><span>Worker clocked in</span><span>${fmtT(clockIn)}</span></div>
-    <div class="row"><span>Worker clocked out</span><span>${fmtT(clockOut)}</span></div>
-  </div>
-  <div class="section">
-    <div class="section-title">Response Times</div>
-    <div class="row"><span>Request to selection</span><span>${minsBetween(reqTime, dispatchedAt)} min</span></div>
-    <div class="row"><span>Selection to en route</span><span>${minsBetween(dispatchedAt, departedAt)} min</span></div>
-    <div class="row"><span>En route to clock-in</span><span>${minsBetween(departedAt, clockIn)} min</span></div>
-    <div class="row" style="font-weight:600;"><span>Total response time</span><span>${minsBetween(reqTime, clockIn)} min</span></div>
-  </div>
-  <div class="section">
-    <div class="section-title">Impact</div>
-    <div class="impact-grid">
-      <div class="impact-card"><div class="impact-value">${s.shift_length_hours}hr</div><div class="impact-label">Cover provided</div></div>
-      <div class="impact-card"><div class="impact-value">${minsBetween(reqTime, clockIn)} min</div><div class="impact-label">Response time</div></div>
-      ${revenueProtected > 0 ? '<div class="impact-card"><div class="impact-value">£'+Math.round(revenueProtected)+'</div><div class="impact-label">Est. revenue protected</div></div>' : ''}
-      <div class="impact-card"><div class="impact-value">£${parseFloat(s.total_earned||0).toFixed(2)}</div><div class="impact-label">Worker cost</div></div>
+    <div>
+      <div class="wordmark">GLASI</div>
+      <div class="invoice-label">Bar Invoice</div>
+    </div>
+    <div class="invoice-meta">
+      <strong>${invoiceNum}</strong>
+      ${shiftDate}
     </div>
   </div>
-  <div class="footer">Glasi Ltd &nbsp;·&nbsp; hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk<br>${workerName} at ${barName} &nbsp;·&nbsp; ${s.glasi_ref}</div>
+
+  <div class="to-from">
+    <div>
+      <div class="to-from-label">Invoice To</div>
+      <div class="to-from-name">${barName}</div>
+      <div class="to-from-detail">${barAddress}</div>
+      <div class="to-from-detail">${managerName}</div>
+    </div>
+    <div>
+      <div class="to-from-label">Invoice From</div>
+      <div class="to-from-name">Glasi Ltd</div>
+      <div class="to-from-detail">hello@glasi.co.uk</div>
+      <div class="to-from-detail">glasi.co.uk</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">What happened</div>
+    <p class="narrative">
+      ${barName} requested a Glasi at <strong>${fmtT(reqTime)}</strong>. 
+      We dispatched <strong>${workerName}</strong> at <strong>${fmtT(s.session_workers?.dispatched_at)}</strong>, 
+      who was on site and working by <strong>${fmtT(s.clock_in_confirmed_at)}</strong>.
+    </p>
+    <p class="narrative">
+      By having Glasi support on the floor, your trained bar staff stayed behind the bar where they belong -- serving customers, not collecting glasses.
+    </p>
+    <div class="impact-box">
+      <p>During ${workerName}'s <strong>${hours}hr shift</strong>, your team reclaimed approximately <strong>${Math.round(recoveredMinsPerHour * hours)} minutes</strong> of bartending time that would otherwise have been spent on glass collection.</p>
+      <p style="margin-top:8px;">At your venue's pace, we estimate your team served an additional <strong>${totalExtraDrinks} drinks</strong> -- protecting an estimated <strong>£${revenueProtected.toLocaleString()}</strong> in revenue.</p>
+      <p style="margin-top:8px;">More importantly, <strong>${totalExtraDrinks} customers</strong> got a faster, better experience.</p>
+      <div class="impact-note">Calculated using your venue data: ${bartenders} bartenders, ${lostMinsPerBartender} mins/hr recovered per bartender, ${drinksPerMin} drinks/min, £${drinkValue.toFixed(2)} average drink value.</div>
+    </div>
+    <p class="tagline">"Keeping trained staff where they are most valuable."</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Shift Details</div>
+    <div class="detail-row"><span>Worker</span><span>${workerName}</span></div>
+    <div class="detail-row"><span>Venue</span><span>${barName}</span></div>
+    <div class="detail-row"><span>Date</span><span>${shiftDate}</span></div>
+    <div class="detail-row"><span>Clock in</span><span>${fmtT(s.clock_in_confirmed_at)}</span></div>
+    <div class="detail-row"><span>Clock out</span><span>${fmtT(s.clock_out_confirmed_at)}</span></div>
+    <div class="detail-row"><span>Hours worked</span><span>${hours}hr</span></div>
+    <div class="detail-row"><span>Reference</span><span>${invoiceNum}</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Invoice</div>
+    <div class="total-section">
+      <div class="total-row"><span>Glasi rate</span><span>£${rate.toFixed(2)}/hr</span></div>
+      <div class="total-row"><span>Shift length</span><span>${hours}hr</span></div>
+      <div class="total-row"><span>Subtotal</span><span>£${subtotal.toFixed(2)}</span></div>
+      <div class="total-row"><span>VAT (20%)</span><span>£${vat.toFixed(2)}</span></div>
+      <div class="total-final"><span>Total</span><span>£${total.toFixed(2)}</span></div>
+      <div class="vat-note">VAT will be applied once Glasi Ltd VAT registration is confirmed. A revised invoice will be issued at that time.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Payment</div>
+    <div class="payment-box">
+      <div class="label">Bank Transfer</div>
+      <div class="value">Glasi Ltd</div>
+      <div class="value" style="color:#6b7280;font-weight:400;margin-top:4px;">Account details to follow</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Glasi Ltd &nbsp;·&nbsp; hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk<br>
+    ${invoiceNum} &nbsp;·&nbsp; ${workerName} at ${barName}
+  </div>
+
   </body></html>`;
 
   const win = window.open('', '_blank');
