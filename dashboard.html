@@ -1096,6 +1096,7 @@ const VAT_NUMBER = 'Pending';
 
 let currentUser = null;
 let activeZone = null;
+let workerBarDistances = [];
 let allWorkers = [];
 let setupWorkers = []; // workers added to room in setup
 let sessionWorkers = []; // workers in live session with status
@@ -4199,13 +4200,55 @@ async function dispatchWorker(applicationId, requestId) {
   const req = activeShiftRequests.find(r => r.id === requestId);
   if(req) req.status = 'dispatched';
 
-  // 4. Re-render
+  // 4. Re-render request cards only -- don't wipe the response feed
   renderRequestCards();
-  renderRoom();
+  // Update worker card status directly
+  const workerCard = document.getElementById('wc-'+worker.id);
+  if(workerCard) workerCard.style.borderColor = 'var(--green)';
 
-  // 5. Clear recommendation panel for this request
-  const panel = document.getElementById('recommendations-panel-'+requestId);
-  if(panel) panel.remove();
+}
+
+async function confirmClockIn(requestId, applicationId) {
+  const code = document.getElementById('clockin-'+requestId)?.value.trim();
+  if(!code) { alert('Please enter the clock-in code from the bar manager.'); return; }
+
+  const worker = sessionWorkers.find(w => Number(w.applicationId) === Number(applicationId));
+  const request = activeShiftRequests.find(r => r.id === Number(requestId));
+  if(!worker || !request) { alert('Worker or request not found.'); return; }
+
+  const now = new Date().toISOString();
+  const clockInTime = new Date().toLocaleTimeString('en-GB', {hour12:false});
+
+  // Update session_workers
+  await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
+    status: 'onshift',
+    clock_in_code: code,
+    clock_in_at: now
+  });
+
+  // Create shift record
+  const shiftRef = 'GS' + String(Date.now()).slice(-6);
+  await sbPost('shifts', {
+    session_id: activeSessionId,
+    session_worker_id: worker.sessionWorkerId,
+    bar_id: request.bar_id,
+    shift_request_id: request.id,
+    clock_in_time: clockInTime,
+    shift_length_hours: parseFloat(request.shift_length_hours || 2),
+    status: 'active',
+    glasi_ref: shiftRef
+  });
+
+  // Update local state
+  worker.status = 'onshift';
+  worker.clockInAt = now;
+  worker.clockInCode = code;
+
+  // Update the clock-in section in the card
+  const clockInDiv = document.getElementById('clockin-'+requestId)?.parentElement?.parentElement;
+  if(clockInDiv) {
+    clockInDiv.innerHTML = '<div style="font-size:11px;color:var(--green);">Clocked in &nbsp;·&nbsp; Ref: '+shiftRef+'</div>';
+  }
 }
 
 function removeRequest(requestId) {
@@ -4264,8 +4307,48 @@ function renderRequestCards() {
     const windowSecs = postedAt ? Math.max(0, 60 - Math.floor((Date.now() - postedAt.getTime()) / 1000)) : null;
     const windowOpen = windowSecs !== null && windowSecs > 0;
 
+    if(isDispatched) {
+      // Find the dispatched worker for this request
+      const dispWorker = sessionWorkers.find(w => w.status === 'dispatched' && w.shiftLength == r.shift_length_hours && (w.bar === barName || (w.barRecord && w.barRecord.id === r.bar_id)));
+      const distData = dispWorker ? workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id) : null;
+      const walkMins = distData ? distData.walking_minutes : null;
+      const dispatchedAt = dispWorker?.dispatchedAt ? new Date(dispWorker.dispatchedAt) : null;
+      const elapsedMins = dispatchedAt ? Math.floor((Date.now() - dispatchedAt.getTime()) / 60000) : 0;
+      const etaMins = walkMins !== null ? Math.max(0, walkMins - elapsedMins) : null;
+
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:12px;" id="rcard-'+r.id+'">'
+        // Left -- request card
+        +'<div style="background:var(--navy-mid);border:1px solid rgba(74,222,128,0.2);border-right:none;border-radius:10px 0 0 10px;padding:16px;">'
+        +'<div style="font-size:10px;letter-spacing:2px;color:var(--green);font-weight:600;margin-bottom:6px;">DISPATCHED</div>'
+        +'<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">'+barName+'</div>'
+        +'<div style="font-size:12px;color:var(--grey);">'+parseFloat(r.shift_length_hours||0)+'hr shift</div>'
+        +(r.raw_message?'<div style="font-size:11px;color:var(--grey);margin-top:8px;line-height:1.5;">'+r.raw_message+'</div>':'')
+        +'</div>'
+        // Connector
+        +'<div style="display:flex;align-items:center;justify-content:center;background:rgba(74,222,128,0.05);border-top:1px solid rgba(74,222,128,0.2);border-bottom:1px solid rgba(74,222,128,0.2);width:0;overflow:visible;z-index:1;">'
+        +'<div style="width:20px;height:2px;background:rgba(74,222,128,0.3);"></div>'
+        +'</div>'
+        // Right -- worker card
+        +'<div style="background:var(--navy-mid);border:1px solid rgba(74,222,128,0.2);border-left:none;border-radius:0 10px 10px 0;padding:16px;">'
+        +(dispWorker?
+          '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
+          +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
+          +(etaMins !== null
+            ?'<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';" id="eta-'+r.id+'">'+( etaMins>0?'ETA: '+etaMins+' min':'Should have arrived')+'</div>'
+            :'<div style="font-size:12px;color:var(--grey);">Distance unknown</div>')
+          +'<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">'
+          +'<div style="font-size:10px;letter-spacing:1px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Clock-in Code</div>'
+          +'<div style="display:flex;gap:6px;">'
+          +'<input type="text" id="clockin-'+r.id+'" maxlength="6" placeholder="Enter code" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--white);font-family:'Inter',sans-serif;outline:none;">'
+          +'<button onclick="event.stopPropagation();confirmClockIn(''+r.id+'','+dispWorker.applicationId+')" style="background:var(--green);color:var(--navy);border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">Confirm</button>'
+          +'</div>'
+          +'</div>'
+        :'<div style="font-size:12px;color:var(--grey);">Worker not found</div>')
+        +'</div>'
+        +'</div>';
+    }
+
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
-      +(isDispatched?'<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-15deg);font-size:28px;font-weight:700;letter-spacing:6px;color:rgba(255,255,255,0.06);pointer-events:none;white-space:nowrap;">DISPATCHED</div>':'')
       +'<div class="req-card-top">'
       +'<div class="req-card-bar">'+barName+'</div>'
       +'<div style="display:flex;align-items:center;gap:8px;">'
@@ -4298,7 +4381,23 @@ function renderRequestCards() {
       el.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
       if(mins >= 5) el.className = 'req-card-timer urgent';
 
-      // Update response window countdown
+      // Update ETA countdown for dispatched requests
+      if(r.status === 'dispatched') {
+        const etaEl = document.getElementById('eta-'+r.id);
+        if(etaEl) {
+          const dispWorker = sessionWorkers.find(w => w.status === 'dispatched');
+          if(dispWorker?.dispatchedAt) {
+            const distData = workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id);
+            const walkMins = distData ? distData.walking_minutes : null;
+            if(walkMins !== null) {
+              const elapsedMins = Math.floor((Date.now() - new Date(dispWorker.dispatchedAt).getTime()) / 60000);
+              const etaMins = Math.max(0, walkMins - elapsedMins);
+              etaEl.textContent = etaMins > 0 ? 'ETA: ' + etaMins + ' min' : 'Should have arrived';
+              etaEl.style.color = etaMins <= 2 ? 'var(--green)' : 'var(--amber)';
+            }
+          }
+        }
+      }
       const windowEl = document.getElementById('rwindow-'+r.id);
       if(windowEl && r.posted_at) {
         const postedAt = new Date(r.posted_at);
@@ -5513,6 +5612,15 @@ async function loadLiveSessionWorkers(sessionId) {
         wage: null, clockOutAt: null,
         notes: null, expectedArrivalMinutes: null,
       });
+    }
+
+    // Fetch all worker-bar distances for this session's workers and bars
+    const appIds = sessionWorkers.map(w => w.applicationId).join(',');
+    if(appIds) {
+      try {
+        const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&select=application_id,bar_id,walking_minutes');
+        workerBarDistances = Array.isArray(dists) ? dists : [];
+      } catch(e) { workerBarDistances = []; }
     }
 
     renderLiveRoom();
