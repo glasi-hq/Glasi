@@ -4578,22 +4578,37 @@ function renderRequestCards() {
 
       // Shift countdown for onshift workers
       if(r.status === 'dispatched' || r.status === 'onshift') {
+        const dispWorker = sessionWorkers.find(w =>
+          (w.status === 'dispatched' || w.status === 'onshift' || w.status === 'completed') &&
+          (Number(w.shiftRequestId) === Number(r.id))
+        ) || sessionWorkers.find(w => w.status === 'dispatched' || w.status === 'onshift');
         const countdownEl = document.getElementById('shift-countdown-'+r.id);
-        if(countdownEl && dispWorker?.clockInAt && dispWorker?.shiftLength) {
-          const clockIn = new Date(dispWorker.clockInAt);
-          const shiftMs = parseFloat(dispWorker.shiftLength) * 3600000;
-          const endTime = new Date(clockIn.getTime() + shiftMs);
-          const remainingMs = endTime.getTime() - Date.now();
-          if(remainingMs > 0) {
-            const totalSecs = Math.floor(remainingMs / 1000);
-            const h = Math.floor(totalSecs / 3600);
-            const m = Math.floor((totalSecs % 3600) / 60);
-            const s = totalSecs % 60;
-            countdownEl.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-            countdownEl.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
-          } else {
-            countdownEl.textContent = 'Shift time elapsed';
-            countdownEl.style.color = 'var(--red)';
+        if(countdownEl) {
+          if(dispWorker?.clockInAt && dispWorker?.shiftLength) {
+            const clockIn = new Date(dispWorker.clockInAt);
+            const shiftMs = parseFloat(dispWorker.shiftLength) * 3600000;
+            const endTime = new Date(clockIn.getTime() + shiftMs);
+            const remainingMs = endTime.getTime() - Date.now();
+            if(remainingMs > 0) {
+              const totalSecs = Math.floor(remainingMs / 1000);
+              const h = Math.floor(totalSecs / 3600);
+              const m = Math.floor((totalSecs % 3600) / 60);
+              const s = totalSecs % 60;
+              countdownEl.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+              countdownEl.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
+            } else {
+              countdownEl.textContent = 'Shift time elapsed';
+              countdownEl.style.color = 'var(--red)';
+            }
+          } else if(countdownEl.textContent === 'Calculating...' && dispWorker?.sessionWorkerId) {
+            // Fetch shift data if missing -- only once
+            countdownEl.textContent = 'Loading...';
+            sbGet('shifts', '?session_worker_id=eq.'+dispWorker.sessionWorkerId+'&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours').then(rows => {
+              if(rows?.[0]) {
+                dispWorker.clockInAt = rows[0].clock_in_confirmed_at;
+                dispWorker.shiftLength = String(rows[0].shift_length_hours);
+              }
+            });
           }
         }
       }
