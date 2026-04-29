@@ -4352,6 +4352,57 @@ async function confirmClockIn(requestId, applicationId) {
   }
 }
 
+function revealClockOutCode(requestId, code) {
+  const section = document.getElementById('clockout-section-'+requestId);
+  if(!section) return;
+  section.innerHTML = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;margin-bottom:8px;">'
+    +'<div style="font-size:10px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Clock-out Code</div>'
+    +'<div style="font-size:28px;font-weight:800;letter-spacing:8px;color:var(--white);">'+code+'</div>'
+    +'<div style="font-size:11px;color:var(--grey);margin-top:6px;">Give this to the worker to end their shift</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;">'
+    +'<input type="text" id="clockout-input-'+requestId+'" maxlength="6" placeholder="Worker enters code" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--white);font-family:Inter,sans-serif;outline:none;">'
+    +'<button onclick="event.stopPropagation();confirmClockOut('+requestId+')" style="background:var(--ice);color:var(--navy);border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">End Shift</button>'
+    +'</div>';
+}
+
+async function confirmClockOut(requestId) {
+  const code = document.getElementById('clockout-input-'+requestId)?.value.trim();
+  if(!code) { alert('Please enter the clock-out code.'); return; }
+
+  const request = activeShiftRequests.find(r => r.id === requestId);
+  const worker = sessionWorkers.find(w => (w.status === 'onshift') && w.shiftLength);
+  if(!worker) { alert('Worker not found.'); return; }
+
+  if(worker.clockOutCode && code !== worker.clockOutCode) {
+    alert('Incorrect clock-out code.');
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  // Update session_workers
+  await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
+    status: 'completed',
+    clock_out_code: code
+  });
+
+  // Update shift record
+  await sbPatch('shifts', '?session_worker_id=eq.'+worker.sessionWorkerId+'&status=eq.onshift', {
+    status: 'completed',
+    clock_out_confirmed_at: now
+  });
+
+  // Update local state
+  worker.status = 'completed';
+  worker.clockOutAt = now;
+
+  if(request) request.status = 'completed';
+
+  renderRequestCards();
+  renderRoom();
+}
+
 function removeRequest(requestId) {
   if(!confirm('Remove this request? This cannot be undone.')) return;
   // Update status to cancelled in DB
@@ -4455,7 +4506,13 @@ function renderRequestCards() {
             +'<button onclick="event.stopPropagation();confirmClockIn('+r.id+','+dispWorker.applicationId+')" style="background:var(--green);color:var(--navy);border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">Confirm</button>'
             +'</div>'
             +'</div>'
-          : '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;font-size:12px;color:var(--green);font-weight:600;">Clocked in · ' + (dispWorker.clockInAt ? new Date(dispWorker.clockInAt).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '') + '</div>')
+          : '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">'
+            +'<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:6px;">Clocked in · '+(dispWorker.clockInAt ? new Date(dispWorker.clockInAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : '')+'</div>'
+            +'<div style="font-size:13px;color:var(--amber);font-weight:600;margin-bottom:10px;" id="shift-countdown-'+r.id+'">Calculating...</div>'
+            +'<div id="clockout-section-'+r.id+'">'
+            +'<button onclick="event.stopPropagation();revealClockOutCode('+r.id+',''+dispWorker.clockOutCode+'')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">Reveal clock-out code</button>'
+            +'</div>'
+            +'</div>')
         :'<div style="font-size:12px;color:var(--grey);">Worker not found</div>')
         +'</div>'
         +'</div>';
@@ -4506,7 +4563,27 @@ function renderRequestCards() {
         }
       }
 
-      // Update ETA countdown for dispatched requests
+      // Shift countdown for onshift workers
+      if(r.status === 'dispatched' || r.status === 'onshift') {
+        const countdownEl = document.getElementById('shift-countdown-'+r.id);
+        if(countdownEl && dispWorker?.clockInAt && dispWorker?.shiftLength) {
+          const clockIn = new Date(dispWorker.clockInAt);
+          const shiftMs = parseFloat(dispWorker.shiftLength) * 3600000;
+          const endTime = new Date(clockIn.getTime() + shiftMs);
+          const remainingMs = endTime.getTime() - Date.now();
+          if(remainingMs > 0) {
+            const totalSecs = Math.floor(remainingMs / 1000);
+            const h = Math.floor(totalSecs / 3600);
+            const m = Math.floor((totalSecs % 3600) / 60);
+            const s = totalSecs % 60;
+            countdownEl.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+            countdownEl.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
+          } else {
+            countdownEl.textContent = 'Shift time elapsed';
+            countdownEl.style.color = 'var(--red)';
+          }
+        }
+      }
       if(r.status === 'dispatched' || r.status === 'onshift') {
         const etaEl = document.getElementById('eta-'+r.id);
         if(etaEl) {
