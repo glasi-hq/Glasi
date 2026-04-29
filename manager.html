@@ -452,6 +452,17 @@
           <div class="clock-in-code" id="clock-in-code-display"></div>
           <div class="clock-in-instruction">Give this code to the worker when they arrive at your venue.</div>
         </div>
+        <div id="manager-clockout-section" style="display:none;margin-top:16px;">
+          <div id="manager-shift-countdown" style="font-size:14px;color:var(--amber);font-weight:600;margin-bottom:12px;text-align:center;"></div>
+          <button id="reveal-clockout-btn" onclick="revealManagerClockOut()" class="request-btn" style="background:none;border:1px solid var(--border);color:var(--grey);">Reveal clock-out code</button>
+          <div id="manager-clockout-code" style="display:none;margin-top:12px;">
+            <div class="clock-in-code-display">
+              <div class="clock-in-label">Clock-out Code</div>
+              <div class="clock-in-code" id="manager-clockout-display"></div>
+              <div class="clock-in-instruction">Give this code to the worker to end their shift.</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -607,10 +618,11 @@
           const type = msg.payload?.data?.type;
           if(record && type === 'UPDATE') {
             if(record.status === 'dispatched') {
-              // New worker dispatched to this bar -- refresh
               await checkForDispatchedWorker();
             } else if(record.status === 'onshift') {
               document.getElementById('worker-eta-display').textContent = 'Clocked in';
+              // Show clock-out section
+              showManagerClockOut(record.clock_out_code, record.shift_length_hours, record.clock_in_at);
             } else if(record.status === 'completed') {
               document.getElementById('worker-en-route').style.display = 'none';
             }
@@ -626,7 +638,7 @@
     if(!currentBar) return;
 
     // Check for active session_workers dispatched to this bar
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?bar_id=eq.' + currentBar.id + '&status=in.(dispatched,onshift)&select=id,worker_name,dispatched_at,clock_in_code,status,sessions(status)', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?bar_id=eq.' + currentBar.id + '&status=in.(dispatched,onshift)&select=id,worker_name,dispatched_at,clock_in_code,clock_out_code,status,sessions(status)', { headers: H }).then(r => r.json());
 
     const active = rows?.find(r => r.sessions?.status === 'live');
     if(!active) {
@@ -646,6 +658,17 @@
 
     // Clock-in code
     document.getElementById('clock-in-code-display').textContent = active.clock_in_code || '----';
+
+    // If already onshift -- show clock-out section
+    if(active.status === 'onshift' && active.clock_out_code) {
+      document.getElementById('worker-eta-display').textContent = 'Clocked in';
+      // Fetch shift for clock-in time
+      try {
+        const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + active.id + '&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours', { headers: H }).then(r => r.json());
+        const shift = shiftRows?.[0];
+        if(shift) showManagerClockOut(active.clock_out_code, shift.shift_length_hours, shift.clock_in_confirmed_at);
+      } catch(e) {}
+    }
 
     // Subscribe to session_workers for status updates
     watchDispatchedWorker(active.id);
@@ -691,6 +714,46 @@
 
   function stopWorkerWatch() {
     if(dispatchedWorkerWs) { try { dispatchedWorkerWs.close(); } catch(e) {} dispatchedWorkerWs = null; }
+  }
+
+  let managerShiftInterval = null;
+  let managerClockOutCode = null;
+
+  function showManagerClockOut(clockOutCode, shiftLengthHours, clockInAt) {
+    managerClockOutCode = clockOutCode;
+    document.getElementById('manager-clockout-section').style.display = 'block';
+
+    if(!clockInAt || !shiftLengthHours) return;
+    if(managerShiftInterval) clearInterval(managerShiftInterval);
+
+    function update() {
+      const el = document.getElementById('manager-shift-countdown');
+      if(!el) return;
+      const clockIn = new Date(clockInAt);
+      const shiftMs = parseFloat(shiftLengthHours) * 3600000;
+      const endTime = new Date(clockIn.getTime() + shiftMs);
+      const remainingMs = endTime.getTime() - Date.now();
+      if(remainingMs > 0) {
+        const h = Math.floor(remainingMs / 3600000);
+        const m = Math.floor((remainingMs % 3600000) / 60000);
+        const s = Math.floor((remainingMs % 60000) / 1000);
+        el.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        el.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
+      } else {
+        el.textContent = 'Shift time elapsed';
+        el.style.color = 'var(--red)';
+        clearInterval(managerShiftInterval);
+      }
+    }
+    update();
+    managerShiftInterval = setInterval(update, 1000);
+  }
+
+  function revealManagerClockOut() {
+    if(!managerClockOutCode) return;
+    document.getElementById('manager-clockout-display').textContent = managerClockOutCode;
+    document.getElementById('manager-clockout-code').style.display = 'block';
+    document.getElementById('reveal-clockout-btn').style.display = 'none';
   }
 
   function selectShift(hours, el) {
