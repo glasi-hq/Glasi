@@ -995,7 +995,20 @@
               <div style="background:rgba(74,222,128,0.08);border:2px solid rgba(74,222,128,0.3);border-radius:16px;padding:32px 24px;text-align:center;">
                 <div style="font-size:36px;margin-bottom:12px;">✓</div>
                 <div style="font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px;">You are clocked in</div>
-                <div style="font-size:14px;color:var(--grey);line-height:1.7;">Your shift has started. Work hard, be helpful, and enjoy it. Every shift builds your tier and your rate.</div>
+                <div style="font-size:14px;color:var(--grey);line-height:1.7;margin-bottom:16px;">Your shift has started. Work hard, be helpful, and enjoy it. Every shift builds your tier and your rate.</div>
+                <div id="portal-shift-countdown" style="font-size:18px;font-weight:700;color:var(--amber);margin-bottom:16px;"></div>
+              </div>
+              <div id="portal-clockout-section" style="display:none;margin-top:16px;">
+                <div style="font-size:11px;font-weight:600;letter-spacing:1px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Clock-out Code</div>
+                <div style="display:flex;gap:8px;">
+                  <input type="text" id="worker-clockout-input" maxlength="6" placeholder="Enter code from bar manager" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:16px;color:var(--white);font-family:'Inter',sans-serif;outline:none;letter-spacing:4px;text-align:center;">
+                  <button onclick="workerClockOut()" style="background:var(--ice);color:var(--navy);border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Confirm</button>
+                </div>
+                <div id="worker-clockout-error" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px;"></div>
+              </div>
+              <div id="portal-shift-complete" style="display:none;margin-top:16px;text-align:center;">
+                <div style="font-size:16px;font-weight:700;color:var(--green);margin-bottom:8px;">Shift complete</div>
+                <div style="font-size:13px;color:var(--grey);line-height:1.7;">Great work tonight. Your points have been updated. See you next time.</div>
               </div>
             </div>
           </div>
@@ -1206,6 +1219,13 @@
         if(heading) heading.style.display = 'none';
         document.getElementById('clockin-input-section').style.display = 'none';
         document.getElementById('clockin-confirmed-section').style.display = 'block';
+
+        // Fetch shift data for countdown
+        try {
+          const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + sw.id + '&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours', { headers: H }).then(r => r.json());
+          const shift = shiftRows?.[0];
+          if(shift) startShiftCountdown(shift.clock_in_confirmed_at, shift.shift_length_hours);
+        } catch(e) {}
         return;
       }
       // Check if already confirmed leaving
@@ -1504,6 +1524,77 @@
     document.getElementById('live-responded-msg').textContent = 'No problem. Stand by for the next shift post.';
   }
 
+  let shiftCountdownInterval = null;
+  let workerClockInTime = null;
+  let workerShiftLength = null;
+
+  function startShiftCountdown(clockInAt, shiftLengthHours) {
+    workerClockInTime = clockInAt;
+    workerShiftLength = shiftLengthHours;
+    if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
+
+    function update() {
+      const el = document.getElementById('portal-shift-countdown');
+      if(!el) return;
+      const clockIn = new Date(clockInAt);
+      const shiftMs = parseFloat(shiftLengthHours) * 3600000;
+      const endTime = new Date(clockIn.getTime() + shiftMs);
+      const remainingMs = endTime.getTime() - Date.now();
+
+      if(remainingMs > 0) {
+        const totalSecs = Math.floor(remainingMs / 1000);
+        const h = Math.floor(totalSecs / 3600);
+        const m = Math.floor((totalSecs % 3600) / 60);
+        const s = totalSecs % 60;
+        el.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        el.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
+        document.getElementById('portal-clockout-section').style.display = 'none';
+      } else {
+        el.textContent = 'Your shift has ended';
+        el.style.color = 'var(--green)';
+        document.getElementById('portal-clockout-section').style.display = 'block';
+        clearInterval(shiftCountdownInterval);
+      }
+    }
+
+    update();
+    shiftCountdownInterval = setInterval(update, 1000);
+  }
+
+  async function workerClockOut() {
+    const code = document.getElementById('worker-clockout-input')?.value.trim();
+    const errorEl = document.getElementById('worker-clockout-error');
+    if(errorEl) errorEl.textContent = '';
+    if(!code) { if(errorEl) errorEl.textContent = 'Please enter the clock-out code.'; return; }
+    if(!currentSessionWorkerId) { if(errorEl) errorEl.textContent = 'Session error. Please contact hello@glasi.co.uk.'; return; }
+
+    // Validate code
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=clock_out_code', { headers: H }).then(r => r.json());
+    const sw = rows?.[0];
+    if(sw?.clock_out_code && code !== sw.clock_out_code) {
+      if(errorEl) errorEl.textContent = 'Incorrect code. Please check with the bar manager.';
+      return;
+    }
+
+    const now = new Date().toISOString();
+    await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
+      method: 'PATCH',
+      headers: { ...H, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: 'completed' })
+    });
+
+    await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + currentSessionWorkerId + '&status=eq.onshift', {
+      method: 'PATCH',
+      headers: { ...H, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: 'completed', clock_out_confirmed_at: now })
+    });
+
+    if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
+    document.getElementById('portal-clockout-section').style.display = 'none';
+    document.getElementById('portal-shift-complete').style.display = 'block';
+    document.getElementById('portal-shift-countdown').style.display = 'none';
+  }
+
   async function workerClockIn() {
     const code = document.getElementById('worker-clockin-input')?.value.trim();
     const errorEl = document.getElementById('worker-clockin-error');
@@ -1559,6 +1650,9 @@
     if(warningBox) warningBox.style.display = 'none';
     const heading = document.getElementById('on-your-way-heading');
     if(heading) heading.style.display = 'none';
+
+    // Start shift countdown
+    startShiftCountdown(now, sw.shift_length_hours || 2);
   }
 
   function openLeavingConfirm() {
