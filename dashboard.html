@@ -2717,15 +2717,17 @@ function startDashboardRealtime(sessionId) {
     }
   );
 
-  // WS 3: session_workers -- departed_at updates
+  // WS 3: session_workers -- status and departed_at updates
   dashboardRealtimeWs3 = makeRealtimeWs(
     'realtime:public:session_workers',
     [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'session_id=eq.' + sessionId }],
     async (record, type) => {
-      if(type === 'UPDATE' && record.departed_at) {
+      if(type === 'UPDATE') {
         const worker = sessionWorkers.find(w => w.sessionWorkerId === record.id);
         if(worker) {
-          worker.departedAt = record.departed_at;
+          if(record.departed_at) worker.departedAt = record.departed_at;
+          if(record.status) worker.status = record.status;
+          if(record.clock_in_at) worker.clockInAt = record.clock_in_at;
           renderRequestCards();
         }
       }
@@ -4436,18 +4438,24 @@ function renderRequestCards() {
           '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-top:4px;">'+(dispWorker.gsRef||'')+'</div>'
-          +(dispWorker.departedAt ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">En route</div>' : '<div style="font-size:12px;color:var(--amber);margin-top:4px;">Awaiting departure confirmation</div>')
+          +(dispWorker.status === 'onshift' 
+            ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">On shift</div>'
+            : dispWorker.departedAt 
+              ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">En route</div>' 
+              : '<div style="font-size:12px;color:var(--amber);margin-top:4px;">Awaiting departure confirmation</div>')
           +(dispWorker.clockInCode ? '<div style="font-size:11px;color:var(--grey);margin-top:6px;">Clock-in code: <span style="color:var(--white);font-weight:600;letter-spacing:2px;">'+dispWorker.clockInCode+'</span></div>' : '')
           +(etaMins !== null
             ?'<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';" id="eta-'+r.id+'">'+( etaMins>0?'ETA: '+etaMins+' min':'Should have arrived')+'</div>'
             :'<div style="font-size:12px;color:var(--grey);">Distance unknown</div>')
-          +'<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">'
-          +'<div style="font-size:10px;letter-spacing:1px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Clock-in Code</div>'
-          +'<div style="display:flex;gap:6px;">'
-          +'<input type="text" id="clockin-'+r.id+'" maxlength="6" placeholder="Enter code" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--white);font-family:Inter,sans-serif;outline:none;">'
-          +'<button onclick="event.stopPropagation();confirmClockIn('+r.id+','+dispWorker.applicationId+')" style="background:var(--green);color:var(--navy);border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">Confirm</button>'
-          +'</div>'
-          +'</div>'
+          +(dispWorker.status !== 'onshift' ? 
+            '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">'
+            +'<div style="font-size:10px;letter-spacing:1px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Clock-in Code</div>'
+            +'<div style="display:flex;gap:6px;">'
+            +'<input type="text" id="clockin-'+r.id+'" maxlength="6" placeholder="Enter code" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--white);font-family:Inter,sans-serif;outline:none;">'
+            +'<button onclick="event.stopPropagation();confirmClockIn('+r.id+','+dispWorker.applicationId+')" style="background:var(--green);color:var(--navy);border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">Confirm</button>'
+            +'</div>'
+            +'</div>'
+          : '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;font-size:12px;color:var(--green);font-weight:600;">Clocked in · ' + (dispWorker.clockInAt ? new Date(dispWorker.clockInAt).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '') + '</div>')
         :'<div style="font-size:12px;color:var(--grey);">Worker not found</div>')
         +'</div>'
         +'</div>';
