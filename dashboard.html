@@ -1975,7 +1975,7 @@ async function tryRestoreSession() {
   // load session workers and requests in parallel
   const [swData, reqData] = await Promise.all([
     sbGet('session_workers',
-      '?session_id=eq.'+session.id+'&select=id,application_id,worker_name,worker_phone,status,clock_in_code,clock_out_code,clock_in_at,dispatched_at,bar_id,shift_length_hours,shift_request_id,expected_arrival_minutes'
+      '?session_id=eq.'+session.id+'&select=id,application_id,worker_name,worker_phone,status,clock_in_code,clock_out_code,clock_in_at,dispatched_at,departed_at,bar_id,shift_length_hours,shift_request_id,expected_arrival_minutes'
     ),
     sbGet('shift_requests',
       '?session_id=eq.'+session.id+'&order=request_time.asc&select=*,bars(name)'
@@ -2042,8 +2042,10 @@ async function tryRestoreSession() {
       barRecord: barRecord,
       barContact: barContact,
       dispatchedAt: sw.dispatched_at,
+      departedAt: sw.departed_at || null,
       clockInAt: sw.clock_in_at,
-      clockInCode: sw.clock_in_code,
+      clockInCode: sw.clock_in_code || null,
+      gsRef: null, // restored from shifts table below
       shiftLength: sw.shift_length_hours ? String(sw.shift_length_hours) : null,
       hourly_rate: appWorker.hourly_rate || 12.71,
       clockOutAt: null,
