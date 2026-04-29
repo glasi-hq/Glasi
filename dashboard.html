@@ -2084,7 +2084,7 @@ async function tryRestoreSession() {
 
   // Restore GS refs from shifts table
   try {
-    const activeShifts = await sbGet('shifts', '?session_id=eq.'+session.id+'&select=session_worker_id,glasi_ref,clock_in_confirmed_at,shift_length_hours');
+    const activeShifts = await sbGet('shifts', '?session_id=eq.'+session.id+'&select=session_worker_id,glasi_ref,clock_in_confirmed_at,shift_length_hours&order=id.desc');
     activeShifts.forEach(s => {
       const worker = sessionWorkers.find(w => w.sessionWorkerId === s.session_worker_id);
       if(worker) {
@@ -4582,6 +4582,7 @@ function renderRequestCards() {
           (w.status === 'dispatched' || w.status === 'onshift' || w.status === 'completed') &&
           (Number(w.shiftRequestId) === Number(r.id))
         ) || sessionWorkers.find(w => w.status === 'dispatched' || w.status === 'onshift');
+        if(dispWorker) console.log('dispWorker found:', dispWorker.name, 'clockInAt:', dispWorker.clockInAt, 'shiftLength:', dispWorker.shiftLength);
         const countdownEl = document.getElementById('shift-countdown-'+r.id);
         if(countdownEl) {
           if(dispWorker?.clockInAt && dispWorker?.shiftLength) {
@@ -4603,7 +4604,7 @@ function renderRequestCards() {
           } else if(countdownEl.textContent === 'Calculating...' && dispWorker?.sessionWorkerId) {
             // Fetch shift data if missing -- only once
             countdownEl.textContent = 'Loading...';
-            sbGet('shifts', '?session_worker_id=eq.'+dispWorker.sessionWorkerId+'&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours').then(rows => {
+            sbGet('shifts', '?session_worker_id=eq.'+dispWorker.sessionWorkerId+'&select=clock_in_confirmed_at,shift_length_hours&order=id.desc&limit=1').then(rows => {
               if(rows?.[0]) {
                 dispWorker.clockInAt = rows[0].clock_in_confirmed_at;
                 dispWorker.shiftLength = String(rows[0].shift_length_hours);
