@@ -1185,6 +1185,24 @@
     if(sw && (sw.status === 'dispatched' || sw.status === 'onshift')) {
       // Dispatched workers always see the dispatched screen -- ignore left_at
       currentSessionWorkerId = sw.id;
+
+      // If already onshift -- show clocked in state directly
+      if(sw.status === 'onshift') {
+        document.getElementById('sessions-empty').style.display = 'none';
+        document.getElementById('sessions-live').style.display = 'block';
+        document.getElementById('live-waiting').style.display = 'none';
+        document.getElementById('live-dispatched').style.display = 'block';
+        document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
+        const dispCard = document.querySelector('.dispatched-card');
+        if(dispCard) dispCard.style.display = 'none';
+        const warningBox = document.querySelector('#live-dispatched .warning-box');
+        if(warningBox) warningBox.style.display = 'none';
+        document.getElementById('leaving-section').style.display = 'none';
+        document.getElementById('leaving-confirmed').style.display = 'block';
+        document.getElementById('clockin-input-section').style.display = 'none';
+        document.getElementById('clockin-confirmed-section').style.display = 'block';
+        return;
+      }
       // Check if already confirmed leaving
       if(sw.departed_at) {
         // Will show leaving-confirmed after dispatch screen renders
