@@ -4636,11 +4636,13 @@ function renderRequestCards() {
               countdownEl.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
               countdownEl.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
             } else {
-              countdownEl.textContent = 'Shift complete';
-              countdownEl.style.color = 'var(--grey)';
-              // Auto-reveal clock-out code
-              const dispWorker2 = sessionWorkers.find(w => Number(w.shiftRequestId) === Number(r.id)) || sessionWorkers.find(w => w.status === 'onshift');
-              if(dispWorker2?.clockOutCode) revealClockOutCode(r.id, dispWorker2.clockOutCode);
+              if(countdownEl.textContent !== 'Shift complete') {
+                countdownEl.textContent = 'Shift complete';
+                countdownEl.style.color = 'var(--grey)';
+                // Auto-reveal clock-out code -- only once
+                const dispWorker2 = sessionWorkers.find(w => Number(w.shiftRequestId) === Number(r.id)) || sessionWorkers.find(w => w.status === 'onshift');
+                if(dispWorker2?.clockOutCode) revealClockOutCode(r.id, dispWorker2.clockOutCode);
+              }
             }
           } else if(countdownEl.textContent === 'Calculating...' && dispWorker?.sessionWorkerId) {
             // Fetch shift data if missing -- only once
