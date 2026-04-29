@@ -2062,13 +2062,40 @@ async function tryRestoreSession() {
   // start shift countdown for any onshift workers
   if(sessionWorkers.some(w=>w.status==='onshift')) startShiftCountdown();
 
+  // Load worker bar distances
+  const appIds = sessionWorkers.map(w => w.applicationId).join(',');
+  if(appIds) {
+    try {
+      const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&select=application_id,bar_id,walking_minutes');
+      workerBarDistances = Array.isArray(dists) ? dists : [];
+    } catch(e) { workerBarDistances = []; }
+  }
+
+  // Restore GS refs from shifts table
+  try {
+    const activeShifts = await sbGet('shifts', '?session_id=eq.'+session.id+'&select=session_worker_id,glasi_ref,clock_in_confirmed_at');
+    activeShifts.forEach(s => {
+      const worker = sessionWorkers.find(w => w.sessionWorkerId === s.session_worker_id);
+      if(worker) {
+        worker.gsRef = s.glasi_ref;
+        worker.clockInAt = s.clock_in_confirmed_at;
+      }
+    });
+  } catch(e) {}
+
   // Navigate to Sessions Live tab
   startDashboardRealtime(session.id);
   showScreen('sessions');
   setActiveNav('sessions');
   switchSessionsTab('live');
 
-  console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers');
+  // Render requests and room after tab switches
+  setTimeout(() => {
+    renderRequestCards();
+    renderRoom();
+  }, 100);
+
+  console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers', activeShiftRequests.length, 'requests');
   return true;
 }
 
@@ -5356,6 +5383,15 @@ function renderLiveRoom() {
   document.getElementById('sessions-live-empty').style.display = 'none';
   document.getElementById('sessions-live-room').style.display = 'block';
 
+  // If room already built, just update header and re-render content
+  if(room.querySelector('#request-section')) {
+    const zoneEl = room.querySelector('[data-zone-name]');
+    if(zoneEl) zoneEl.textContent = activeZone?.name || '';
+    renderRequestCards();
+    renderRoom();
+    return;
+  }
+
   const zoneName = activeZone?.name || '';
   const sessionDate = new Date().toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
 
@@ -5366,7 +5402,7 @@ function renderLiveRoom() {
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;"></div>
           <div>
-            <div style="font-size:15px;font-weight:700;color:var(--white);">${zoneName}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--white);" data-zone-name>${zoneName}</div>
             <div style="font-size:11px;color:var(--grey);margin-top:2px;">${sessionDate} &nbsp;·&nbsp; Session #${activeSessionId}</div>
           </div>
         </div>
@@ -5421,6 +5457,7 @@ function renderLiveRoom() {
     if(el) el.textContent = m + ':' + s;
   }, 1000);
 
+  renderRequestCards();
   renderRoom();
 }
 
