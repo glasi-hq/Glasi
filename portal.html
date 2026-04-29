@@ -721,21 +721,15 @@
 <!-- LOGIN SCREEN -->
 <div id="screen-login" class="screen active">
   <div class="login-wrap">
-    <div class="login-card">
-      <div class="wordmark-wrap">
-        <span class="wordmark">GLASI</span>
-      </div>
-      <div class="login-title">Worker Portal</div>
-      <div class="login-sub">Sign in with your registered email and password</div>
+    <div class="login-card" style="text-align:center;">
+      <div class="wordmark">GLASI</div>
+      <p style="font-size:9px;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:32px;font-family:'Inter',sans-serif;">Worker Portal</p>
 
-      <label class="field-label">Email</label>
-      <input type="email" id="login-email" class="field" placeholder="you@example.com">
+      <input type="email" id="login-email" class="field" placeholder="Email" style="text-align:left;">
+      <input type="password" id="login-password" class="field" placeholder="Password" style="text-align:left;margin-top:12px;">
 
-      <label class="field-label">Password</label>
-      <input type="password" id="login-password" class="field" placeholder="Your password">
-
-      <button class="primary-btn" onclick="handleLogin()">Sign In</button>
-      <span class="forgot-link" onclick="handleForgot()">Forgot password?</span>
+      <button class="primary-btn" onclick="handleLogin()" style="margin-top:20px;">Sign In</button>
+      <div style="margin-top:12px;"><span class="forgot-link" onclick="handleForgot()" style="font-size:12px;color:var(--grey);cursor:pointer;text-decoration:underline;">Forgot password?</span></div>
       <div class="error-msg" id="login-error"></div>
     </div>
   </div>
