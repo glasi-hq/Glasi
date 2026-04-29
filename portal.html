@@ -982,7 +982,19 @@
           </div>
           <div id="leaving-confirmed" style="display:none;margin-top:16px;text-align:center;">
             <div style="font-size:14px;color:var(--green);font-weight:600;margin-bottom:6px;">On your way</div>
-            <div style="font-size:13px;color:var(--grey);line-height:1.6;">Head straight to the venue. Your clock-in code will be given to you by the bar manager on arrival. Send it back to us immediately.</div>
+            <div style="font-size:13px;color:var(--grey);line-height:1.6;margin-bottom:20px;">Head straight to the venue. Your clock-in code will be given to you by the bar manager on arrival. Enter it below as soon as you receive it.</div>
+            <div id="clockin-input-section">
+              <div style="font-size:11px;font-weight:600;letter-spacing:1px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;text-align:left;">Clock-in Code</div>
+              <div style="display:flex;gap:8px;">
+                <input type="text" id="worker-clockin-input" maxlength="6" placeholder="Enter code from bar manager" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:16px;color:var(--white);font-family:'Inter',sans-serif;outline:none;letter-spacing:4px;text-align:center;">
+                <button onclick="workerClockIn()" style="background:var(--green);color:var(--navy);border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Confirm</button>
+              </div>
+              <div id="worker-clockin-error" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px;"></div>
+            </div>
+            <div id="clockin-confirmed-section" style="display:none;margin-top:12px;">
+              <div style="font-size:14px;color:var(--green);font-weight:600;">Clocked in</div>
+              <div style="font-size:12px;color:var(--grey);margin-top:4px;">Your shift has started. Work hard and enjoy it.</div>
+            </div>
           </div>
 
           <!-- Location confirmation overlay -->
@@ -1467,6 +1479,56 @@
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-responded').style.display = 'block';
     document.getElementById('live-responded-msg').textContent = 'No problem. Stand by for the next shift post.';
+  }
+
+  async function workerClockIn() {
+    const code = document.getElementById('worker-clockin-input')?.value.trim();
+    const errorEl = document.getElementById('worker-clockin-error');
+    if(errorEl) errorEl.textContent = '';
+
+    if(!code) { if(errorEl) errorEl.textContent = 'Please enter the code from the bar manager.'; return; }
+    if(!currentSessionWorkerId) { if(errorEl) errorEl.textContent = 'Session error. Please contact hello@glasi.co.uk.'; return; }
+
+    // Validate code against session_workers
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=id,clock_in_code,session_id,bar_id,shift_length_hours,shift_request_id', { headers: H }).then(r => r.json());
+    const sw = rows?.[0];
+
+    if(!sw) { if(errorEl) errorEl.textContent = 'Could not find your shift. Please contact hello@glasi.co.uk.'; return; }
+    if(sw.clock_in_code && code !== sw.clock_in_code) {
+      if(errorEl) errorEl.textContent = 'Incorrect code. Please check with the bar manager.';
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    // Update session_workers status to onshift
+    await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
+      method: 'PATCH',
+      headers: { ...H, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: 'onshift', clock_in_at: now, clock_in_code: code })
+    });
+
+    // Create shift record
+    const shiftRef = 'GS' + String(Date.now()).slice(-6);
+    await fetch(SUPABASE_URL + '/rest/v1/shifts', {
+      method: 'POST',
+      headers: { ...H, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        session_id: sw.session_id,
+        session_worker_id: currentSessionWorkerId,
+        bar_id: sw.bar_id,
+        shift_request_id: sw.shift_request_id,
+        shift_length_hours: sw.shift_length_hours,
+        clock_in_confirmed_at: now,
+        status: 'onshift',
+        glasi_ref: shiftRef,
+        hourly_rate: currentWorker?.hourly_rate || 12.71
+      })
+    });
+
+    // Show confirmed state
+    document.getElementById('clockin-input-section').style.display = 'none';
+    document.getElementById('clockin-confirmed-section').style.display = 'block';
   }
 
   function openLeavingConfirm() {
