@@ -1171,6 +1171,7 @@
     const sw = swRows?.[0];
 
     if(sw && (sw.status === 'dispatched' || sw.status === 'onshift')) {
+      // Dispatched workers always see the dispatched screen -- ignore left_at
       currentSessionWorkerId = sw.id;
       // Check if already confirmed leaving
       if(sw.departed_at) {
@@ -1200,7 +1201,7 @@
           if(mapsBtn) mapsBtn.href = bar.google_maps_link || '#';
         }
       }
-    } else if(liveInvite.joined_at && !liveInvite.left_at) {
+    } else if(liveInvite.joined_at && (!liveInvite.left_at || new Date(liveInvite.joined_at) > new Date(liveInvite.left_at))) {
       // Worker already joined -- restore to live waiting room
       currentSessionInvite = liveInvite;
       document.getElementById('sessions-empty').style.display = 'none';
