@@ -2654,6 +2654,7 @@ function updateCounts() {
 let dashboardRealtimeWs = null;
 
 let dashboardRealtimeWs2 = null;
+let dashboardRealtimeWs3 = null;
 
 function makeRealtimeWs(topic, pgChanges, onRecord) {
   const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY + '&vsn=1.0.0';
@@ -2710,6 +2711,21 @@ function startDashboardRealtime(sessionId) {
     [{ event: 'INSERT', schema: 'public', table: 'shift_responses' }],
     async (record, type) => {
       if(type === 'INSERT') await handleNewShiftResponse(record);
+    }
+  );
+
+  // WS 3: session_workers -- departed_at updates
+  dashboardRealtimeWs3 = makeRealtimeWs(
+    'realtime:public:session_workers',
+    [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'session_id=eq.' + sessionId }],
+    async (record, type) => {
+      if(type === 'UPDATE' && record.departed_at) {
+        const worker = sessionWorkers.find(w => w.sessionWorkerId === record.id);
+        if(worker) {
+          worker.departedAt = record.departed_at;
+          renderRequestCards();
+        }
+      }
     }
   );
 }
@@ -2773,6 +2789,7 @@ async function handleWorkerPortalJoin(record) {
 function stopDashboardRealtime() {
   if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} dashboardRealtimeWs = null; }
   if(dashboardRealtimeWs2) { try { dashboardRealtimeWs2.close(); } catch(e) {} dashboardRealtimeWs2 = null; }
+  if(dashboardRealtimeWs3) { try { dashboardRealtimeWs3.close(); } catch(e) {} dashboardRealtimeWs3 = null; }
 }
 
 // ROOM
@@ -4390,6 +4407,7 @@ function renderRequestCards() {
           '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-top:4px;">'+(dispWorker.gsRef||'')+'</div>'
+          +(dispWorker.departedAt ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">En route</div>' : '<div style="font-size:12px;color:var(--amber);margin-top:4px;">Awaiting departure confirmation</div>')
           +(etaMins !== null
             ?'<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';" id="eta-'+r.id+'">'+( etaMins>0?'ETA: '+etaMins+' min':'Should have arrived')+'</div>'
             :'<div style="font-size:12px;color:var(--grey);">Distance unknown</div>')
