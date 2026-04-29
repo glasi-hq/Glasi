@@ -2108,7 +2108,6 @@ async function tryRestoreSession() {
   }, 100);
 
   console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers', activeShiftRequests.length, 'requests');
-  sessionWorkers.forEach(w => console.log('Worker:', w.name, 'status:', w.status, 'clockInAt:', w.clockInAt, 'shiftLength:', w.shiftLength, 'shiftRequestId:', w.shiftRequestId));
   return true;
 }
 
@@ -4582,7 +4581,7 @@ function renderRequestCards() {
           (w.status === 'dispatched' || w.status === 'onshift' || w.status === 'completed') &&
           (Number(w.shiftRequestId) === Number(r.id))
         ) || sessionWorkers.find(w => w.status === 'dispatched' || w.status === 'onshift');
-        if(dispWorker) console.log('dispWorker found:', dispWorker.name, 'clockInAt:', dispWorker.clockInAt, 'shiftLength:', dispWorker.shiftLength);
+        if(dispWorker) { /* found */ }
         const countdownEl = document.getElementById('shift-countdown-'+r.id);
         if(countdownEl) {
           if(dispWorker?.clockInAt && dispWorker?.shiftLength) {
