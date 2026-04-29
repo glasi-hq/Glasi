@@ -3089,7 +3089,7 @@ function renderShiftCard(w) {
     +'</div></div>';
 }
 
-function confirmClockIn(wid) {
+function confirmClockInLegacy(wid) {
   const w=sessionWorkers.find(x=>x.id===wid);
   const input=document.getElementById(`ci-${wid}`);
   if(!w||!input) return;
@@ -4224,8 +4224,10 @@ async function confirmClockIn(requestId, applicationId) {
   if(!code) { alert('Please enter the clock-in code from the bar manager.'); return; }
 
   const worker = sessionWorkers.find(w => Number(w.applicationId) === Number(applicationId));
-  const request = activeShiftRequests.find(r => r.id === Number(requestId));
-  if(!worker || !request) { alert('Worker or request not found.'); return; }
+  const request = activeShiftRequests.find(r => Number(r.id) === Number(requestId));
+
+  if(!worker) { alert('Worker not found. Session may need refreshing.'); console.error('Worker not found, appId:', applicationId, 'sessionWorkers:', sessionWorkers); return; }
+  if(!request) { alert('Request not found. Session may need refreshing.'); console.error('Request not found, requestId:', requestId, 'activeShiftRequests:', activeShiftRequests); return; }
 
   const now = new Date().toISOString();
   const clockInTime = new Date().toLocaleTimeString('en-GB', {hour12:false});
@@ -4239,16 +4241,19 @@ async function confirmClockIn(requestId, applicationId) {
 
   // Create shift record
   const shiftRef = 'GS' + String(Date.now()).slice(-6);
-  await sbPost('shifts', {
+  const shiftResult = await sbPost('shifts', {
     session_id: activeSessionId,
     session_worker_id: worker.sessionWorkerId,
     bar_id: request.bar_id,
     shift_request_id: request.id,
-    clock_in_time: clockInTime,
+    clock_in_confirmed_at: now,
     shift_length_hours: parseFloat(request.shift_length_hours || 2),
+    hourly_rate: worker.hourly_rate || 12.71,
     status: 'active',
-    glasi_ref: shiftRef
+    glasi_ref: shiftRef,
+    accepted_at: worker.dispatchedAt || now
   });
+  console.log('Shift created:', shiftResult);
 
   // Update local state
   worker.status = 'onshift';
