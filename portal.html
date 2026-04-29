@@ -1571,31 +1571,71 @@
     if(!code) { if(errorEl) errorEl.textContent = 'Please enter the clock-out code.'; return; }
     if(!currentSessionWorkerId) { if(errorEl) errorEl.textContent = 'Session error. Please contact hello@glasi.co.uk.'; return; }
 
-    // Validate code
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=clock_out_code', { headers: H }).then(r => r.json());
+    // Fetch full session_worker record for calculation
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=clock_out_code,shift_length_hours,application_id,session_id', { headers: H }).then(r => r.json());
     const sw = rows?.[0];
-    if(sw?.clock_out_code && code !== sw.clock_out_code) {
+    if(!sw) { if(errorEl) errorEl.textContent = 'Could not find your shift. Please contact hello@glasi.co.uk.'; return; }
+    if(sw.clock_out_code && code !== sw.clock_out_code) {
       if(errorEl) errorEl.textContent = 'Incorrect code. Please check with the bar manager.';
       return;
     }
 
     const now = new Date().toISOString();
+    const hourlyRate = currentWorker?.hourly_rate || 12.71;
+    const shiftHours = parseFloat(sw.shift_length_hours || 2);
+    const totalEarned = Math.round(shiftHours * hourlyRate * 100) / 100;
+
+    // Points: 100 base + 20 bonus for arriving on time (we'll add arrival bonus logic later)
+    const pointsEarned = 100;
+
+    // 1. Update session_workers to completed
     await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
       method: 'PATCH',
       headers: { ...H, 'Prefer': 'return=minimal' },
       body: JSON.stringify({ status: 'completed' })
     });
 
+    // 2. Update shifts record with full completion data
     await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + currentSessionWorkerId + '&status=eq.onshift', {
       method: 'PATCH',
       headers: { ...H, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: 'completed', clock_out_confirmed_at: now })
+      body: JSON.stringify({
+        status: 'completed',
+        clock_out_confirmed_at: now,
+        total_earned: totalEarned
+      })
     });
 
+    // 3. Add points to worker's application record
+    if(sw.application_id && currentWorker) {
+      const currentPoints = currentWorker.total_points || 0;
+      const newPoints = currentPoints + pointsEarned;
+      await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + sw.application_id, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ total_points: newPoints })
+      });
+      currentWorker.total_points = newPoints;
+    }
+
+    // 4. Update UI
     if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
     document.getElementById('portal-clockout-section').style.display = 'none';
-    document.getElementById('portal-shift-complete').style.display = 'block';
     document.getElementById('portal-shift-countdown').style.display = 'none';
+    document.getElementById('portal-clockout-early').style.display = 'none';
+
+    // Show completion card with earnings and points
+    const completeEl = document.getElementById('portal-shift-complete');
+    completeEl.innerHTML = '<div style="background:rgba(74,222,128,0.08);border:2px solid rgba(74,222,128,0.3);border-radius:16px;padding:32px 24px;text-align:center;">'
+      + '<div style="font-size:32px;margin-bottom:12px;">🎉</div>'
+      + '<div style="font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px;">Shift complete</div>'
+      + '<div style="font-size:14px;color:var(--grey);line-height:1.7;margin-bottom:20px;">Great work tonight. You have earned ' + pointsEarned + ' points towards your next tier.</div>'
+      + '<div style="display:flex;justify-content:center;gap:24px;">'
+      + '<div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--white);">£' + totalEarned.toFixed(2) + '</div><div style="font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Earned</div></div>'
+      + '<div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--amber);">+' + pointsEarned + '</div><div style="font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Points</div></div>'
+      + '</div>'
+      + '</div>';
+    completeEl.style.display = 'block';
   }
 
   async function workerClockIn() {
