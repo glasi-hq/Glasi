@@ -2031,6 +2031,7 @@ async function tryRestoreSession() {
 
     return {
       ...appWorker,
+      name: appWorker.name || sw.worker_name || 'Unknown',
       applicationId: sw.application_id,
       id: uid(),
       sessionWorkerId: sw.id,
@@ -2058,6 +2059,14 @@ async function tryRestoreSession() {
 
   // restore UI
   document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+
+  // Restore live session timer from actual start time
+  if(session.start_time) {
+    const today = new Date().toISOString().slice(0, 10);
+    liveSessionStart = new Date(today + 'T' + session.start_time).getTime();
+  } else {
+    liveSessionStart = Date.now();
+  }
 
   // start shift countdown for any onshift workers
   if(sessionWorkers.some(w=>w.status==='onshift')) startShiftCountdown();
@@ -4353,7 +4362,10 @@ function renderRequestCards() {
 
     if(isDispatched) {
       // Find the dispatched worker for this request
-      const dispWorker = sessionWorkers.find(w => w.status === 'dispatched' && w.shiftLength == r.shift_length_hours && (w.bar === barName || (w.barRecord && w.barRecord.id === r.bar_id)));
+      const dispWorker = sessionWorkers.find(w => 
+        (w.status === 'dispatched' || w.status === 'onshift') && 
+        (w.shiftRequestId === r.id || Number(w.shiftRequestId) === Number(r.id))
+      ) || sessionWorkers.find(w => w.status === 'dispatched' || w.status === 'onshift');
       const distData = dispWorker ? workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id) : null;
       const walkMins = distData ? distData.walking_minutes : null;
       const dispatchedAt = dispWorker?.dispatchedAt ? new Date(dispWorker.dispatchedAt) : null;
@@ -5607,6 +5619,7 @@ async function goLiveSession(sessionId) {
   });
 
   activeSessionId = sessionId;
+  liveSessionStart = Date.now();
   startDashboardRealtime(sessionId);
 
   // 3. Load session details
