@@ -2693,6 +2693,22 @@ function makeRealtimeWs(topic, pgChanges, onRecord) {
   return ws;
 }
 
+let scheduleRealtimeWs = null;
+
+function startScheduleRealtime() {
+  if(scheduleRealtimeWs) { try { scheduleRealtimeWs.close(); } catch(e) {} }
+  scheduleRealtimeWs = makeRealtimeWs(
+    'realtime:public:session_invites_schedule',
+    [{ event: 'UPDATE', schema: 'public', table: 'session_invites' }],
+    async (record, type) => {
+      if(type === 'UPDATE' && record.attendance_confirmed === 'confirmed') {
+        // Refresh sessions list to update confirmed headcount
+        await loadSessionsList();
+      }
+    }
+  );
+}
+
 function startDashboardRealtime(sessionId) {
   if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} }
   if(dashboardRealtimeWs2) { try { dashboardRealtimeWs2.close(); } catch(e) {} }
@@ -2852,9 +2868,7 @@ function renderRoom() {
         (w.reliability_score!=null?scorebadge(w.reliability_score):'')+
         '</div>'+
         '<div class="wc-actions">'+
-        (!isLeft?'<button class="wc-btn wc-btn-dispatch" onclick="event.stopPropagation();openDispatch(\''+w.id+'\')">Dispatch</button>':'')+
-        (!isLeft?'<button class="wc-btn wc-btn-left" onclick="event.stopPropagation();markLeft(\''+w.id+'\')">Left</button>':'')+
-        (isLeft?'<button class="wc-btn wc-btn-restore" onclick="event.stopPropagation();restoreWorker(\''+w.id+'\')">Restore</button>':'')+
+        
         '</div>'+
 
         '</div>';
@@ -5640,6 +5654,7 @@ function renderLiveRoom() {
 async function goToSessions() {
   showScreen('sessions');
   setActiveNav('sessions');
+  startScheduleRealtime();
   await loadSessionsList();
 }
 
@@ -5945,25 +5960,25 @@ async function sendSessionCodes(sessionId) {
 <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
 <div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
 <div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;">
-<span style="font-size:20px;letter-spacing:8px;color:#a8c6e8;">GLASI</span>
+<span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span>
 </div>
 </div>
 <div style="background:#ffffff;padding:28px 32px;">
 <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${firstName},</p>
 <p style="margin:0 0 20px;font-size:15px;color:#374151;">Your session is live tonight at <strong>${timeStr}</strong>. Here is your session code.</p>
 <div style="background:#0d1117;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
-<div style="font-size:11px;letter-spacing:3px;color:#a8c6e8;margin-bottom:8px;">YOUR SESSION CODE</div>
-<div style="font-size:36px;font-weight:700;letter-spacing:12px;color:#a8c6e8;">${code}</div>
+<div style="font-size:11px;letter-spacing:3px;color:#ffffff;margin-bottom:8px;opacity:0.6;">YOUR SESSION CODE</div>
+<div style="font-size:36px;font-weight:700;letter-spacing:12px;color:#ffffff;">${code}</div>
 </div>
-<p style="margin:0 0 12px;font-size:14px;color:#374151;">Log in at <strong>glasi.co.uk/portal</strong> at <strong>${timeStr}</strong> and enter this code in the Sessions tab.</p>
+<p style="margin:0 0 12px;font-size:14px;color:#374151;">Log in at <strong>www.glasi.co.uk/portal.html</strong> at <strong>${timeStr}</strong> and enter this code in the Sessions tab.</p>
 <p style="margin:0 0 20px;font-size:13px;color:#6b7280;">Once you join the session, stay on the page. Do not navigate away. If you are not using a laptop, we recommend keeping this tab open on your phone and not switching apps.</p>
-<a href="https://glasi.co.uk/portal.html" style="display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:16px;">Log in to Glasi Portal</a>
+<a href="https://www.glasi.co.uk/portal.html" style="display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:16px;">Log in to Glasi Portal</a>
 </div>
 <div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
 <p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
 </div>
 </div>
-<p style="margin-top:24px;font-family:Arial,sans-serif;font-size:12px;color:#999;text-align:center;">Select all (Ctrl+A), Copy (Ctrl+C), then paste into Gmail</p>
+
 </body></html>`;
 
     return { name, email, code, html };
@@ -6164,7 +6179,7 @@ function copyWorkerReport(btn, reportId) {
   const html = _reportStore[reportId] || '';
   if(!html) { btn.textContent = 'No report found'; return; }
   // open in new tab -- select all, copy, paste into Gmail
-  const fullPage = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body>' + html + '<p style="margin-top:24px;font-family:Arial,sans-serif;font-size:12px;color:#999;text-align:center;">Select all (Ctrl+A), Copy (Ctrl+C), then paste into Gmail</p></body></html>';
+  const fullPage = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body>' + html + '</body></html>';
   const win = window.open('', '_blank');
   if(win) {
     win.document.write(fullPage);
@@ -6305,7 +6320,7 @@ async function generateInvites() {
     const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
 <div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
 <div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;">
-<span style="font-size:20px;letter-spacing:8px;color:#a8c6e8;">GLASI</span>
+<span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span>
 </div>
 </div>
 <div style="background:#ffffff;padding:28px 32px;">
@@ -6316,7 +6331,7 @@ async function generateInvites() {
 <a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a>
 <a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a>
 </div>
-<p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at glasi.co.uk/portal.html at the session start time.</p>
+<p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at www.glasi.co.uk/portal.html at the session start time.</p>
 </div>
 <div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
 <p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
@@ -6345,7 +6360,7 @@ async function generateInvites() {
   window._inviteEmails = messages.map(m => ({
     name: m.name,
     email: m.email,
-    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body><div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;"><div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;"><div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;"><span style="font-size:20px;letter-spacing:8px;color:#a8c6e8;">GLASI</span></div></div><div style="background:#ffffff;padding:28px 32px;"><p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p><p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p><p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p><div style="display:flex;gap:12px;margin-bottom:24px;"><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a></div><p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at glasi.co.uk/portal.html at the session start time.</p></div><div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;"><p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p></div></div><p style="margin-top:24px;font-family:Arial,sans-serif;font-size:12px;color:#999;text-align:center;">Select all (Ctrl+A), Copy (Ctrl+C), then paste into Gmail</p></body></html>`
+    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body><div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;"><div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;"><div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;"><span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span></div></div><div style="background:#ffffff;padding:28px 32px;"><p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p><p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p><p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p><div style="display:flex;gap:12px;margin-bottom:24px;"><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a></div><p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at www.glasi.co.uk/portal.html at the session start time.</p></div><div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;"><p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p></div></div></body></html>`
   }));
 
   openOv('invite-messages');
