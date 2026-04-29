@@ -2108,6 +2108,7 @@ async function tryRestoreSession() {
   }, 100);
 
   console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers', activeShiftRequests.length, 'requests');
+  sessionWorkers.forEach(w => console.log('Worker:', w.name, 'status:', w.status, 'clockInAt:', w.clockInAt, 'shiftLength:', w.shiftLength, 'shiftRequestId:', w.shiftRequestId));
   return true;
 }
 
