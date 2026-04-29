@@ -2101,7 +2101,7 @@ async function tryRestoreSession() {
   setActiveNav('sessions');
   switchSessionsTab('live');
 
-  // Render requests and room after tab switches
+  // Render after all data loaded
   setTimeout(() => {
     renderRequestCards();
     renderRoom();
