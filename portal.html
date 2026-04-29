@@ -981,7 +981,7 @@
             <button onclick="openLeavingConfirm()" id="leaving-btn" class="primary-btn" style="background:var(--green);color:var(--navy);">I am leaving now</button>
           </div>
           <div id="leaving-confirmed" style="display:none;margin-top:16px;text-align:center;">
-            <div style="font-size:14px;color:var(--green);font-weight:600;margin-bottom:6px;">On your way</div>
+            <div id="on-your-way-heading" style="font-size:14px;color:var(--green);font-weight:600;margin-bottom:6px;">On your way</div>
             <div style="font-size:13px;color:var(--grey);line-height:1.6;margin-bottom:20px;">Head straight to the venue. Your clock-in code will be given to you by the bar manager on arrival. Enter it below as soon as you receive it.</div>
             <div id="clockin-input-section">
               <div style="font-size:11px;font-weight:600;letter-spacing:1px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;text-align:left;">Clock-in Code</div>
@@ -1201,8 +1201,10 @@
         const warningBox = document.querySelector('#live-dispatched .warning-box');
         if(warningBox) warningBox.style.display = 'none';
         document.getElementById('leaving-section').style.display = 'none';
-        document.getElementById('leaving-confirmed').style.display = 'none';
-        document.getElementById('clockin-input-section') && (document.getElementById('clockin-input-section').style.display = 'none');
+        document.getElementById('leaving-confirmed').style.display = 'block';
+        const heading = document.getElementById('on-your-way-heading');
+        if(heading) heading.style.display = 'none';
+        document.getElementById('clockin-input-section').style.display = 'none';
         document.getElementById('clockin-confirmed-section').style.display = 'block';
         return;
       }
@@ -1550,12 +1552,13 @@
     // Show confirmed state
     document.getElementById('clockin-input-section').style.display = 'none';
     document.getElementById('clockin-confirmed-section').style.display = 'block';
-    // Hide everything else
+    // Hide the venue card, WhatsApp instruction and On your way heading
     const dispCard = document.querySelector('.dispatched-card');
     if(dispCard) dispCard.style.display = 'none';
     const warningBox = document.querySelector('#live-dispatched .warning-box');
     if(warningBox) warningBox.style.display = 'none';
-    document.getElementById('leaving-confirmed').style.display = 'none';
+    const heading = document.getElementById('on-your-way-heading');
+    if(heading) heading.style.display = 'none';
   }
 
   function openLeavingConfirm() {
