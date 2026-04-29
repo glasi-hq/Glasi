@@ -977,6 +977,25 @@
           <div class="warning-box" style="margin-top:12px;">
             <p>Share your live location with the Glasi team on WhatsApp now, then leave for the venue immediately. Do not delay.</p>
           </div>
+          <div id="leaving-section" style="margin-top:16px;">
+            <button onclick="openLeavingConfirm()" id="leaving-btn" class="primary-btn" style="background:var(--green);color:var(--navy);">I am leaving now</button>
+          </div>
+          <div id="leaving-confirmed" style="display:none;margin-top:16px;text-align:center;">
+            <div style="font-size:14px;color:var(--green);font-weight:600;margin-bottom:6px;">On your way</div>
+            <div style="font-size:13px;color:var(--grey);line-height:1.6;">Head straight to the venue. Your clock-in code will be given to you by the bar manager on arrival. Send it back to us immediately.</div>
+          </div>
+
+          <!-- Location confirmation overlay -->
+          <div id="leaving-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center;padding:24px;">
+            <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:400px;width:100%;text-align:center;">
+              <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:12px;">Before you go</div>
+              <div style="font-size:14px;color:var(--grey);line-height:1.7;margin-bottom:24px;">Have you shared your live location with the Glasi team on WhatsApp? We need this to track your ETA to the venue.</div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <button onclick="confirmLeaving()" style="background:var(--green);color:var(--navy);border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Yes, I have shared my location</button>
+                <button onclick="closeLeavingOverlay()" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:10px;padding:14px;font-size:14px;font-family:'Inter',sans-serif;cursor:pointer;">Not yet -- go back</button>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -1148,10 +1167,21 @@
     if(!liveInvite) return;
 
     // Check if worker was dispatched in this session
-    const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&session_id=eq.' + liveInvite.session_id + '&select=id,status,bar_id,shift_length_hours', { headers: H }).then(r => r.json());
+    const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&session_id=eq.' + liveInvite.session_id + '&select=id,status,bar_id,shift_length_hours,departed_at', { headers: H }).then(r => r.json());
     const sw = swRows?.[0];
 
     if(sw && (sw.status === 'dispatched' || sw.status === 'onshift')) {
+      currentSessionWorkerId = sw.id;
+      // Check if already confirmed leaving
+      if(sw.departed_at) {
+        // Will show leaving-confirmed after dispatch screen renders
+        setTimeout(() => {
+          const leavingSection = document.getElementById('leaving-section');
+          const leavingConfirmed = document.getElementById('leaving-confirmed');
+          if(leavingSection) leavingSection.style.display = 'none';
+          if(leavingConfirmed) leavingConfirmed.style.display = 'block';
+        }, 100);
+      }
       // Worker was dispatched -- show dispatched screen with venue details
       currentSessionInvite = liveInvite;
       document.getElementById('sessions-empty').style.display = 'none';
@@ -1438,7 +1468,38 @@
     document.getElementById('live-responded-msg').textContent = 'No problem. Stand by for the next shift post.';
   }
 
+  function openLeavingConfirm() {
+    const overlay = document.getElementById('leaving-overlay');
+    if(overlay) overlay.style.display = 'flex';
+  }
+
+  function closeLeavingOverlay() {
+    const overlay = document.getElementById('leaving-overlay');
+    if(overlay) overlay.style.display = 'none';
+  }
+
+  let currentSessionWorkerId = null;
+
+  async function confirmLeaving() {
+    closeLeavingOverlay();
+    if(!currentSessionWorkerId) return;
+    const btn = document.getElementById('leaving-btn');
+    if(btn) btn.disabled = true;
+
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ departed_at: new Date().toISOString() })
+      });
+    } catch(e) {}
+
+    document.getElementById('leaving-section').style.display = 'none';
+    document.getElementById('leaving-confirmed').style.display = 'block';
+  }
+
   async function showDispatched(swRecord) {
+    currentSessionWorkerId = swRecord.id || swRecord.session_worker_id || null;
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-waiting').style.display = 'none';
     document.getElementById('live-responded').style.display = 'none';
