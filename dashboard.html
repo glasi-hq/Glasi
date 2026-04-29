@@ -4557,10 +4557,9 @@ function renderRequestCards() {
   requestTimerInterval = setInterval(() => {
     activeShiftRequests.forEach(r => {
       const el = document.getElementById('rtimer-'+r.id);
-      if(!el) return;
 
-      // 30 minute request timeout countdown
-      if(r.status !== 'dispatched' && r.status !== 'onshift' && r.status !== 'expired') {
+      // 30 minute request timeout countdown -- only for non-dispatched requests with a timer element
+      if(el && r.status !== 'dispatched' && r.status !== 'onshift' && r.status !== 'expired') {
         const postedAt = r.posted_at ? new Date(r.posted_at) : (r.request_time ? new Date(r.request_time) : new Date(r.created_at));
         const totalSecs = Math.floor((Date.now() - postedAt.getTime()) / 1000);
         const remainingSecs = Math.max(0, 1800 - totalSecs);
