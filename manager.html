@@ -658,6 +658,7 @@
               startManagerShiftCountdown(record.clock_out_code, record.shift_length_hours, record.clock_in_at);
               loadPastRequests();
             } else if(record.status === 'completed') {
+              if(managerShiftInterval) clearInterval(managerShiftInterval);
               showStatus('complete');
               loadPastRequests();
             }
