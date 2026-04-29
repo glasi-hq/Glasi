@@ -1565,6 +1565,37 @@
     shiftCountdownInterval = setInterval(update, 1000);
   }
 
+  let workerRating = 0;
+
+  function setWorkerRating(stars) {
+    workerRating = stars;
+    document.querySelectorAll('#worker-stars span').forEach(s => {
+      s.style.opacity = parseInt(s.dataset.star) <= stars ? '1' : '0.3';
+      s.style.color = parseInt(s.dataset.star) <= stars ? 'var(--amber)' : 'var(--white)';
+    });
+  }
+
+  async function submitWorkerRating() {
+    if(!currentSessionWorkerId) { skipWorkerRating(); return; }
+    const notes = document.getElementById('worker-rating-notes')?.value.trim();
+    await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + currentSessionWorkerId + '&status=eq.completed', {
+      method: 'PATCH',
+      headers: { ...H, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        worker_bar_rating: workerRating || null,
+        worker_bar_notes: notes || null
+      })
+    });
+    skipWorkerRating();
+  }
+
+  function skipWorkerRating() {
+    const section = document.getElementById('worker-rating-section');
+    const done = document.getElementById('worker-rating-done');
+    if(section) section.style.display = 'none';
+    if(done) done.style.display = 'block';
+  }
+
   async function workerClockOut() {
     const code = document.getElementById('worker-clockout-input')?.value.trim();
     const errorEl = document.getElementById('worker-clockout-error');
@@ -1628,7 +1659,7 @@
 
     // Show completion card with earnings and points
     const completeEl = document.getElementById('portal-shift-complete');
-    completeEl.innerHTML = '<div style="background:rgba(74,222,128,0.08);border:2px solid rgba(74,222,128,0.3);border-radius:16px;padding:32px 24px;text-align:center;">'
+    completeEl.innerHTML = '<div style="background:rgba(34,197,94,0.08);border:2px solid rgba(34,197,94,0.3);border-radius:16px;padding:32px 24px;text-align:center;margin-bottom:16px;">'
       + '<div style="font-size:32px;margin-bottom:12px;">🎉</div>'
       + '<div style="font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px;">Shift complete</div>'
       + '<div style="font-size:14px;color:var(--grey);line-height:1.7;margin-bottom:20px;">Great work tonight. You have earned ' + pointsEarned + ' points towards your next tier.</div>'
@@ -1636,7 +1667,22 @@
       + '<div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--white);">£' + totalEarned.toFixed(2) + '</div><div style="font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Earned</div></div>'
       + '<div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--amber);">+' + pointsEarned + '</div><div style="font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Points</div></div>'
       + '</div>'
-      + '</div>';
+      + '</div>'
+      + '<div id="worker-rating-section" style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;">'
+      + '<div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:4px;text-align:center;">How was the venue?</div>'
+      + '<div style="font-size:12px;color:var(--grey);text-align:center;margin-bottom:16px;">Your feedback helps us improve.</div>'
+      + '<div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px;" id="worker-stars">'
+      + '<span onclick="setWorkerRating(1)" style="font-size:32px;cursor:pointer;opacity:0.3;" data-star="1">★</span>'
+      + '<span onclick="setWorkerRating(2)" style="font-size:32px;cursor:pointer;opacity:0.3;" data-star="2">★</span>'
+      + '<span onclick="setWorkerRating(3)" style="font-size:32px;cursor:pointer;opacity:0.3;" data-star="3">★</span>'
+      + '<span onclick="setWorkerRating(4)" style="font-size:32px;cursor:pointer;opacity:0.3;" data-star="4">★</span>'
+      + '<span onclick="setWorkerRating(5)" style="font-size:32px;cursor:pointer;opacity:0.3;" data-star="5">★</span>'
+      + '</div>'
+      + '<textarea id="worker-rating-notes" placeholder="Any feedback about the venue or your experience..." style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:var(--white);font-family:\'Inter\',sans-serif;outline:none;resize:none;height:70px;margin-bottom:12px;"></textarea>'
+      + '<button onclick="submitWorkerRating()" style="width:100%;background:var(--ice);color:var(--navy);border:none;border-radius:8px;padding:13px;font-size:13px;font-weight:700;font-family:\'Inter\',sans-serif;cursor:pointer;margin-bottom:8px;">Submit Feedback</button>'
+      + '<button onclick="skipWorkerRating()" style="width:100%;background:none;border:none;color:var(--grey);font-size:12px;font-family:\'Inter\',sans-serif;cursor:pointer;padding:6px;">Skip</button>'
+      + '</div>'
+      + '<div id="worker-rating-done" style="display:none;text-align:center;padding:16px;"><div style="font-size:13px;color:var(--grey);">Thank you for your feedback. See you next time.</div></div>';
     completeEl.style.display = 'block';
   }
 
