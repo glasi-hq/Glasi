@@ -4233,6 +4233,7 @@ async function dispatchWorker(applicationId, requestId) {
   const shiftLength = request.shift_length_hours;
   const now = new Date().toISOString();
   const gsRef = 'GS' + String(Date.now()).slice(-6);
+  const clockInCode = String(Math.floor(1000 + Math.random() * 9000)); // 4 digit code
 
   // 1. Update session_workers
   await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
@@ -4240,7 +4241,8 @@ async function dispatchWorker(applicationId, requestId) {
     bar_id: barId,
     shift_request_id: requestId,
     shift_length_hours: shiftLength,
-    dispatched_at: now
+    dispatched_at: now,
+    clock_in_code: clockInCode
   });
 
   // 2. Update shift_request status
@@ -4253,6 +4255,7 @@ async function dispatchWorker(applicationId, requestId) {
   worker.dispatchedAt = now;
   worker.shiftLength = shiftLength;
   worker.gsRef = gsRef;
+  worker.clockInCode = clockInCode;
 
   const req = activeShiftRequests.find(r => r.id === requestId);
   if(req) req.status = 'dispatched';
@@ -4277,6 +4280,12 @@ async function dispatchWorker(applicationId, requestId) {
 async function confirmClockIn(requestId, applicationId) {
   const code = document.getElementById('clockin-'+requestId)?.value.trim();
   if(!code) { alert('Please enter the clock-in code from the bar manager.'); return; }
+
+  // Validate against generated code if available
+  if(worker.clockInCode && code !== worker.clockInCode) {
+    alert('Incorrect clock-in code. Please check with the bar manager.');
+    return;
+  }
 
   const worker = sessionWorkers.find(w => Number(w.applicationId) === Number(applicationId));
   const request = activeShiftRequests.find(r => Number(r.id) === Number(requestId));
@@ -4408,6 +4417,7 @@ function renderRequestCards() {
           +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-top:4px;">'+(dispWorker.gsRef||'')+'</div>'
           +(dispWorker.departedAt ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">En route</div>' : '<div style="font-size:12px;color:var(--amber);margin-top:4px;">Awaiting departure confirmation</div>')
+          +(dispWorker.clockInCode ? '<div style="font-size:11px;color:var(--grey);margin-top:6px;">Clock-in code: <span style="color:var(--white);font-weight:600;letter-spacing:2px;">'+dispWorker.clockInCode+'</span></div>' : '')
           +(etaMins !== null
             ?'<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';" id="eta-'+r.id+'">'+( etaMins>0?'ETA: '+etaMins+' min':'Should have arrived')+'</div>'
             :'<div style="font-size:12px;color:var(--grey);">Distance unknown</div>')
