@@ -4179,6 +4179,7 @@ async function dispatchWorker(applicationId, requestId) {
   const barId = request.bar_id;
   const shiftLength = request.shift_length_hours;
   const now = new Date().toISOString();
+  const gsRef = 'GS' + String(Date.now()).slice(-6);
 
   // 1. Update session_workers
   await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
@@ -4198,6 +4199,7 @@ async function dispatchWorker(applicationId, requestId) {
   worker.barRecord = bars.find(b => b.id === barId) || null;
   worker.dispatchedAt = now;
   worker.shiftLength = shiftLength;
+  worker.gsRef = gsRef;
 
   const req = activeShiftRequests.find(r => r.id === requestId);
   if(req) req.status = 'dispatched';
@@ -4230,7 +4232,7 @@ async function confirmClockIn(requestId, applicationId) {
   if(!request) { alert('Request not found. Session may need refreshing.'); console.error('Request not found, requestId:', requestId, 'activeShiftRequests:', activeShiftRequests); return; }
 
   const now = new Date().toISOString();
-  const clockInTime = new Date().toLocaleTimeString('en-GB', {hour12:false});
+  const shiftRef = worker.gsRef || ('GS' + String(Date.now()).slice(-6));
 
   // Update session_workers
   await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
@@ -4240,7 +4242,6 @@ async function confirmClockIn(requestId, applicationId) {
   });
 
   // Create shift record
-  const shiftRef = 'GS' + String(Date.now()).slice(-6);
   const shiftResult = await sbPost('shifts', {
     session_id: activeSessionId,
     session_worker_id: worker.sessionWorkerId,
@@ -4249,7 +4250,7 @@ async function confirmClockIn(requestId, applicationId) {
     clock_in_confirmed_at: now,
     shift_length_hours: parseFloat(request.shift_length_hours || 2),
     hourly_rate: worker.hourly_rate || 12.71,
-    status: 'active',
+    status: 'onshift',
     glasi_ref: shiftRef,
     accepted_at: worker.dispatchedAt || now
   });
@@ -4349,6 +4350,7 @@ function renderRequestCards() {
         +(dispWorker?
           '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
+          +'<div style="font-size:11px;color:var(--grey);margin-top:4px;">'+(dispWorker.gsRef||'')+'</div>'
           +(etaMins !== null
             ?'<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';" id="eta-'+r.id+'">'+( etaMins>0?'ETA: '+etaMins+' min':'Should have arrived')+'</div>'
             :'<div style="font-size:12px;color:var(--grey);">Distance unknown</div>')
@@ -4389,19 +4391,31 @@ function renderRequestCards() {
   requestTimerInterval = setInterval(() => {
     activeShiftRequests.forEach(r => {
       const el = document.getElementById('rtimer-'+r.id);
-      if(!el || r.status === 'dispatched') return;
-      const reqTime = r.request_time ? new Date(r.request_time) : new Date(r.created_at);
-      const totalSecs = Math.floor((Date.now() - reqTime.getTime()) / 1000);
-      const mins = Math.floor(totalSecs / 60);
-      const secs = totalSecs % 60;
-      el.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
-      if(mins >= 5) el.className = 'req-card-timer urgent';
+      if(!el) return;
+
+      // 30 minute request timeout countdown
+      if(r.status !== 'dispatched' && r.status !== 'onshift' && r.status !== 'expired') {
+        const postedAt = r.posted_at ? new Date(r.posted_at) : (r.request_time ? new Date(r.request_time) : new Date(r.created_at));
+        const totalSecs = Math.floor((Date.now() - postedAt.getTime()) / 1000);
+        const remainingSecs = Math.max(0, 1800 - totalSecs);
+        const mins = Math.floor(remainingSecs / 60);
+        const secs = remainingSecs % 60;
+        el.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+        el.className = 'req-card-timer' + (remainingSecs <= 300 ? ' urgent' : '');
+
+        // Auto-expire at zero
+        if(remainingSecs === 0 && r.status === 'pending') {
+          r.status = 'expired';
+          sbPatch('shift_requests', '?id=eq.'+r.id, { status: 'expired' });
+          renderRequestCards();
+        }
+      }
 
       // Update ETA countdown for dispatched requests
-      if(r.status === 'dispatched') {
+      if(r.status === 'dispatched' || r.status === 'onshift') {
         const etaEl = document.getElementById('eta-'+r.id);
         if(etaEl) {
-          const dispWorker = sessionWorkers.find(w => w.status === 'dispatched');
+          const dispWorker = sessionWorkers.find(w => (w.status === 'dispatched' || w.status === 'onshift') && w.shiftLength == r.shift_length_hours);
           if(dispWorker?.dispatchedAt) {
             const distData = workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id);
             const walkMins = distData ? distData.walking_minutes : null;
@@ -4414,6 +4428,7 @@ function renderRequestCards() {
           }
         }
       }
+
       const windowEl = document.getElementById('rwindow-'+r.id);
       if(windowEl && r.posted_at) {
         const postedAt = new Date(r.posted_at);
