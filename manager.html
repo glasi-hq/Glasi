@@ -441,27 +441,57 @@
     <div class="venue-name" id="portal-venue-name"></div>
     <div class="venue-sub" id="portal-venue-sub"></div>
 
-    <!-- Worker en route (shown when worker dispatched) -->
-    <div id="worker-en-route" style="display:none;">
-      <div class="worker-card">
-        <div class="worker-label">Worker on the way</div>
-        <div class="worker-name" id="worker-name-display"></div>
-        <div class="worker-eta" id="worker-eta-display"></div>
-        <div class="clock-in-code-display">
-          <div class="clock-in-label">Clock-in Code</div>
-          <div class="clock-in-code" id="clock-in-code-display"></div>
-          <div class="clock-in-instruction">Give this code to the worker when they arrive at your venue.</div>
+    <!-- ACTIVE STATUS CARD -- shown when there is an active request -->
+    <div id="active-status-card" style="display:none;margin-bottom:24px;">
+      <div id="status-finding" style="display:none;">
+        <div style="background:rgba(200,162,74,0.08);border:2px solid rgba(200,162,74,0.3);border-radius:20px;padding:32px 24px;text-align:center;">
+          <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--amber);text-transform:uppercase;margin-bottom:8px;">Finding Glasi</div>
+          <div style="font-size:15px;color:var(--grey);line-height:1.6;">We have received your request and are finding someone right now.</div>
         </div>
-        <div id="manager-clockout-section" style="display:none;margin-top:16px;">
-          <div id="manager-shift-countdown" style="font-size:14px;color:var(--amber);font-weight:600;margin-bottom:12px;text-align:center;"></div>
-          <button id="reveal-clockout-btn" onclick="revealManagerClockOut()" class="request-btn" style="background:none;border:1px solid var(--border);color:var(--grey);">Reveal clock-out code</button>
-          <div id="manager-clockout-code" style="display:none;margin-top:12px;">
-            <div class="clock-in-code-display">
-              <div class="clock-in-label">Clock-out Code</div>
-              <div class="clock-in-code" id="manager-clockout-display"></div>
-              <div class="clock-in-instruction">Give this code to the worker to end their shift.</div>
+      </div>
+
+      <div id="status-selected" style="display:none;">
+        <div style="background:rgba(168,198,232,0.08);border:2px solid rgba(168,198,232,0.3);border-radius:20px;padding:32px 24px;text-align:center;">
+          <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Glasi Selected</div>
+          <div style="font-size:22px;font-weight:700;color:var(--white);margin-bottom:4px;" id="status-worker-name"></div>
+          <div style="font-size:14px;color:var(--grey);">is heading to you now</div>
+        </div>
+      </div>
+
+      <div id="status-onway" style="display:none;">
+        <div style="background:rgba(168,198,232,0.08);border:2px solid rgba(168,198,232,0.3);border-radius:20px;padding:32px 24px;text-align:center;">
+          <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Glasi on the Way</div>
+          <div style="font-size:22px;font-weight:700;color:var(--white);margin-bottom:4px;" id="status-onway-name"></div>
+          <div style="font-size:14px;color:var(--grey);margin-bottom:16px;" id="status-onway-eta"></div>
+          <div style="background:var(--navy);border-radius:10px;padding:16px;display:inline-block;">
+            <div style="font-size:11px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Clock-in Code</div>
+            <div style="font-size:32px;font-weight:800;letter-spacing:10px;color:var(--white);font-family:'Raleway',sans-serif;" id="status-clockin-code"></div>
+            <div style="font-size:11px;color:var(--grey);margin-top:6px;">Give this to your Glasi when they arrive</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="status-onshift" style="display:none;">
+        <div style="background:rgba(74,222,128,0.08);border:2px solid rgba(74,222,128,0.3);border-radius:20px;padding:32px 24px;text-align:center;">
+          <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:8px;">Glasi on Shift</div>
+          <div style="font-size:22px;font-weight:700;color:var(--white);margin-bottom:4px;" id="status-onshift-name"></div>
+          <div style="font-size:16px;color:var(--amber);font-weight:600;margin-bottom:20px;" id="status-shift-countdown"></div>
+          <div id="status-clockout-section">
+            <button onclick="revealStatusClockOut()" id="status-reveal-btn" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:10px;padding:12px 24px;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;">Reveal clock-out code</button>
+            <div id="status-clockout-code" style="display:none;margin-top:16px;">
+              <div style="font-size:11px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Clock-out Code</div>
+              <div style="font-size:32px;font-weight:800;letter-spacing:10px;color:var(--white);font-family:'Raleway',sans-serif;" id="status-clockout-display"></div>
+              <div style="font-size:11px;color:var(--grey);margin-top:6px;">Give this to your Glasi to end their shift</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div id="status-complete" style="display:none;">
+        <div style="background:rgba(107,114,128,0.08);border:2px solid rgba(107,114,128,0.2);border-radius:20px;padding:32px 24px;text-align:center;">
+          <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:8px;">Shift Complete</div>
+          <div style="font-size:15px;color:var(--grey);">Your Glasi has finished their shift. Thank you for using Glasi.</div>
+          <button onclick="showRequestForm()" style="margin-top:16px;background:var(--ice);color:var(--navy);border:none;border-radius:10px;padding:12px 24px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Request another Glasi</button>
         </div>
       </div>
     </div>
@@ -488,7 +518,7 @@
           </div>
         </div>
 
-        <div style="margin-bottom:16px;" id="name-confirm-section" style="display:none;">
+        <div style="margin-bottom:16px;" id="name-confirm-section">
           <div style="font-size:12px;color:var(--grey);line-height:1.7;margin-bottom:10px;padding:12px;background:rgba(168,198,232,0.06);border:1px solid var(--border);border-radius:8px;">By typing your name below you confirm you have read and agree to the <a href="https://glasi.co.uk/terms.html" target="_blank" style="color:var(--ice);">Glasi terms of service</a> and that this request is binding. The agreed shift rate will apply in full.</div>
           <label class="field-label">Type your full name to confirm</label>
           <input type="text" id="manager-name-confirm" class="field" placeholder="Your full name" oninput="checkNameConfirm()">
@@ -498,21 +528,24 @@
       </div>
     </div>
 
-    <!-- Request confirmed -->
-    <div id="request-confirmed" style="display:none;">
-      <div class="confirm-card">
-        <div class="confirm-icon">✓</div>
-        <div class="confirm-title">Request Received</div>
-        <div class="confirm-sub">We have received your request and are working on finding you someone right now. We will be in touch shortly.</div>
-      </div>
-      <button class="new-request-btn" onclick="resetRequest()">Submit another request</button>
-    </div>
-
     <!-- Past requests -->
     <div style="margin-top:32px;">
       <div class="section-label">Recent Requests</div>
       <div id="past-requests">
         <div style="font-size:13px;color:var(--grey);padding:12px 0;">No requests yet.</div>
+      </div>
+    </div>
+
+    <!-- Hidden elements kept for compatibility -->
+    <div id="worker-en-route" style="display:none;">
+      <div id="worker-name-display" style="display:none;"></div>
+      <div id="worker-eta-display" style="display:none;"></div>
+      <div id="clock-in-code-display" style="display:none;"></div>
+      <div id="manager-clockout-section" style="display:none;">
+        <div id="manager-shift-countdown" style="display:none;"></div>
+        <div id="manager-clockout-code" style="display:none;">
+          <div id="manager-clockout-display" style="display:none;"></div>
+        </div>
       </div>
     </div>
 
@@ -619,12 +652,14 @@
           if(record && type === 'UPDATE') {
             if(record.status === 'dispatched') {
               await checkForDispatchedWorker();
+              loadPastRequests();
             } else if(record.status === 'onshift') {
-              document.getElementById('worker-eta-display').textContent = 'Clocked in';
-              // Show clock-out section
-              showManagerClockOut(record.clock_out_code, record.shift_length_hours, record.clock_in_at);
+              showStatus('onshift', record);
+              startManagerShiftCountdown(record.clock_out_code, record.shift_length_hours, record.clock_in_at);
+              loadPastRequests();
             } else if(record.status === 'completed') {
-              document.getElementById('worker-en-route').style.display = 'none';
+              showStatus('complete');
+              loadPastRequests();
             }
           }
         }
@@ -637,42 +672,102 @@
   async function checkForDispatchedWorker() {
     if(!currentBar) return;
 
-    // Check for active session_workers dispatched to this bar
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?bar_id=eq.' + currentBar.id + '&status=in.(dispatched,onshift)&select=id,worker_name,dispatched_at,clock_in_code,clock_out_code,status,sessions(status)', { headers: H }).then(r => r.json());
-
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?bar_id=eq.' + currentBar.id + '&status=in.(dispatched,onshift)&select=id,worker_name,dispatched_at,clock_in_code,clock_out_code,clock_in_at,status,shift_length_hours,sessions(status)', { headers: H }).then(r => r.json());
     const active = rows?.find(r => r.sessions?.status === 'live');
+
     if(!active) {
-      document.getElementById('worker-en-route').style.display = 'none';
+      // Check for pending requests
+      const pendingReqs = await fetch(SUPABASE_URL + '/rest/v1/shift_requests?bar_id=eq.' + currentBar.id + '&status=eq.pending&order=created_at.desc&limit=1&select=id', { headers: H }).then(r => r.json());
+      if(pendingReqs?.length) {
+        showStatus('finding');
+      }
       return;
     }
 
-    // Show worker en route card
-    document.getElementById('worker-en-route').style.display = 'block';
-    document.getElementById('worker-name-display').textContent = active.worker_name || 'Worker';
-
-    // ETA
-    if(active.dispatched_at) {
-      const dispMins = Math.floor((Date.now() - new Date(active.dispatched_at).getTime()) / 60000);
-      document.getElementById('worker-eta-display').textContent = 'Dispatched ' + dispMins + ' min ago';
-    }
-
-    // Clock-in code
-    document.getElementById('clock-in-code-display').textContent = active.clock_in_code || '----';
-
-    // If already onshift -- show clock-out section
-    if(active.status === 'onshift' && active.clock_out_code) {
-      document.getElementById('worker-eta-display').textContent = 'Clocked in';
-      // Fetch shift for clock-in time
+    if(active.status === 'dispatched') {
+      showStatus('onway', active);
+    } else if(active.status === 'onshift') {
+      showStatus('onshift', active);
+      // Fetch shift for countdown
       try {
         const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + active.id + '&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours', { headers: H }).then(r => r.json());
         const shift = shiftRows?.[0];
-        if(shift) showManagerClockOut(active.clock_out_code, shift.shift_length_hours, shift.clock_in_confirmed_at);
+        if(shift) startManagerShiftCountdown(active.clock_out_code, shift.shift_length_hours, shift.clock_in_confirmed_at);
       } catch(e) {}
     }
-
-    // Subscribe to session_workers for status updates
-    watchDispatchedWorker(active.id);
   }
+
+  function showStatus(state, sw) {
+    document.getElementById('active-status-card').style.display = 'block';
+    ['finding','selected','onway','onshift','complete'].forEach(s => {
+      document.getElementById('status-'+s).style.display = s === state ? 'block' : 'none';
+    });
+
+    if(state === 'onway' && sw) {
+      document.getElementById('status-onway-name').textContent = sw.worker_name || '';
+      document.getElementById('status-clockin-code').textContent = sw.clock_in_code || '----';
+      const dispMins = sw.dispatched_at ? Math.floor((Date.now() - new Date(sw.dispatched_at).getTime()) / 60000) : 0;
+      document.getElementById('status-onway-eta').textContent = 'Dispatched ' + dispMins + ' min ago';
+      document.getElementById('request-form').style.display = 'none';
+    }
+
+    if(state === 'onshift' && sw) {
+      document.getElementById('status-onshift-name').textContent = sw.worker_name || '';
+      document.getElementById('request-form').style.display = 'none';
+    }
+
+    if(state === 'finding') {
+      // Keep request form visible but small
+    }
+  }
+
+  function showRequestForm() {
+    document.getElementById('active-status-card').style.display = 'none';
+    document.getElementById('request-form').style.display = 'block';
+  }
+
+  let managerShiftInterval = null;
+  let managerClockOutCode = null;
+
+  function startManagerShiftCountdown(clockOutCode, shiftLengthHours, clockInAt) {
+    managerClockOutCode = clockOutCode;
+    if(managerShiftInterval) clearInterval(managerShiftInterval);
+
+    function update() {
+      const el = document.getElementById('status-shift-countdown');
+      if(!el) return;
+      const clockIn = new Date(clockInAt);
+      const shiftMs = parseFloat(shiftLengthHours) * 3600000;
+      const endTime = new Date(clockIn.getTime() + shiftMs);
+      const remainingMs = endTime.getTime() - Date.now();
+      if(remainingMs > 0) {
+        const h = Math.floor(remainingMs / 3600000);
+        const m = Math.floor((remainingMs % 3600000) / 60000);
+        const s = Math.floor((remainingMs % 60000) / 1000);
+        el.textContent = 'Shift ends in ' + (h > 0 ? h + 'h ' : '') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        el.style.color = remainingMs < 600000 ? 'var(--red)' : 'var(--amber)';
+      } else {
+        el.textContent = 'Shift time elapsed';
+        el.style.color = 'var(--red)';
+        clearInterval(managerShiftInterval);
+      }
+    }
+    update();
+    managerShiftInterval = setInterval(update, 1000);
+  }
+
+  function revealStatusClockOut() {
+    if(!managerClockOutCode) return;
+    document.getElementById('status-clockout-display').textContent = managerClockOutCode;
+    document.getElementById('status-clockout-code').style.display = 'block';
+    document.getElementById('status-reveal-btn').style.display = 'none';
+  }
+
+  // Keep old functions for compatibility
+  function showManagerClockOut(clockOutCode, shiftLengthHours, clockInAt) {
+    if(clockInAt) startManagerShiftCountdown(clockOutCode, shiftLengthHours, clockInAt);
+  }
+  function revealManagerClockOut() { revealStatusClockOut(); }
 
   function watchDispatchedWorker(swId) {
     stopWorkerWatch();
@@ -808,7 +903,7 @@
     }).then(r => r.json());
 
     document.getElementById('request-form').style.display = 'none';
-    document.getElementById('request-confirmed').style.display = 'block';
+    showStatus('finding');
     loadPastRequests();
   }
 
@@ -827,7 +922,7 @@
 
   async function loadPastRequests() {
     if(!currentBar) return;
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/shift_requests?bar_id=eq.' + currentBar.id + '&order=created_at.desc&limit=5&select=id,shift_length_hours,status,request_time,created_at', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/shift_requests?bar_id=eq.' + currentBar.id + '&order=created_at.desc&limit=10&select=id,shift_length_hours,status,created_at', { headers: H }).then(r => r.json());
     const el = document.getElementById('past-requests');
     if(!rows || !rows.length) {
       el.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No requests yet.</div>';
@@ -837,11 +932,13 @@
       const d = new Date(r.created_at);
       const dateStr = d.toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
       const timeStr = d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
-      const statusColor = r.status === 'dispatched' || r.status === 'onshift' ? 'var(--green)' : r.status === 'expired' ? 'var(--red)' : 'var(--amber)';
+      const statusMap = { pending: 'Requested', dispatched: 'Dispatched', onshift: 'On shift', completed: 'Completed', expired: 'Expired' };
+      const statusColor = { pending: 'var(--amber)', dispatched: 'var(--ice)', onshift: 'var(--green)', completed: 'var(--grey)', expired: 'var(--red)' };
+      const s = r.status || 'pending';
       return '<div class="past-row">'
         + '<div><div class="past-date">' + dateStr + ' at ' + timeStr + '</div>'
         + '<div class="past-meta">' + (r.shift_length_hours || '') + 'hr shift</div></div>'
-        + '<div style="font-size:12px;font-weight:600;color:' + statusColor + ';">' + (r.status || 'pending') + '</div>'
+        + '<div style="font-size:12px;font-weight:600;color:' + (statusColor[s] || 'var(--grey)') + ';">' + (statusMap[s] || s) + '</div>'
         + '</div>';
     }).join('');
   }
