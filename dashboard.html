@@ -289,12 +289,10 @@
   <div class="hdr-left">
     <div class="hdr-wordmark" onclick="safeNavigate(()=>{showScreen('home');setActiveNav(null);})">GLASI</div>
     <nav class="hdr-nav">
-      <button class="hdr-nav-btn" id="nav-bars" onclick="safeNavigate(goToBars)">Bars</button>
-      <button class="hdr-nav-btn" id="nav-zones" onclick="safeNavigate(goToZonesMgmt)">Zones</button>
-      <button class="hdr-nav-btn" id="nav-workers" onclick="safeNavigate(goToWorkers)">Workers</button>
       <button class="hdr-nav-btn" id="nav-sessions" onclick="safeNavigate(goToSessions)">Sessions</button>
-      <button class="hdr-nav-btn" id="nav-shifts" onclick="safeNavigate(goToShifts)">Shifts</button>
-      <button class="hdr-nav-btn" id="nav-requests" onclick="safeNavigate(goToRequests)">Requests</button>
+      <button class="hdr-nav-btn" id="nav-zones" onclick="safeNavigate(goToZonesMgmt)">Zones</button>
+      <button class="hdr-nav-btn" id="nav-bars" onclick="safeNavigate(goToBars)">Bars</button>
+      <button class="hdr-nav-btn" id="nav-workers" onclick="safeNavigate(goToWorkers)">Workers</button>
 
     </nav>
   </div>
@@ -5634,8 +5632,93 @@ async function loadSessionsHistory() {
 }
 
 async function loadSessionDetail(sessionId) {
-  // For now -- log to console, full detail view coming next
-  console.log('Load session detail:', sessionId);
+  const listEl = document.getElementById('sessions-history-list');
+
+  // Fetch session data
+  const [sessionArr, requests, sessionShifts, invites] = await Promise.all([
+    sbGet('sessions', '?id=eq.'+sessionId+'&select=id,session_date,start_time,end_time,zone_id,zones(name)'),
+    sbGet('shift_requests', '?session_id=eq.'+sessionId+'&select=*,bars(name)'),
+    sbGet('shifts', '?session_id=eq.'+sessionId+'&select=*,session_workers(worker_name,application_id,dispatched_at,departed_at,clock_in_at)'),
+    sbGet('session_invites', '?session_id=eq.'+sessionId+'&select=application_id,attendance_confirmed,joined_at')
+  ]);
+
+  const session = sessionArr[0];
+  if(!session) return;
+
+  const date = session.session_date ? new Date(session.session_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+  const confirmed = invites.filter(i => i.attendance_confirmed === 'confirmed').length;
+  const joined = invites.filter(i => i.joined_at).length;
+  const completed = sessionShifts.filter(s => s.clock_out_confirmed_at).length;
+  const totalEarned = sessionShifts.reduce((sum, s) => sum + (parseFloat(s.total_earned) || 0), 0);
+
+  listEl.innerHTML = '<div style="margin-bottom:20px;">'
+    + '<button onclick="loadSessionsHistory()" style="background:none;border:none;color:var(--ice);font-size:13px;cursor:pointer;padding:0;font-family:Inter,sans-serif;">← Back to Sessions</button>'
+    + '</div>'
+    + '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px;">'
+    + '<div style="font-size:18px;font-weight:700;color:var(--white);margin-bottom:4px;">'+session.zones?.name+' &nbsp;·&nbsp; <span style="color:var(--grey);font-weight:400;font-size:14px;">Session #'+sessionId+'</span></div>'
+    + '<div style="font-size:13px;color:var(--grey);margin-bottom:20px;">'+date+(session.start_time ? ' · Started '+session.start_time.slice(0,5) : '')+(session.end_time ? ' · Ended '+session.end_time.slice(0,5) : '')+'</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">'
+    + '<div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--white);">'+invites.length+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Invited</div></div>'
+    + '<div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--white);">'+confirmed+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Confirmed</div></div>'
+    + '<div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--white);">'+joined+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Joined</div></div>'
+    + '<div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--green);">'+completed+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Shifts</div></div>'
+    + '</div>'
+    + '</div>'
+
+    // Shifts list
+    + '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">SHIFTS</div>'
+    + (sessionShifts.length === 0
+      ? '<div style="font-size:13px;color:var(--grey);padding:16px 0;">No shifts completed in this session.</div>'
+      : sessionShifts.map(s => {
+          const req = requests.find(r => r.id === s.shift_request_id);
+          const barName = req?.bars?.name || bars.find(b => b.id === s.bar_id)?.name || 'Unknown';
+          const workerName = s.session_workers?.worker_name || 'Unknown';
+          const dispatchedAt = s.session_workers?.dispatched_at;
+          const departedAt = s.session_workers?.departed_at;
+          const clockIn = s.clock_in_confirmed_at;
+          const clockOut = s.clock_out_confirmed_at;
+          const reqTime = req?.created_at;
+
+          // Response time -- request to clock-in
+          const responseMin = (reqTime && clockIn) ? Math.round((new Date(clockIn) - new Date(reqTime)) / 60000) : null;
+
+          const fmt = t => t ? new Date(t).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '--';
+
+          return '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:10px;cursor:pointer;" onclick="loadShiftDetail('+s.id+')">'
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">'
+            + '<div>'
+            + '<div style="font-size:14px;font-weight:600;color:var(--white);">'+workerName+' &nbsp;·&nbsp; '+barName+'</div>'
+            + '<div style="font-size:11px;color:var(--grey);margin-top:2px;">'+s.glasi_ref+' &nbsp;·&nbsp; '+parseFloat(s.shift_length_hours||0)+'hr shift</div>'
+            + '</div>'
+            + '<div style="text-align:right;">'
+            + (s.total_earned ? '<div style="font-size:16px;font-weight:700;color:var(--amber);">£'+parseFloat(s.total_earned).toFixed(2)+'</div>' : '')
+            + '<div style="font-size:11px;color:'+(s.clock_out_confirmed_at?'var(--green)':'var(--amber)')+';">'+( s.clock_out_confirmed_at?'Completed':'On shift')+'</div>'
+            + '</div>'
+            + '</div>'
+            // Operational timeline
+            + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">'
+            + timelineCell('Requested', fmt(reqTime))
+            + timelineCell('Dispatched', fmt(dispatchedAt))
+            + timelineCell('En Route', fmt(departedAt))
+            + timelineCell('Clocked In', fmt(clockIn))
+            + timelineCell('Clocked Out', fmt(clockOut))
+            + '</div>'
+            + (responseMin !== null ? '<div style="font-size:11px;color:var(--grey);margin-top:12px;">Response time: <span style="color:var(--ice);font-weight:600;">'+responseMin+' min</span> from request to clock-in</div>' : '')
+            + '</div>';
+        }).join('')
+    );
+}
+
+function timelineCell(label, value) {
+  return '<div style="text-align:center;background:var(--navy);border-radius:8px;padding:10px 4px;">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--white);">'+value+'</div>'
+    + '<div style="font-size:9px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-top:3px;">'+label+'</div>'
+    + '</div>';
+}
+
+async function loadShiftDetail(shiftId) {
+  // Full shift detail -- coming next
+  console.log('Shift detail:', shiftId);
 }
 
 // OVERLAYS
