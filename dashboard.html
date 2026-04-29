@@ -2744,7 +2744,7 @@ function renderRoom() {
   const invitedSection = document.getElementById('invited-section');
 
   const available = sessionWorkers.filter(w => w.status==='available'||w.status==='left');
-  const invited = sessionWorkers.filter(w => w.status==='invited'||w.status==='noshow');
+  const invited = sessionWorkers.filter(w => (w.status==='invited'||w.status==='noshow') && w.status !== 'dispatched' && w.status !== 'onshift');
 
   // Available section -- workers who joined via portal
   if(!available.length) {
@@ -4205,6 +4205,15 @@ async function dispatchWorker(applicationId, requestId) {
   // Update worker card status directly
   const workerCard = document.getElementById('wc-'+worker.id);
   if(workerCard) workerCard.style.borderColor = 'var(--green)';
+
+  // 5. Clear live responses feed, recommendations, and remove worker from room/expected
+  const feed = document.getElementById('response-feed');
+  if(feed) feed.innerHTML = '';
+  const feedSection = document.getElementById('response-feed-section');
+  if(feedSection) feedSection.style.display = 'none';
+
+  // Remove worker from sessionWorkers visible lists by re-rendering room without them
+  renderRoom();
 
 }
 
