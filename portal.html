@@ -1036,6 +1036,8 @@
     }
 
     currentWorker = rows[0];
+    resetSessionStates();
+    stopRealtime();
     loadPortal();
     showScreen('portal');
   }
@@ -1046,10 +1048,14 @@
 
   function handleSignOut() {
     stopRealtime();
+    resetSessionStates();
     currentWorker = null;
     currentSessionInvite = null;
+    // Clear login form
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-error').textContent = '';
     showScreen('login');
-    resetSessionStates();
   }
 
   function loadPortal() {
@@ -1137,10 +1143,42 @@
 
   async function checkForLiveSession() {
     if(!currentWorker) return;
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_invites?application_id=eq.' + currentWorker.id + '&select=id,session_code,session_id,sessions(status,zone_id,zones(name),scheduled_start)', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_invites?application_id=eq.' + currentWorker.id + '&select=id,session_code,session_id,joined_at,left_at,sessions(status,zone_id,zones(name),scheduled_start)', { headers: H }).then(r => r.json());
     const liveInvite = rows ? rows.find(r => r.sessions?.status === 'live') : null;
-    if(liveInvite) {
-      // Show code entry if not yet joined
+    if(!liveInvite) return;
+
+    // Check if worker was dispatched in this session
+    const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&session_id=eq.' + liveInvite.session_id + '&select=id,status,bar_id,shift_length_hours', { headers: H }).then(r => r.json());
+    const sw = swRows?.[0];
+
+    if(sw && (sw.status === 'dispatched' || sw.status === 'onshift')) {
+      // Worker was dispatched -- show dispatched screen with venue details
+      currentSessionInvite = liveInvite;
+      document.getElementById('sessions-empty').style.display = 'none';
+      document.getElementById('sessions-live').style.display = 'block';
+      document.getElementById('live-waiting').style.display = 'none';
+      document.getElementById('live-dispatched').style.display = 'block';
+      document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
+      // Fetch bar details
+      if(sw.bar_id) {
+        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + sw.bar_id + '&select=name,address,google_maps_link', { headers: H }).then(r => r.json());
+        const bar = barRows?.[0];
+        if(bar) {
+          document.getElementById('dispatched-venue').textContent = bar.name || '';
+          document.getElementById('dispatched-address').textContent = bar.address || '';
+          const mapsBtn = document.getElementById('dispatched-maps');
+          if(mapsBtn) mapsBtn.href = bar.google_maps_link || '#';
+        }
+      }
+    } else if(liveInvite.joined_at && !liveInvite.left_at) {
+      // Worker already joined -- restore to live waiting room
+      currentSessionInvite = liveInvite;
+      document.getElementById('sessions-empty').style.display = 'none';
+      document.getElementById('sessions-live').style.display = 'block';
+      document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
+      startLiveSession();
+    } else {
+      // Show code entry
       document.getElementById('sessions-empty').style.display = 'none';
       document.getElementById('sessions-code-entry').style.display = 'block';
     }
@@ -1486,14 +1524,53 @@
   }
 
   function resetSessionStates() {
-    ['sessions-empty','sessions-code-entry','sessions-prejoin','sessions-live'].forEach(id => {
+    // Reset session tab screens
+    const screens = {
+      'sessions-empty': 'block',
+      'sessions-code-entry': 'none',
+      'sessions-prejoin': 'none',
+      'sessions-live': 'none'
+    };
+    Object.entries(screens).forEach(([id, display]) => {
       const el = document.getElementById(id);
-      if(el) el.style.display = id === 'sessions-empty' ? 'block' : 'none';
+      if(el) el.style.display = display;
     });
+
+    // Reset live room inner states
+    const liveStates = ['live-waiting','live-shift-post','live-responded','live-filled','live-dispatched'];
+    liveStates.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = id === 'live-waiting' ? 'block' : 'none';
+    });
+
+    // Reset checkboxes
     ['check-available','check-presentable','check-leave','check-identity'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.checked = false;
     });
+
+    // Reset join button
+    const joinBtn = document.getElementById('join-session-btn');
+    if(joinBtn) { joinBtn.disabled = true; joinBtn.style.opacity = '0.4'; }
+
+    // Reset code input
+    const codeInput = document.getElementById('session-code-input');
+    if(codeInput) codeInput.value = '';
+    const codeError = document.getElementById('code-error');
+    if(codeError) codeError.textContent = '';
+
+    // Reset ticker and timers
+    if(elapsedInterval) { clearInterval(elapsedInterval); elapsedInterval = null; }
+    if(tickerTimeout) { clearTimeout(tickerTimeout); tickerTimeout = null; }
+    if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
+
+    // Reset dispatched screen
+    document.getElementById('dispatched-venue').textContent = '';
+    document.getElementById('dispatched-address').textContent = '';
+
+    // Reset session invite
+    currentSessionInvite = null;
+    activeShiftRequestId = null;
   }
 
   // Demo: show shift post (remove when real-time is wired up)
