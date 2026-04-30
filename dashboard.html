@@ -4318,6 +4318,14 @@ async function dispatchWorker(applicationId, requestId) {
   // 2. Update shift_request status
   await sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'dispatched' });
 
+  // Award +20 points for being selected
+  const workerApp = allWorkers.find(w => w.id === worker.applicationId);
+  if(workerApp) {
+    const currentPts = workerApp.total_points || 0;
+    await sbPatch('applications', '?id=eq.'+worker.applicationId, { total_points: currentPts + 20 });
+    workerApp.total_points = currentPts + 20;
+  }
+
   // 3. Update local state
   worker.status = 'dispatched';
   worker.bar = request._barName;
@@ -5909,7 +5917,13 @@ async function downloadBI(shiftId) {
     <div class="payment-box">
       <div class="label">Bank Transfer</div>
       <div class="value">Glasi Ltd</div>
-      <div class="value" style="color:#6b7280;font-weight:400;margin-top:4px;">Account details to follow</div>
+      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+        <div class="label" style="margin:0;">Account Number</div>
+        <div class="value">31291275</div>
+        <div class="label" style="margin:0;">Sort Code</div>
+        <div class="value">04-06-05</div>
+      </div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:8px;">Please use invoice reference ${invoiceNum} as payment reference.</div>
     </div>
   </div>
 
