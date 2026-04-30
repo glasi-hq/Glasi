@@ -273,22 +273,22 @@
           <p>Glasi connects busy bars with reliable local people when they need extra hands at short notice. The work is simple. Glass collecting, clearing tables, and keeping the floor tidy. No till work, no stocking, nothing that needs training. Just wear plain black clothing, be ready to move, and show up with a good attitude.</p>
 
           <p class="section-heading">Sessions</p>
-          <p>When we are running a session in your area, you will receive a Zoom link for that evening. Sessions run during the busiest hours, usually between 2 and 4 hours. Only join if you are genuinely ready to work that night. By joining, you are confirming that you are available, presentable, and able to leave immediately if we assign you a shift. You do not need your camera or mic on. Everything happens in the chat.</p>
+          <p>When we are running a session in your area, you will receive a session code by email. Log in to the Glasi worker portal at www.glasi.co.uk/portal.html and enter your code to join. Sessions run during the busiest hours, usually between 2 and 4 hours. Only join if you are genuinely ready to work that night. By joining, you are confirming that you are available, presentable, and able to leave immediately if selected for a shift.</p>
 
           <p class="section-heading">Staying alert</p>
-          <p>Once you are in the session, stay present and attentive. We will check in during the session to make sure everyone is still ready. The more responsive and consistent you are, the more opportunities you will receive.</p>
+          <p>Once you are in the session, keep the portal open on a laptop or tablet and stay nearby. You are not paid for time spent waiting. A sound will play when a shift is posted so you do not need to watch the screen constantly. A Glasi app is in development which will send you a push notification instead. For now, a laptop with the portal open works best.</p>
 
           <p class="section-heading">When a shift comes in</p>
-          <p>Shifts are posted in the Zoom chat with the venue name and shift length. When one appears, you will have a short window to respond with the keyword shown. Reply as quickly as you can. We then choose who gets the shift based on reliability, responsiveness, and tier. Showing up consistently and responding every time is what gets you work. Always respond, even if you are declining. Never ignore a shift post.</p>
+          <p>Shift posts appear on your portal screen with the venue name and shift length. You will have 60 seconds to tap I'm available. Do it as fast as you can. We then select who gets the shift based on tier, reliability, response speed and distance to the venue. Always respond, even if you are passing. Never ignore a shift post.</p>
 
           <p class="section-heading">Earn more over time</p>
-          <p>The more reliable you are, the more you earn. Glasi has five tiers and each one pays £1 more per hour. Top workers earn up to £16.71 per hour for the same work. You earn points for joining sessions, responding to shifts, completing shifts, and arriving on time. After every session we send you a personal update showing your points, your tier, and how close you are to the next level. You always know exactly where you stand.</p>
+          <p>The more reliable you are, the more you earn. Glasi has five tiers and each one pays £1 more per hour. Top workers earn up to £16.71 per hour for the same work. You earn points for joining sessions, responding to shifts, completing shifts, and arriving on time. You can always see your points, tier and progress in your portal profile.</p>
 
           <p class="section-heading">Heading to the venue</p>
-          <p>Once we assign you a shift, you will be removed from the session and sent the venue details on WhatsApp. Share your live location and head straight there. When you arrive, go to the bar or glass collection point, tell them you are from Glasi, and ask for the named contact. They will give you a clock-in code which you send to us to confirm your shift has started. Your shift is a fixed length. When it ends, you are done.</p>
+          <p>If you are selected, your portal will show the venue name and address. Before you leave, share your live location with the Glasi team on WhatsApp and tap I'm leaving now on your portal. We will reply with a pin of the venue so you know exactly where you are heading. When you arrive, find the named contact and tell them you are from Glasi. They will give you a 4-digit clock-in code. Enter it in your portal to confirm your shift has started. When your shift ends, the bar manager will give you a clock-out code. Enter it in your portal to complete the shift.</p>
 
           <p class="section-heading">Pay</p>
-          <p>You are paid for every shift you complete. You are not paid for time spent in sessions. We aim to get your money to you as quickly as possible after your shift.</p>
+          <p>You are paid for every shift you complete through our payroll partner. You are not paid for time spent waiting in sessions. We aim to get your money to you as quickly as possible after your shift.</p>
 
           <p class="section-heading">We have got your back</p>
           <p>We only work with well run venues that want you there. If anything feels off during a shift, contact us straight away. We are always on your side.</p>
@@ -346,7 +346,7 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-2 block text-gray-600">Do you have access to a car or e-scooter? *</label>
+            <label class="text-sm font-medium mb-2 block text-gray-600">Can you get to venues in Southampton city centre within 20 minutes on foot, bicycle, e-scooter or e-bike? *</label>
             <select id="has_transport" required class="form-input w-full px-4 py-3 bg-white border border-gray-200">
               <option value="">Select an option</option>
               <option value="true">Yes</option>
@@ -424,11 +424,11 @@
             </div>
 
             <div class="question-block">
-              <label class="question-title">After being assigned a shift and removed from the Zoom, what should you do?</label>
+              <label class="question-title">After being selected for a shift, what should you do first?</label>
               <div class="answers-list">
-                <label class="radio-option"><input type="radio" name="q2" value="zoom"><span class="radio-option-text">Stay in the Zoom room and wait for further instructions</span></label>
-                <label class="radio-option"><input type="radio" name="q2" value="whatsapp"><span class="radio-option-text">Reply with your live location on WhatsApp and start heading to the venue straight away</span></label>
-                <label class="radio-option"><input type="radio" name="q2" value="call"><span class="radio-option-text">Wait at home until you hear back from Glasi with the venue details</span></label>
+                <label class="radio-option"><input type="radio" name="q2" value="zoom"><span class="radio-option-text">Wait for a WhatsApp message with the venue details before doing anything</span></label>
+                <label class="radio-option"><input type="radio" name="q2" value="whatsapp"><span class="radio-option-text">Share your live location on WhatsApp, tap I'm leaving now on the portal, and head straight to the venue</span></label>
+                <label class="radio-option"><input type="radio" name="q2" value="call"><span class="radio-option-text">Call the venue first to let them know you are on your way</span></label>
               </div>
             </div>
 
@@ -565,8 +565,8 @@ form.addEventListener('submit', async (e) => {
 
     feedback.innerHTML = `
       <div class="success-message text-green-600 text-sm space-y-2">
-        <p>Application received. We will be in touch if you are selected for the trial in your area.</p>
-        <p>Keep an eye on your inbox. If you are a good fit we will reach out with next steps.</p>
+        <p>Application received. We will be in touch with next steps.</p>
+        <p>Keep an eye on your inbox and your spam folder. If you have not heard from us within 5 days, email hello@glasi.co.uk.</p>
       </div>
     `;
 
