@@ -553,9 +553,15 @@
         </div>
 
         <div style="margin-bottom:16px;" id="name-confirm-section">
-          <div style="font-size:12px;color:var(--grey);line-height:1.7;margin-bottom:10px;padding:12px;background:rgba(168,198,232,0.06);border:1px solid var(--border);border-radius:8px;">By typing your name below you confirm you have read and agree to the <a href="https://glasi.co.uk/terms.html" target="_blank" style="color:var(--ice);">Glasi terms of service</a> and that this request is binding. The agreed shift rate will apply in full.</div>
-          <label class="field-label">Type your full name to confirm</label>
-          <input type="text" id="manager-name-confirm" class="field" placeholder="Your full name" oninput="checkNameConfirm()">
+          <label style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer;">
+            <span style="font-size:13px;color:var(--grey);line-height:1.6;">I agree to the <a href="https://glasi.co.uk/terms.html" target="_blank" style="color:var(--ice);">Glasi terms of service</a>. This request is binding if a Glasi is dispatched within 30 minutes and cannot be cancelled once submitted.</span>
+            <input type="checkbox" id="manager-check-terms" onchange="checkManagerConfirm()" style="accent-color:var(--ice);width:20px;height:20px;flex-shrink:0;margin-top:2px;cursor:pointer;">
+          </label>
+          <div id="manager-pin-section" style="display:none;">
+            <label class="field-label">Enter your PIN to confirm</label>
+            <input type="password" id="manager-pin-input" class="field" maxlength="4" placeholder="4-digit PIN" oninput="checkPinConfirm()" style="letter-spacing:8px;font-size:18px;">
+            <div id="manager-pin-error" style="font-size:12px;color:var(--red);margin-top:6px;min-height:16px;"></div>
+          </div>
         </div>
         <button class="request-btn" id="request-btn" disabled onclick="submitRequest()">Request a Glasi</button>
         <div class="error-msg" id="request-error"></div>
@@ -613,7 +619,7 @@
 
     if(!email || !password) { errorEl.textContent = 'Please enter your email and password.'; return; }
 
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_password', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_password,manager_pin', { headers: H }).then(r => r.json());
 
     if(!rows || !rows.length) {
       errorEl.textContent = 'No account found. Please contact hello@glasi.co.uk.';
@@ -944,25 +950,41 @@
     selectedShiftLength = hours;
     document.querySelectorAll('.shift-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
-    // Show name confirm section
-    const nameSection = document.getElementById('name-confirm-section');
-    if(nameSection) nameSection.style.display = 'block';
-    // Clear name field and disable button
-    const nameInput = document.getElementById('manager-name-confirm');
-    if(nameInput) nameInput.value = '';
-    document.getElementById('request-btn').disabled = true;
+    checkManagerConfirm();
   }
 
-  function checkNameConfirm() {
-    const name = document.getElementById('manager-name-confirm')?.value.trim();
-    const expectedName = currentBar?.manager_name || '';
-    const btn = document.getElementById('request-btn');
-    if(name && name.toLowerCase() === expectedName.toLowerCase()) {
-      btn.disabled = false;
+  function checkManagerConfirm() {
+    const terms = document.getElementById('manager-check-terms')?.checked;
+    const pinSection = document.getElementById('manager-pin-section');
+    const shiftSelected = selectedShiftLength !== null;
+
+    if(terms && shiftSelected) {
+      if(pinSection) pinSection.style.display = 'block';
     } else {
-      btn.disabled = true;
+      if(pinSection) pinSection.style.display = 'none';
+      document.getElementById('request-btn').disabled = true;
     }
   }
+
+  function checkPinConfirm() {
+    const pin = document.getElementById('manager-pin-input')?.value.trim();
+    const errorEl = document.getElementById('manager-pin-error');
+    const btn = document.getElementById('request-btn');
+    if(errorEl) errorEl.textContent = '';
+    if(pin && pin.length === 4) {
+      if(currentBar?.manager_pin && pin === currentBar.manager_pin) {
+        if(btn) btn.disabled = false;
+      } else {
+        if(btn) btn.disabled = true;
+        if(errorEl && pin.length === 4) errorEl.textContent = 'Incorrect PIN.';
+      }
+    } else {
+      if(btn) btn.disabled = true;
+    }
+  }
+
+  // Keep for compatibility
+  function checkNameConfirm() { checkPinConfirm(); }
 
   async function submitRequest() {
     if(!selectedShiftLength || !currentBar) return;
@@ -1001,12 +1023,16 @@
     document.querySelectorAll('.shift-option').forEach(o => o.classList.remove('selected'));
     document.getElementById('request-btn').disabled = true;
     document.getElementById('request-btn').textContent = 'Request a Glasi';
-    const nameSection = document.getElementById('name-confirm-section');
-    if(nameSection) nameSection.style.display = 'none';
-    const nameInput = document.getElementById('manager-name-confirm');
-    if(nameInput) nameInput.value = '';
+    const termsCheck = document.getElementById('manager-check-terms');
+    if(termsCheck) termsCheck.checked = false;
+    const pinSection = document.getElementById('manager-pin-section');
+    if(pinSection) pinSection.style.display = 'none';
+    const pinInput = document.getElementById('manager-pin-input');
+    if(pinInput) pinInput.value = '';
+    const pinError = document.getElementById('manager-pin-error');
+    if(pinError) pinError.textContent = '';
     document.getElementById('request-form').style.display = 'block';
-    document.getElementById('request-confirmed').style.display = 'none';
+    document.getElementById('active-status-card').style.display = 'none';
   }
 
   async function loadPastRequests() {
