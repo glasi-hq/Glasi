@@ -619,7 +619,7 @@
 
     if(!email || !password) { errorEl.textContent = 'Please enter your email and password.'; return; }
 
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_password,manager_pin', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_password,manager_pin,closing_time,opening_time', { headers: H }).then(r => r.json());
 
     if(!rows || !rows.length) {
       errorEl.textContent = 'No account found. Please contact hello@glasi.co.uk.';
@@ -950,6 +950,25 @@
     selectedShiftLength = hours;
     document.querySelectorAll('.shift-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
+
+    // Check closing time -- would this shift run past closing?
+    if(currentBar?.closing_time) {
+      const now = new Date();
+      const shiftEndTime = new Date(now.getTime() + hours * 3600000);
+      const closingParts = currentBar.closing_time.split(':');
+      const closing = new Date(now);
+      closing.setHours(parseInt(closingParts[0]), parseInt(closingParts[1]), 0, 0);
+      // Handle midnight closing (00:00) -- means next day
+      if(closing <= now) closing.setDate(closing.getDate() + 1);
+
+      if(shiftEndTime > closing) {
+        document.getElementById('request-error').textContent = 'A ' + hours + 'hr shift started now would end after your venue closes. Please select a shorter shift or contact us on 07803856078.';
+        document.getElementById('request-btn').disabled = true;
+        return;
+      }
+    }
+
+    document.getElementById('request-error').textContent = '';
     checkManagerConfirm();
   }
 
