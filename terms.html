@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glasi | Terms of Service</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f8f9fa;
+      color: #1a1a2e;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .header {
+      background: #0F1F3D;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wordmark {
+      font-family: 'Raleway', sans-serif;
+      font-weight: 400;
+      font-size: 20px;
+      letter-spacing: 8px;
+      color: #FAFAFA;
+      border: 1.5px solid #FAFAFA;
+      border-radius: 4px;
+      padding: 8px 16px;
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    .header-sub {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #A8D8EA;
+    }
+
+    .draft-banner {
+      background: #f59e0b;
+      color: #1a1a2e;
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 48px 40px 80px;
+    }
+
+    .page-title {
+      font-family: 'Raleway', sans-serif;
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: 2px;
+      color: #0F1F3D;
+      margin-bottom: 8px;
+    }
+
+    .page-meta {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 48px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid #0F1F3D;
+    }
+
+    .toc {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 48px;
+    }
+
+    .toc-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 12px;
+    }
+
+    .toc a {
+      display: block;
+      font-size: 13px;
+      color: #0F1F3D;
+      text-decoration: none;
+      padding: 4px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .toc a:last-child { border-bottom: none; }
+    .toc a:hover { color: #A8D8EA; }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-number {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #A8D8EA;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      font-family: 'Raleway', sans-serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: #0F1F3D;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    p {
+      color: #374151;
+      margin-bottom: 12px;
+    }
+
+    .highlight-box {
+      background: #fff;
+      border-left: 3px solid #0F1F3D;
+      border-radius: 0 6px 6px 0;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+
+    .highlight-box p {
+      margin: 0;
+      font-weight: 500;
+      color: #0F1F3D;
+    }
+
+    .warning-box {
+      background: #fef3c7;
+      border-left: 3px solid #f59e0b;
+      border-radius: 0 6px 6px 0;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+
+    .warning-box p {
+      margin: 0;
+      color: #92400e;
+    }
+
+    ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+      color: #374151;
+    }
+
+    ul li {
+      margin-bottom: 6px;
+      line-height: 1.7;
+    }
+
+    .definition {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 8px 16px;
+      margin-bottom: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .definition:last-child { border-bottom: none; }
+
+    .def-term {
+      font-weight: 600;
+      color: #0F1F3D;
+      font-size: 13px;
+    }
+
+    .def-desc {
+      color: #374151;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .company-details {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+
+    .company-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+    }
+
+    .company-row:last-child { border-bottom: none; }
+    .company-label { color: #9ca3af; }
+    .company-value { font-weight: 500; color: #0F1F3D; }
+
+    .footer {
+      background: #0F1F3D;
+      padding: 32px 40px;
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .footer a { color: #A8D8EA; text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .container { padding: 32px 20px 60px; }
+      .header { padding: 20px; }
+      .definition { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="draft-banner">Draft -- For Legal Review Only -- Not Yet In Effect</div>
+
+<div class="header">
+  <a href="https://glasi.co.uk" class="wordmark">GLASI</a>
+  <span class="header-sub">Terms of Service</span>
+</div>
+
+<div class="container">
+
+  <div class="page-title">Terms of Service</div>
+  <div class="page-meta">
+    Glasi Ltd &nbsp;·&nbsp; Company No. 17147716 &nbsp;·&nbsp; Last updated: April 2026 &nbsp;·&nbsp; Version 1.0
+  </div>
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <a href="#definitions">1. Definitions</a>
+    <a href="#about">2. About Glasi</a>
+    <a href="#eligibility">3. Eligibility and Subscription</a>
+    <a href="#subscription">4. Subscription Terms and Fees</a>
+    <a href="#requesting">5. Requesting a Glasi</a>
+    <a href="#binding">6. Binding Nature of Requests</a>
+    <a href="#window">7. The 30-Minute Fulfilment Window</a>
+    <a href="#no-guarantee">8. No Guarantee of Fulfilment</a>
+    <a href="#shift-fees">9. Shift Fees and Invoicing</a>
+    <a href="#payment">10. Payment Terms</a>
+    <a href="#late-payment">11. Late Payment</a>
+    <a href="#employment">12. Employment and Worker Status</a>
+    <a href="#conduct">13. Conduct and Platform Standards</a>
+    <a href="#cancellation">14. Cancellation and Termination</a>
+    <a href="#liability">15. Limitation of Liability</a>
+    <a href="#data">16. Data and Privacy</a>
+    <a href="#changes">17. Changes to These Terms</a>
+    <a href="#governing">18. Governing Law</a>
+    <a href="#contact">19. Contact</a>
+  </div>
+
+  <div class="section" id="definitions">
+    <div class="section-number">Section 1</div>
+    <h2>Definitions</h2>
+    <div class="definition">
+      <div class="def-term">Glasi Ltd</div>
+      <div class="def-desc">The company providing the Glasi platform and services. Registered in England and Wales, company number 17147716.</div>
+    </div>
+    <div class="definition">
+      <div class="def-term">Platform</div>
+      <div class="def-desc">The Glasi web-based software system including the bar manager portal, worker portal and dispatch dashboard accessible at glasi.co.uk.</div>
+    </div>
+    <div class="definition">
+      <div class="def-term">Subscriber</div>
+      <div class="def-desc">A bar, venue or hospitality business that has entered into a subscription agreement with Glasi Ltd and has an active subscription.</div>
+    </div>
+    <div class="definition">
+      <div class="def-term">Glasi Worker</div>
+      <div class="def-desc">An individual registered, vetted and onboarded by Glasi Ltd and engaged via a third-party payroll provider to carry out shifts at subscriber venues.</div>
+    </div>
+    <div class="definition">
+      <div class="def-term">Shift Request</div>
+      <div class="def-desc">A formal request submitted by a Subscriber via the Glasi platform requesting a Glasi Worker to attend their venue for a specified shift length.</div>
+    </div>
+    <div class="definition">
+      <div class="def-term">Fulfilment Window</div>
+      <div class="def-desc">The 30-minute period following submission of a Shift Request during which Glasi Ltd will attempt to dispatch a Glasi Worker to the venue.</div>
+    </div>
+    <div class="definition">
+      <div class="def-term">Session</div>
+      <div class="def-desc">A scheduled operational window during which Glasi Workers are available and ready to respond to Shift Requests in a given zone.</div>
+    </div>
+    <div class="definition">
+      <div class="def-term">Shift Fee</div>
+      <div class="def-desc">The fee payable by the Subscriber to Glasi Ltd for each completed shift, calculated at the agreed hourly rate multiplied by the confirmed shift length.</div>
+    </div>
+  </div>
+
+  <div class="section" id="about">
+    <div class="section-number">Section 2</div>
+    <h2>About Glasi</h2>
+    <p>Glasi Ltd operates a technology platform that connects bars and hospitality venues with pre-vetted local workers available for short-notice glass collection and table clearing shifts. Glasi Ltd acts as an intermediary platform provider and does not itself employ the workers deployed to subscriber venues.</p>
+    <p>Workers are engaged and paid via a third-party payroll provider. Glasi Ltd manages the recruitment, vetting, scheduling and dispatch of workers on behalf of subscribers.</p>
+  </div>
+
+  <div class="section" id="eligibility">
+    <div class="section-number">Section 3</div>
+    <h2>Eligibility and Subscription</h2>
+    <p>Access to the Glasi platform and the ability to submit Shift Requests is available exclusively to active Subscribers. A business must hold a valid, paid subscription to use any part of the Glasi service.</p>
+    <div class="highlight-box">
+      <p>You cannot submit a Shift Request if you do not hold an active subscription. Access to the platform does not constitute a right to request workers.</p>
+    </div>
+    <p>Subscriptions are granted at the sole discretion of Glasi Ltd. Glasi Ltd reserves the right to decline or terminate any subscription without obligation to provide reasons.</p>
+  </div>
+
+  <div class="section" id="subscription">
+    <div class="section-number">Section 4</div>
+    <h2>Subscription Terms and Fees</h2>
+    <p>The subscription fee is £349 per month unless otherwise agreed in writing between the Subscriber and Glasi Ltd. A reduced rate may be offered at Glasi Ltd's discretion as part of an introductory or negotiated agreement.</p>
+    <p>The subscription fee covers access to the Glasi platform, the ability to submit Shift Requests during active Sessions, and the management of worker scheduling and dispatch by Glasi Ltd.</p>
+    <p>The subscription fee does not guarantee the availability of a Glasi Worker for any given Shift Request. See Section 8 for full details.</p>
+    <p>Subscription fees are invoiced monthly and are due within 7 days of the invoice date. Failure to pay the subscription fee may result in suspension of platform access.</p>
+  </div>
+
+  <div class="section" id="requesting">
+    <div class="section-number">Section 5</div>
+    <h2>Requesting a Glasi</h2>
+    <p>Shift Requests must be submitted via the Glasi bar manager portal at glasi.co.uk/manager.html. Requests submitted by other means (including by telephone or messaging) are accepted at Glasi Ltd's sole discretion and do not carry the same binding confirmation as a platform submission.</p>
+    <p>To submit a Shift Request, the authorised bar manager must:</p>
+    <ul>
+      <li>Be logged in with their authorised account credentials</li>
+      <li>Select the required shift length (2, 3 or 4 hours)</li>
+      <li>Confirm agreement to these Terms of Service by ticking the confirmation checkbox</li>
+      <li>Confirm the request using their personal 4-digit PIN</li>
+    </ul>
+    <p>Submission of a Shift Request via the platform constitutes a formal, binding request and agreement to pay the applicable Shift Fee if the request is fulfilled within the Fulfilment Window.</p>
+    <p>Shift Requests may only be submitted during an active Session in the Subscriber's zone. Glasi Ltd schedules Sessions in advance based on anticipated demand. The Subscriber should contact Glasi Ltd in advance to discuss session scheduling for their venue.</p>
+  </div>
+
+  <div class="section" id="binding">
+    <div class="section-number">Section 6</div>
+    <h2>Binding Nature of Requests</h2>
+    <div class="highlight-box">
+      <p>Once a Shift Request has been submitted, it is binding and cannot be cancelled or withdrawn by the Subscriber.</p>
+    </div>
+    <p>If a Glasi Worker is dispatched to the venue within the Fulfilment Window, the Subscriber is obligated to accept the worker and pay the full Shift Fee for the agreed shift length, regardless of whether the worker is ultimately needed for the full duration.</p>
+    <p>If the Subscriber refuses to accept a dispatched worker upon arrival without reasonable cause, Glasi Ltd reserves the right to issue an invoice for the full Shift Fee and to take action to recover payment.</p>
+    <p>Repeated refusal to accept dispatched workers may result in suspension or termination of the Subscriber's account.</p>
+  </div>
+
+  <div class="section" id="window">
+    <div class="section-number">Section 7</div>
+    <h2>The 30-Minute Fulfilment Window</h2>
+    <p>Upon submission of a Shift Request, Glasi Ltd will make reasonable efforts to dispatch an available and suitable Glasi Worker to the Subscriber's venue within 30 minutes of the request being submitted.</p>
+    <p>The Fulfilment Window begins at the time the Shift Request is submitted on the platform. If a Glasi Worker is dispatched within this 30-minute window, the request is considered fulfilled and the Shift Fee becomes payable.</p>
+    <div class="highlight-box">
+      <p>If Glasi Ltd is unable to dispatch a Glasi Worker within the 30-minute Fulfilment Window, the Shift Request expires automatically. No Shift Fee is charged for an expired, unfulfilled request.</p>
+    </div>
+    <p>The Fulfilment Window cannot be extended or paused by either party.</p>
+  </div>
+
+  <div class="section" id="no-guarantee">
+    <div class="section-number">Section 8</div>
+    <h2>No Guarantee of Fulfilment</h2>
+    <div class="warning-box">
+      <p>Glasi Ltd does not guarantee that a Glasi Worker will be available to fulfil any given Shift Request. A subscription gives the Subscriber the right to submit Shift Requests -- it does not guarantee that those requests will be fulfilled.</p>
+    </div>
+    <p>The availability of Glasi Workers depends on a number of factors including the number of workers registered in the Subscriber's zone, the time and day of the request, competing requests from other Subscribers, and worker availability at the time of the request.</p>
+    <p>Glasi Ltd will make all reasonable commercial efforts to fulfil Shift Requests submitted during active Sessions. However, the Subscriber acknowledges that fulfilment cannot be guaranteed and that an unfulfilled request does not constitute a breach of these Terms by Glasi Ltd.</p>
+    <p>No refund or credit of the subscription fee will be issued solely on the basis of an unfulfilled Shift Request.</p>
+  </div>
+
+  <div class="section" id="shift-fees">
+    <div class="section-number">Section 9</div>
+    <h2>Shift Fees and Invoicing</h2>
+    <p>Where a Shift Request is fulfilled, Glasi Ltd will invoice the Subscriber for the applicable Shift Fee. The Shift Fee is calculated at £30.00 per hour multiplied by the shift length confirmed at the time of the request.</p>
+    <p>Shift fees are subject to VAT at the standard rate of 20% once Glasi Ltd is VAT registered. Invoices issued prior to VAT registration will be reissued to include VAT once the VAT registration number is confirmed. The Subscriber agrees to pay the VAT-inclusive amount upon reissue.</p>
+    <p>Invoices will be issued following the completion of each shift and will include the shift reference number (GS reference), the worker name, venue, date, clock-in and clock-out times, shift length, hourly rate and total amount due.</p>
+    <p>Shift Fees are separate from and in addition to the monthly subscription fee.</p>
+  </div>
+
+  <div class="section" id="payment">
+    <div class="section-number">Section 10</div>
+    <h2>Payment Terms</h2>
+    <p>All invoices issued by Glasi Ltd are due for payment within 7 days of the invoice date. Payment must be made by bank transfer to the Glasi Ltd bank account details shown on the invoice.</p>
+    <p>The Subscriber must use the invoice reference number as the payment reference to ensure correct allocation.</p>
+    <p>Glasi Ltd reserves the right to vary payment terms by written agreement with individual Subscribers.</p>
+  </div>
+
+  <div class="section" id="late-payment">
+    <div class="section-number">Section 11</div>
+    <h2>Late Payment</h2>
+    <p>If payment is not received within 7 days of the invoice date, Glasi Ltd will issue a formal written reminder to the Subscriber.</p>
+    <p>If payment remains outstanding 14 days after the invoice date, Glasi Ltd reserves the right to:</p>
+    <ul>
+      <li>Suspend the Subscriber's access to the Glasi platform</li>
+      <li>Decline to fulfil further Shift Requests from the Subscriber</li>
+      <li>Charge statutory interest on the outstanding amount under the Late Payment of Commercial Debts (Interest) Act 1998</li>
+      <li>Terminate the Subscriber's account and subscription</li>
+      <li>Pursue recovery of the outstanding amount through appropriate legal channels</li>
+    </ul>
+    <p>Reinstatement of a suspended account is at the sole discretion of Glasi Ltd and is conditional on full payment of all outstanding amounts.</p>
+  </div>
+
+  <div class="section" id="employment">
+    <div class="section-number">Section 12</div>
+    <h2>Employment and Worker Status</h2>
+    <p>Glasi Workers are not employees of Glasi Ltd or of the Subscriber. Workers are engaged via a third-party payroll provider (currently Parasol Group) under a self-employed or umbrella company arrangement compliant with UK employment and tax legislation.</p>
+    <p>The Subscriber acknowledges and agrees that:</p>
+    <ul>
+      <li>They have no employment relationship with Glasi Workers</li>
+      <li>They are not responsible for the payment of wages, National Insurance contributions, holiday pay or any other employment-related costs in respect of Glasi Workers</li>
+      <li>They must not offer Glasi Workers direct employment or attempt to engage them outside of the Glasi platform during the term of the subscription and for a period of 6 months following termination</li>
+      <li>They must provide Glasi Workers with a safe working environment and treat them with respect and professionalism in accordance with applicable health and safety legislation</li>
+      <li>They must not direct or supervise Glasi Workers beyond reasonable operational instruction necessary for the shift to be carried out</li>
+    </ul>
+    <p>Glasi Ltd is responsible for the vetting, training standards and conduct of Glasi Workers. Any concerns regarding worker conduct should be reported to Glasi Ltd via hello@glasi.co.uk immediately following the relevant shift.</p>
+  </div>
+
+  <div class="section" id="conduct">
+    <div class="section-number">Section 13</div>
+    <h2>Conduct and Platform Standards</h2>
+    <p>Subscribers must use the Glasi platform in good faith and in accordance with these Terms. The following conduct may result in immediate suspension or termination of the Subscriber's account:</p>
+    <ul>
+      <li>Submitting fraudulent or bad faith Shift Requests</li>
+      <li>Refusing to accept a dispatched Glasi Worker without reasonable cause</li>
+      <li>Failing to provide a safe working environment for Glasi Workers</li>
+      <li>Mistreating, harassing or discriminating against a Glasi Worker</li>
+      <li>Sharing platform login credentials with unauthorised parties</li>
+      <li>Attempting to engage Glasi Workers directly outside the platform</li>
+      <li>Providing false information in connection with the Glasi service</li>
+    </ul>
+    <p>Glasi Ltd reserves the right to remove a Subscriber from the platform at any time for conduct that Glasi Ltd reasonably considers to be harmful to its workers, other subscribers, or the reputation of the Glasi service.</p>
+  </div>
+
+  <div class="section" id="cancellation">
+    <div class="section-number">Section 14</div>
+    <h2>Cancellation and Termination</h2>
+    <p>A Subscriber may cancel their subscription by providing written notice to Glasi Ltd at hello@glasi.co.uk. Notice must be received at least 2 clear days before the next scheduled Session window for the Subscriber's zone to avoid being charged for that Session period.</p>
+    <p>Upon cancellation, the Subscriber's access to the platform will be removed at the end of the current subscription period. Any outstanding Shift Fee invoices remain due and payable regardless of cancellation.</p>
+    <p>Glasi Ltd may terminate a Subscriber's account immediately and without notice in the event of:</p>
+    <ul>
+      <li>Material breach of these Terms</li>
+      <li>Non-payment of invoices</li>
+      <li>Conduct that Glasi Ltd considers harmful to its workers or the platform</div>
+      <li>Insolvency or cessation of trading by the Subscriber</li>
+    </ul>
+    <p>Glasi Ltd may also terminate or suspend the service at any time by providing reasonable written notice to the Subscriber. In such circumstances, any prepaid subscription fees for the unexpired period will be refunded on a pro-rata basis.</p>
+  </div>
+
+  <div class="section" id="liability">
+    <div class="section-number">Section 15</div>
+    <h2>Limitation of Liability</h2>
+    <p>Glasi Ltd's total liability to the Subscriber in connection with these Terms, whether in contract, tort (including negligence) or otherwise, shall not exceed the total subscription fees paid by the Subscriber in the 3 months immediately preceding the event giving rise to the claim.</p>
+    <p>Glasi Ltd shall not be liable for:</p>
+    <ul>
+      <li>Any loss of profit, revenue, business or goodwill suffered by the Subscriber</li>
+      <li>Any indirect or consequential loss</li>
+      <li>Loss arising from the unavailability of a Glasi Worker for any Shift Request</li>
+      <li>Loss arising from the conduct, performance or actions of any Glasi Worker at the Subscriber's venue</li>
+      <li>Any failure or interruption of the Glasi platform due to circumstances beyond Glasi Ltd's reasonable control</li>
+    </ul>
+    <p>Nothing in these Terms limits either party's liability for death or personal injury caused by negligence, fraud or fraudulent misrepresentation, or any other liability that cannot be excluded by law.</p>
+  </div>
+
+  <div class="section" id="data">
+    <div class="section-number">Section 16</div>
+    <h2>Data and Privacy</h2>
+    <p>Glasi Ltd will process personal data in connection with the provision of the service in accordance with its Privacy Policy, available at glasi.co.uk/privacy.html, and in compliance with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018.</p>
+    <p>By using the Glasi platform, the Subscriber agrees to Glasi Ltd processing operational data including shift records, request timestamps, and venue information for the purposes of providing the service, generating invoices and improving the platform.</p>
+  </div>
+
+  <div class="section" id="changes">
+    <div class="section-number">Section 17</div>
+    <h2>Changes to These Terms</h2>
+    <p>Glasi Ltd reserves the right to update these Terms of Service at any time. Subscribers will be notified of material changes by email to the address registered on their account. Continued use of the platform following notification of changes constitutes acceptance of the updated Terms.</p>
+    <p>The current version of these Terms will always be available at glasi.co.uk/terms.html.</p>
+  </div>
+
+  <div class="section" id="governing">
+    <div class="section-number">Section 18</div>
+    <h2>Governing Law</h2>
+    <p>These Terms of Service and any dispute or claim arising out of or in connection with them shall be governed by and construed in accordance with the law of England and Wales. Each party irrevocably agrees that the courts of England and Wales shall have exclusive jurisdiction to settle any dispute or claim arising out of or in connection with these Terms.</p>
+  </div>
+
+  <div class="section" id="contact">
+    <div class="section-number">Section 19</div>
+    <h2>Contact</h2>
+    <p>For any queries regarding these Terms of Service, please contact Glasi Ltd using the details below.</p>
+    <div class="company-details">
+      <div class="company-row">
+        <span class="company-label">Company</span>
+        <span class="company-value">Glasi Ltd</span>
+      </div>
+      <div class="company-row">
+        <span class="company-label">Company Number</span>
+        <span class="company-value">17147716</span>
+      </div>
+      <div class="company-row">
+        <span class="company-label">Registered Address</span>
+        <span class="company-value">63 Winchester Street, Botley, Southampton SO30 2EB</span>
+      </div>
+      <div class="company-row">
+        <span class="company-label">Email</span>
+        <span class="company-value">hello@glasi.co.uk</span>
+      </div>
+      <div class="company-row">
+        <span class="company-label">Website</span>
+        <span class="company-value">glasi.co.uk</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div style="margin-bottom:8px;">
+    <a href="https://glasi.co.uk">glasi.co.uk</a> &nbsp;·&nbsp;
+    <a href="mailto:hello@glasi.co.uk">hello@glasi.co.uk</a>
+  </div>
+  Glasi Ltd &nbsp;·&nbsp; Company No. 17147716 &nbsp;·&nbsp; Registered in England and Wales<br>
+  <span style="color:#475569;margin-top:6px;display:block;">DRAFT -- For legal review only -- Not yet in effect</span>
+</div>
+
+</body>
+</html>
