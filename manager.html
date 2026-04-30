@@ -530,6 +530,20 @@
       </div>
     </div>
 
+    <!-- No session active -->
+    <div id="no-session-card" style="display:none;margin-bottom:24px;">
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;padding:32px 24px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:16px;">🕐</div>
+        <div style="font-size:16px;font-weight:600;color:var(--white);margin-bottom:8px;">No session active right now</div>
+        <div style="font-size:14px;color:var(--grey);line-height:1.7;margin-bottom:20px;">If you think you'll need someone outside of your scheduled sessions, give us a call.</div>
+        <a href="tel:07803856078" style="display:inline-block;background:var(--ice);color:var(--navy);text-decoration:none;border-radius:10px;padding:12px 28px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;margin-bottom:20px;">07803856078</a>
+        <div id="no-session-schedule-section" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Your scheduled sessions</div>
+          <div style="font-size:14px;color:var(--white);" id="no-session-schedule">Friday 3pm to 8pm · Saturday 3pm to 8pm</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Request form -->
     <div id="request-form">
       <div class="request-card">
@@ -619,7 +633,7 @@
 
     if(!email || !password) { errorEl.textContent = 'Please enter your email and password.'; return; }
 
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_password,manager_pin,closing_time,opening_time', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_password,manager_pin,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
 
     if(!rows || !rows.length) {
       errorEl.textContent = 'No account found. Please contact hello@glasi.co.uk.';
@@ -646,12 +660,30 @@
     showScreen('login');
   }
 
-  function loadPortal() {
+  async function loadPortal() {
     const bar = currentBar;
     const managerName = bar.manager_name || bar.contact_name || 'there';
     document.getElementById('header-bar-name').textContent = bar.name;
     document.getElementById('portal-venue-name').textContent = 'Hi ' + managerName;
     document.getElementById('portal-venue-sub').textContent = bar.name + ' · Glasi Partner';
+
+    // Check if a session is live in this zone
+    try {
+      const liveSessions = await fetch(SUPABASE_URL + '/rest/v1/sessions?zone_id=eq.' + bar.zone_id + '&status=eq.live&select=id&limit=1', { headers: H }).then(r => r.json());
+      const sessionActive = liveSessions?.length > 0;
+      if(sessionActive) {
+        document.getElementById('no-session-card').style.display = 'none';
+        document.getElementById('request-form').style.display = 'block';
+      } else {
+        document.getElementById('no-session-card').style.display = 'block';
+        document.getElementById('request-form').style.display = 'none';
+        const scheduleEl = document.getElementById('no-session-schedule');
+        if(scheduleEl && bar.session_schedule) scheduleEl.textContent = bar.session_schedule;
+      }
+    } catch(e) {
+      // Default to showing request form if check fails
+      document.getElementById('request-form').style.display = 'block';
+    }
 
     // Check for dispatched worker
     checkForDispatchedWorker();
@@ -693,6 +725,9 @@
             if(record.status === 'dispatched') {
               await checkForDispatchedWorker();
               loadPastRequests();
+              // Session is live -- show request form
+              document.getElementById('no-session-card').style.display = 'none';
+              document.getElementById('request-form').style.display = 'block';
             } else if(record.status === 'onshift') {
               showStatus('onshift', record);
               startManagerShiftCountdown(record.clock_out_code, record.shift_length_hours, record.clock_in_at);
