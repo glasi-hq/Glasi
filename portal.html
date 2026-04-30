@@ -975,13 +975,12 @@
         <!-- Dispatched! -->
         <div id="live-dispatched" style="display:none;">
           <div class="dispatched-card">
-            <div class="dispatched-title">Leave now. You have been selected.</div>
+            <div class="dispatched-title">You have been selected.</div>
             <div class="dispatched-venue" id="dispatched-venue">The Woolhouse</div>
-            <div class="dispatched-address" id="dispatched-address">1 Bugle Street, Southampton SO14 2AL<br>Ask for Wolf on arrival.</div>
-            <a href="#" id="dispatched-maps" class="maps-btn" target="_blank" rel="noopener">Open in Maps</a>
+            <div class="dispatched-address" id="dispatched-address">1 Bugle Street, Southampton SO14 2AL</div>
           </div>
           <div class="warning-box" style="margin-top:12px;">
-            <p>Share your live location with the Glasi team on WhatsApp now, then leave for the venue immediately. Do not delay.</p>
+            <p id="dispatched-instructions">Share your live location with Glasi on <strong><a href="https://wa.me/447803856078" style="color:var(--amber);">07803856078</a></strong>, start heading to the venue and ask for <strong style="color:var(--white);">the bar manager</strong> who will have your clock-in code.</p>
           </div>
           <div id="leaving-section" style="margin-top:16px;">
             <button onclick="openLeavingConfirm()" id="leaving-btn" class="primary-btn" style="background:var(--green);color:var(--navy);">I am leaving now</button>
@@ -1262,13 +1261,16 @@
       document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
       // Fetch bar details
       if(sw.bar_id) {
-        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + sw.bar_id + '&select=name,address,google_maps_link', { headers: H }).then(r => r.json());
+        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + sw.bar_id + '&select=name,address,google_maps_link,manager_name', { headers: H }).then(r => r.json());
         const bar = barRows?.[0];
         if(bar) {
           document.getElementById('dispatched-venue').textContent = bar.name || '';
           document.getElementById('dispatched-address').textContent = bar.address || '';
           const mapsBtn = document.getElementById('dispatched-maps');
           if(mapsBtn) mapsBtn.href = bar.google_maps_link || '#';
+          const managerName = bar.manager_name || 'the bar manager';
+          const warningEl = document.getElementById('dispatched-instructions');
+          if(warningEl) warningEl.innerHTML = 'Share your live location with Glasi on <strong><a href="https://wa.me/447803856078" style="color:var(--amber);">07803856078</a></strong>, start heading to the venue and ask for <strong style="color:var(--white);">' + managerName + '</strong> who will have your clock-in code.';
         }
       }
     } else if(liveInvite.joined_at && (!liveInvite.left_at || new Date(liveInvite.joined_at) > new Date(liveInvite.left_at))) {
@@ -1872,7 +1874,7 @@
     // Fetch bar details
     try {
       if(swRecord.bar_id) {
-        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + swRecord.bar_id + '&select=name,address,google_maps_link', { headers: H }).then(r => r.json());
+        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + swRecord.bar_id + '&select=name,address,google_maps_link,manager_name', { headers: H }).then(r => r.json());
         const bar = barRows?.[0];
         if(bar) {
           document.getElementById('dispatched-venue').textContent = bar.name || '';
@@ -1884,6 +1886,10 @@
           } else if(mapsBtn) {
             mapsBtn.style.display = 'none';
           }
+          // Update dispatched copy with manager name
+          const managerName = bar.manager_name || 'the bar manager';
+          const warningEl = document.querySelector('#live-dispatched .warning-box p');
+          if(warningEl) warningEl.innerHTML = 'Share your live location with Glasi on <strong><a href="https://wa.me/447803856078" style="color:var(--amber);">07803856078</a></strong>, start heading to the venue and ask for <strong style="color:var(--white);">' + managerName + '</strong> who will have your clock-in code.';
         }
       }
     } catch(e) {}
