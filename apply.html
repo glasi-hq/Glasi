@@ -419,27 +419,27 @@
             <div class="question-block">
               <label class="question-title">Which of the following is part of the role?</label>
               <div class="answers-list">
-                <label class="radio-option"><input type="radio" name="q3" value="till"><span class="radio-option-text">Working the till</span></label>
-                <label class="radio-option"><input type="radio" name="q3" value="floor"><span class="radio-option-text">Glass collecting and clearing tables</span></label>
-                <label class="radio-option"><input type="radio" name="q3" value="stock"><span class="radio-option-text">Managing stock in the back</span></label>
+                <label class="radio-option"><input type="radio" name="question1" value="till"><span class="radio-option-text">Working the till</span></label>
+                <label class="radio-option"><input type="radio" name="question1" value="floor"><span class="radio-option-text">Glass collecting and clearing tables</span></label>
+                <label class="radio-option"><input type="radio" name="question1" value="stock"><span class="radio-option-text">Managing stock in the back</span></label>
               </div>
             </div>
 
             <div class="question-block">
               <label class="question-title">After being selected for a shift, what should you do first?</label>
               <div class="answers-list">
-                <label class="radio-option"><input type="radio" name="q2" value="zoom"><span class="radio-option-text">Wait for a WhatsApp message with the venue details before doing anything</span></label>
-                <label class="radio-option"><input type="radio" name="q2" value="whatsapp"><span class="radio-option-text">Share your live location on WhatsApp, tap I'm leaving now on the portal, and head straight to the venue</span></label>
-                <label class="radio-option"><input type="radio" name="q2" value="call"><span class="radio-option-text">Call the venue first to let them know you are on your way</span></label>
+                <label class="radio-option"><input type="radio" name="question2" value="zoom"><span class="radio-option-text">Wait for a WhatsApp message with the venue details before doing anything</span></label>
+                <label class="radio-option"><input type="radio" name="question2" value="whatsapp"><span class="radio-option-text">Share your live location on WhatsApp, tap I'm leaving now on the portal, and head straight to the venue</span></label>
+                <label class="radio-option"><input type="radio" name="question2" value="call"><span class="radio-option-text">Call the venue first to let them know you are on your way</span></label>
               </div>
             </div>
 
             <div class="question-block">
               <label class="question-title">When you arrive at the venue, what do you do?</label>
               <div class="answers-list">
-                <label class="radio-option"><input type="radio" name="q5" value="wait"><span class="radio-option-text">Wait outside until someone comes to find you</span></label>
-                <label class="radio-option"><input type="radio" name="q5" value="manager"><span class="radio-option-text">Head to the glass collection point or the pass at the bar, tell them you are from Glasi and ask for the named contact shown in your portal</span></label>
-                <label class="radio-option"><input type="radio" name="q5" value="start"><span class="radio-option-text">Start collecting glasses straight away so they can see you are keen</span></label>
+                <label class="radio-option"><input type="radio" name="question3" value="wait"><span class="radio-option-text">Wait outside until someone comes to find you</span></label>
+                <label class="radio-option"><input type="radio" name="question3" value="manager"><span class="radio-option-text">Head to the glass collection point or the pass at the bar, tell them you are from Glasi and ask for the named contact shown in your portal</span></label>
+                <label class="radio-option"><input type="radio" name="question3" value="start"><span class="radio-option-text">Start collecting glasses straight away so they can see you are keen</span></label>
               </div>
             </div>
           </div>
@@ -501,9 +501,9 @@ form.addEventListener('submit', async (e) => {
   const checkedHours = Array.from(document.querySelectorAll('input[name="hours"]:checked')).map(cb => cb.value);
   const availableHours = checkedHours.length > 0 ? checkedHours.join(',') : null;
 
-  const q2 = document.querySelector('input[name="q2"]:checked')?.value;
-  const q3 = document.querySelector('input[name="q3"]:checked')?.value;
-  const q5 = document.querySelector('input[name="q5"]:checked')?.value;
+  const q2 = document.querySelector('input[name="question2"]:checked')?.value;
+  const q3 = document.querySelector('input[name="question1"]:checked')?.value;
+  const q5 = document.querySelector('input[name="question3"]:checked')?.value;
 
   if (!email || !ageGroup || !hospitalityExperience || !ukWorkRight || !hasBlackClothing || !hasTransport || !physicallyAble || !speaksEnglish || !agreesWorkStandard || !reliabilityNotes) {
     feedback.innerHTML = `<div class="text-red-500 text-sm">Please complete all required fields.</div>`;
