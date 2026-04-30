@@ -389,27 +389,16 @@
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-1 block text-gray-600">When are you typically available? (Select all that apply) *</label>
-            <p class="text-xs text-gray-400 mb-3">Required. This is how we know when to invite you to sessions.</p>
-            <div style="overflow-x: auto;">
-              <table class="hours-grid">
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th>12pm to 6pm</th>
-                    <th>6pm onwards</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Mon</td><td><input type="checkbox" name="hours" value="mon_12_18"></td><td><input type="checkbox" name="hours" value="mon_18_00"></td></tr>
-                  <tr><td>Tue</td><td><input type="checkbox" name="hours" value="tue_12_18"></td><td><input type="checkbox" name="hours" value="tue_18_00"></td></tr>
-                  <tr><td>Wed</td><td><input type="checkbox" name="hours" value="wed_12_18"></td><td><input type="checkbox" name="hours" value="wed_18_00"></td></tr>
-                  <tr><td>Thu</td><td><input type="checkbox" name="hours" value="thu_12_18"></td><td><input type="checkbox" name="hours" value="thu_18_00"></td></tr>
-                  <tr><td>Fri</td><td><input type="checkbox" name="hours" value="fri_12_18"></td><td><input type="checkbox" name="hours" value="fri_18_00"></td></tr>
-                  <tr><td>Sat</td><td><input type="checkbox" name="hours" value="sat_12_18"></td><td><input type="checkbox" name="hours" value="sat_18_00"></td></tr>
-                  <tr><td>Sun</td><td><input type="checkbox" name="hours" value="sun_12_18"></td><td><input type="checkbox" name="hours" value="sun_18_00"></td></tr>
-                </tbody>
-              </table>
+            <label class="text-sm font-medium mb-1 block text-gray-600">Which days are you usually free in the evenings? *</label>
+            <p class="text-xs text-gray-400 mb-3">Sessions run when bars are typically busy. No obligation -- this just helps us know when to invite you.</p>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:13px;color:#374151;">Mon<input type="checkbox" name="hours" value="mon" style="accent-color:#0F1F3D;width:16px;height:16px;"></label>
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:13px;color:#374151;">Tue<input type="checkbox" name="hours" value="tue" style="accent-color:#0F1F3D;width:16px;height:16px;"></label>
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:13px;color:#374151;">Wed<input type="checkbox" name="hours" value="wed" style="accent-color:#0F1F3D;width:16px;height:16px;"></label>
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:13px;color:#374151;">Thu<input type="checkbox" name="hours" value="thu" style="accent-color:#0F1F3D;width:16px;height:16px;"></label>
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:13px;color:#374151;">Fri<input type="checkbox" name="hours" value="fri" style="accent-color:#0F1F3D;width:16px;height:16px;"></label>
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:13px;color:#374151;">Sat<input type="checkbox" name="hours" value="sat" style="accent-color:#0F1F3D;width:16px;height:16px;"></label>
+              <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:13px;color:#374151;">Sun<input type="checkbox" name="hours" value="sun" style="accent-color:#0F1F3D;width:16px;height:16px;"></label>
             </div>
           </div>
 
