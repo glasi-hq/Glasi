@@ -6077,9 +6077,8 @@ async function goToSessions() {
 
 async function loadSessionsList() {
   const upcomingEl = document.getElementById('sessions-upcoming');
-  const pastEl = document.getElementById('sessions-list');
+  if(!upcomingEl) return;
   upcomingEl.innerHTML = '<div class="empty">Loading...</div>';
-  pastEl.innerHTML = '<div class="empty">Loading...</div>';
 
   const [allSessions, zonesData] = await Promise.all([
     sbGet('sessions', '?select=*&order=session_date.desc,start_time.desc'),
@@ -6087,7 +6086,6 @@ async function loadSessionsList() {
   ]);
 
   const upcoming = allSessions.filter(s => s.status === 'scheduled');
-  const past = allSessions.filter(s => s.status === 'closed' || s.end_time !== null);
 
   // Load invite counts for upcoming sessions
   const inviteCounts = {};
@@ -6132,26 +6130,6 @@ async function loadSessionsList() {
           <button class="small-ice-btn" onclick="sendSessionCodes(${s.id})">Send Session Codes</button>
           <button class="small-ice-btn" onclick="goLiveSession(${s.id})">Go Live</button>
           <button style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;" onclick="cancelScheduledSession(${s.id})">Cancel</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  // Render past
-  if(!past.length) {
-    pastEl.innerHTML = '<div class="empty">No closed sessions yet.</div>';
-  } else {
-    pastEl.innerHTML = past.map(s => {
-      const zone = zonesData.find(z => Number(z.id) === Number(s.zone_id));
-      const date = s.session_date ? new Date(s.session_date).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Unknown date';
-      return `<div class="zone-card" style="margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;" onclick="openSessionDetail(${s.id})">
-        <div>
-          <div style="font-weight:600;color:var(--white);font-size:14px;margin-bottom:2px;">${date}</div>
-          <div style="color:var(--grey);font-size:12px;">${zone ? zone.name : 'Unknown zone'}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="color:var(--grey);font-size:11px;">${s.start_time ? s.start_time.slice(0,5) : ''} - ${s.end_time ? s.end_time.slice(0,5) : ''}</div>
-          <div style="color:var(--ice);font-size:11px;margin-top:2px;">View workers</div>
         </div>
       </div>`;
     }).join('');
