@@ -464,8 +464,9 @@
     .confirm-check {
       display: flex;
       align-items: flex-start;
+      justify-content: space-between;
       gap: 12px;
-      padding: 12px;
+      padding: 14px;
       border: 1px solid var(--border);
       border-radius: 8px;
       margin-bottom: 10px;
@@ -474,16 +475,18 @@
 
     .confirm-check input {
       accent-color: var(--ice);
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       flex-shrink: 0;
       margin-top: 1px;
+      cursor: pointer;
     }
 
     .confirm-check span {
       font-size: 13px;
       color: var(--grey);
-      line-height: 1.5;
+      line-height: 1.6;
+      flex: 1;
     }
 
     /* LIVE SESSION */
@@ -886,32 +889,37 @@
       <div id="sessions-prejoin" style="display:none;">
         <div class="prejoin-card">
           <div class="prejoin-title">Before You Join</div>
-          <div class="prejoin-sub">Please read the following carefully before joining tonight's session.</div>
+          <div class="prejoin-sub">Read and confirm each statement before joining tonight's session.</div>
 
-          <div class="warning-box">
-            <p>You must not navigate away from this page while the session is open. If you cannot commit to keeping this page open and active, we recommend using a laptop or tablet. If you are using a phone, do not switch apps or lock your screen.</p>
+          <!-- Stage 1: Three confirmations -->
+          <div id="prejoin-stage-1">
+            <label class="confirm-check">
+              <span>I understand that joining this session is unpaid. I am here to wait for shift opportunities and will only be paid if I am selected and complete a shift.</span>
+              <input type="checkbox" id="check-available" onchange="checkPreJoinStage1()">
+            </label>
+            <label class="confirm-check">
+              <span>I am dressed in appropriate black clothing and ready to leave my current location immediately if I am selected for a shift I put myself forward for.</span>
+              <input type="checkbox" id="check-presentable" onchange="checkPreJoinStage1()">
+            </label>
+            <label class="confirm-check">
+              <span>I confirm that I am not under the influence of alcohol, drugs or any substance that would impair my ability to work safely and professionally.</span>
+              <input type="checkbox" id="check-leave" onchange="checkPreJoinStage1()">
+            </label>
+
+            <button class="primary-btn" id="prejoin-continue-btn" disabled style="opacity:0.4;margin-top:8px;" onclick="showFraudStep()">Continue</button>
           </div>
 
-          <div class="section-label" style="margin-bottom:12px;">I confirm that:</div>
+          <!-- Stage 2: Fraud confirmation -->
+          <div id="prejoin-stage-2" style="display:none;">
+            <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:16px;margin-bottom:20px;">
+              <div style="font-size:12px;color:var(--white);line-height:1.8;">By typing your full name below you confirm you are the registered Glasi worker associated with this account. Allowing another person to use your login or attend a shift in your place is a criminal offence under the Fraud Act 2006 and will result in immediate and permanent removal from the platform.</div>
+            </div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:1px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Type your full name to confirm</div>
+            <input type="text" id="prejoin-name-input" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:13px 16px;font-size:14px;color:var(--white);font-family:'Inter',sans-serif;outline:none;margin-bottom:12px;" placeholder="Your full name" oninput="checkPreJoinStage2()">
+            <button class="primary-btn" id="join-session-btn" disabled style="opacity:0.4;" onclick="handleJoinSession()">Join Session</button>
+            <button onclick="backToStage1()" style="width:100%;background:none;border:none;color:var(--grey);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;padding:10px;margin-top:4px;">Go back</button>
+          </div>
 
-          <label class="confirm-check">
-            <input type="checkbox" id="check-available" onchange="checkPreJoin()">
-            <span>I am available and ready to work tonight</span>
-          </label>
-          <label class="confirm-check">
-            <input type="checkbox" id="check-presentable" onchange="checkPreJoin()">
-            <span>I am wearing plain black clothing and am presentable</span>
-          </label>
-          <label class="confirm-check">
-            <input type="checkbox" id="check-leave" onchange="checkPreJoin()">
-            <span>I can leave immediately if assigned a shift</span>
-          </label>
-          <label class="confirm-check">
-            <input type="checkbox" id="check-identity" onchange="checkPreJoin()">
-            <span>I am <strong id="prejoin-worker-name">Fran Leach</strong>, the registered Glasi worker. I understand that allowing another person to use my login or attend a shift in my place is false representation under the Fraud Act 2006.</span>
-          </label>
-
-          <button class="primary-btn" id="join-session-btn" disabled style="opacity:0.4;" onclick="handleJoinSession()">Join Session</button>
         </div>
       </div>
 
@@ -1006,7 +1014,7 @@
                 <button onclick="workerClockOut()" style="width:100%;background:var(--ice);color:var(--navy);border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-bottom:12px;">Confirm</button>
                 <div id="worker-clockout-error" style="font-size:12px;color:var(--red);margin-bottom:8px;min-height:16px;text-align:center;"></div>
                 <div style="text-align:center;">
-                  <a href="https://wa.me/447700000000?text=I%20cannot%20get%20my%20clock-out%20code" target="_blank" style="font-size:12px;color:var(--grey);text-decoration:underline;">Can't get my code?</a>
+                  <a href="https://wa.me/447803856078?text=I%20cannot%20get%20my%20clock-out%20code" target="_blank" style="font-size:12px;color:var(--grey);text-decoration:underline;">Can't get my code?</a>
                 </div>
               </div>
 
@@ -1071,15 +1079,19 @@
 
     // For now -- check applications table directly
     // Later this will use Supabase Auth
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,portal_password', { headers: H }).then(r => r.json());
 
     if(!rows || !rows.length) {
       errorEl.textContent = 'No account found. Please check your email or contact hello@glasi.co.uk.';
       return;
     }
 
-    // Temporary password check -- remove when Supabase Auth is wired up
-    if(password !== 'glasi2026') {
+    // Check portal_password from database
+    if(!rows[0].portal_password) {
+      errorEl.textContent = 'Your account is not yet active. Please contact hello@glasi.co.uk.';
+      return;
+    }
+    if(password !== rows[0].portal_password) {
       errorEl.textContent = 'Incorrect password.';
       return;
     }
@@ -1298,12 +1310,35 @@
     document.getElementById('sessions-prejoin').style.display = 'block';
   }
 
-  function checkPreJoin() {
-    const allChecked = ['check-available','check-presentable','check-leave','check-identity'].every(id => document.getElementById(id).checked);
-    const btn = document.getElementById('join-session-btn');
-    btn.disabled = !allChecked;
-    btn.style.opacity = allChecked ? '1' : '0.4';
+  function checkPreJoinStage1() {
+    const allChecked = ['check-available','check-presentable','check-leave'].every(id => {
+      const el = document.getElementById(id);
+      return el && el.checked;
+    });
+    const btn = document.getElementById('prejoin-continue-btn');
+    if(btn) { btn.disabled = !allChecked; btn.style.opacity = allChecked ? '1' : '0.4'; }
   }
+
+  function showFraudStep() {
+    document.getElementById('prejoin-stage-1').style.display = 'none';
+    document.getElementById('prejoin-stage-2').style.display = 'block';
+  }
+
+  function backToStage1() {
+    document.getElementById('prejoin-stage-2').style.display = 'none';
+    document.getElementById('prejoin-stage-1').style.display = 'block';
+  }
+
+  function checkPreJoinStage2() {
+    const nameInput = document.getElementById('prejoin-name-input')?.value.trim().toLowerCase();
+    const workerName = (currentWorker?.name || '').toLowerCase();
+    const nameMatches = nameInput && workerName && nameInput === workerName;
+    const btn = document.getElementById('join-session-btn');
+    if(btn) { btn.disabled = !nameMatches; btn.style.opacity = nameMatches ? '1' : '0.4'; }
+  }
+
+  // Keep old checkPreJoin as alias for resetSessionStates compatibility
+  function checkPreJoin() { checkPreJoinStage1(); }
 
   async function handleJoinSession() {
     if(!currentSessionInvite) return;
@@ -1313,6 +1348,17 @@
       headers: { ...H, 'Prefer': 'return=representation' },
       body: JSON.stringify({ joined_at: new Date().toISOString() })
     });
+
+    // Award +5 points for joining session
+    if(currentWorker) {
+      const newPoints = (currentWorker.total_points || 0) + 5;
+      await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ total_points: newPoints })
+      });
+      currentWorker.total_points = newPoints;
+    }
     document.getElementById('sessions-prejoin').style.display = 'none';
     document.getElementById('sessions-live').style.display = 'block';
     // Start real-time subscription (placeholder for now)
@@ -1516,6 +1562,17 @@
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-responded').style.display = 'block';
     document.getElementById('live-responded-msg').textContent = 'Response recorded. Stand by while we select.';
+
+    // Award +10 points for responding
+    if(currentWorker) {
+      const newPoints = (currentWorker.total_points || 0) + 10;
+      await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ total_points: newPoints })
+      });
+      currentWorker.total_points = newPoints;
+    }
   }
 
   async function handlePass() {
@@ -1617,8 +1674,32 @@
     const shiftHours = parseFloat(sw.shift_length_hours || 2);
     const totalEarned = Math.round(shiftHours * hourlyRate * 100) / 100;
 
-    // Points: 100 base + 20 bonus for arriving on time (we'll add arrival bonus logic later)
-    const pointsEarned = 100;
+    // Points calculation
+    let pointsEarned = 60; // Base shift completion
+
+    // Fast response bonus -- based on response time recorded in shift_responses
+    // Fetch response time for this shift
+    try {
+      const responseRows = await fetch(SUPABASE_URL + '/rest/v1/shift_responses?application_id=eq.' + currentWorker.id + '&session_id=eq.' + sw.session_id + '&order=created_at.desc&limit=1&select=response_time', { headers: H }).then(r => r.json());
+      const responseTimeSecs = responseRows?.[0]?.response_time;
+      if(responseTimeSecs !== null && responseTimeSecs !== undefined) {
+        if(responseTimeSecs <= 30) pointsEarned += 20;
+        else if(responseTimeSecs <= 60) pointsEarned += 15;
+        else if(responseTimeSecs <= 120) pointsEarned += 10;
+      }
+    } catch(e) {}
+
+    // Arrival bonus -- based on dispatched_at vs clock_in_confirmed_at vs expected_arrival_minutes
+    try {
+      const swFullRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=dispatched_at,expected_arrival_minutes', { headers: H }).then(r => r.json());
+      const swFull = swFullRows?.[0];
+      if(swFull?.dispatched_at && swFull?.expected_arrival_minutes) {
+        const actualMins = Math.round((new Date(now) - new Date(swFull.dispatched_at)) / 60000);
+        const expectedMins = parseFloat(swFull.expected_arrival_minutes);
+        if(actualMins <= expectedMins) pointsEarned += 40; // On time or early
+        else if(actualMins <= expectedMins + 5) pointsEarned += 25; // Within 5 mins
+      }
+    } catch(e) {}
 
     // 1. Update session_workers to completed
     await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
@@ -1885,10 +1966,20 @@
     });
 
     // Reset checkboxes
-    ['check-available','check-presentable','check-leave','check-identity'].forEach(id => {
+    ['check-available','check-presentable','check-leave'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.checked = false;
     });
+
+    // Reset prejoin stages
+    const stage1 = document.getElementById('prejoin-stage-1');
+    const stage2 = document.getElementById('prejoin-stage-2');
+    if(stage1) stage1.style.display = 'block';
+    if(stage2) stage2.style.display = 'none';
+    const nameInput = document.getElementById('prejoin-name-input');
+    if(nameInput) nameInput.value = '';
+    const continueBtn = document.getElementById('prejoin-continue-btn');
+    if(continueBtn) { continueBtn.disabled = true; continueBtn.style.opacity = '0.4'; }
 
     // Reset join button
     const joinBtn = document.getElementById('join-session-btn');
