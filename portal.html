@@ -1135,7 +1135,8 @@
     document.getElementById('profile-tier-label').textContent = 'TIER ' + tier + ' · £' + rate.toFixed(2) + '/hr';
     document.getElementById('profile-points').textContent = pts.toLocaleString();
     document.getElementById('profile-reliability').textContent = w.reliability_score ? Math.round(w.reliability_score) + '%' : 'N/A';
-    document.getElementById('prejoin-worker-name').textContent = w.name;
+    const prejoinName = document.getElementById('prejoin-worker-name');
+    if(prejoinName) prejoinName.textContent = w.name;
 
     // Progress bar
     const prevThreshold = TIER_THRESHOLDS[tier - 1] || 0;
