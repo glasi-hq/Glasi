@@ -376,6 +376,206 @@
     .bar-row-status.signed { color: var(--green); background: rgba(34,197,94,0.1); }
     .bar-row-status.unsigned { color: var(--amber); background: rgba(245,158,11,0.1); }
 
+    /* TIERS PAGE — current tier hero */
+    .tiers-current-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .tiers-current-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .tiers-current-name {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .tiers-current-rate {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ice);
+      margin-bottom: 22px;
+    }
+    .tiers-progress-track {
+      position: relative;
+      height: 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .tiers-progress-fill {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--ice);
+      transition: width 0.8s ease;
+    }
+    .tiers-progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--grey);
+    }
+    .tiers-progress-meta strong { color: var(--white); font-weight: 700; }
+
+    /* TIERS PAGE — how points work */
+    .how-points-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .how-points-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .how-points-section { margin-bottom: 18px; }
+    .how-points-section:last-child { margin-bottom: 0; }
+    .how-points-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .how-points-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--navy);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--white);
+    }
+    .how-points-row .pts {
+      font-weight: 700;
+      color: var(--ice);
+      font-size: 13px;
+    }
+    .how-points-row.highlight {
+      background: rgba(168,198,232,0.06);
+      border: 1px solid rgba(168,198,232,0.15);
+    }
+    .how-points-row.highlight .pts { color: var(--ice); }
+    .how-points-row.negative .pts { color: var(--red); }
+    .how-points-footnote {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(168,198,232,0.06);
+      border: 1px solid rgba(168,198,232,0.18);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--grey);
+      line-height: 1.6;
+    }
+
+    /* ACTIVITY PAGE */
+    .activity-stats-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .activity-stats-row {
+      display: flex;
+      gap: 10px;
+    }
+    .activity-stat {
+      flex: 1;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 8px;
+      text-align: center;
+    }
+    .activity-stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.1;
+    }
+    .activity-stat-value.points { color: var(--ice); }
+    .activity-stat-label {
+      font-size: 10px;
+      color: var(--grey);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .activity-feed-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .activity-feed-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .activity-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .activity-row-pts {
+      flex-shrink: 0;
+      min-width: 56px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 8px;
+      border-radius: 999px;
+    }
+    .activity-row-pts.positive { color: var(--ice); background: rgba(168,198,232,0.12); }
+    .activity-row-pts.negative { color: var(--red); background: rgba(239,68,68,0.1); }
+    .activity-row-pts.zero { color: var(--amber); background: rgba(245,158,11,0.1); }
+    .activity-row-body { flex: 1; min-width: 0; }
+    .activity-row-reason {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+    .activity-row-meta {
+      font-size: 11px;
+      color: var(--grey);
+    }
+
     /* PER-BAR H&S DETAIL */
     .bar-detail-back {
       background: none;
@@ -1104,22 +1304,109 @@
 
     </div>
 
-    <!-- TIERS TAB (Phase 2 placeholder) -->
+    <!-- TIERS TAB -->
     <div id="tab-tiers" style="display:none;">
-      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:48px 24px;text-align:center;">
-        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Tiers</div>
-        <div style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:6px;">Coming in Phase 2</div>
-        <div style="font-size:12px;color:var(--grey);line-height:1.6;">Tier ladder, progression, and how to earn points will live here.</div>
+
+      <!-- Current tier hero -->
+      <div class="tiers-current-card">
+        <div class="tiers-current-label" id="tiers-current-label">Tier 1 of 5</div>
+        <div class="tiers-current-name" id="tiers-current-name">New</div>
+        <div class="tiers-current-rate" id="tiers-current-rate">£12.71/hr</div>
+        <div class="tiers-progress-track">
+          <div id="tiers-progress-fill" class="tiers-progress-fill"></div>
+        </div>
+        <div class="tiers-progress-meta">
+          <span><strong id="tiers-progress-pts">0</strong> points</span>
+          <span id="tiers-progress-next-meta"><span id="tiers-progress-next">--</span> to next tier</span>
+        </div>
       </div>
+
+      <!-- All tiers ladder -->
+      <div class="tier-ladder">
+        <div class="tier-ladder-title">All Tiers</div>
+        <div id="tier-ladder-rows"></div>
+      </div>
+
+      <!-- How points work — locked spec -->
+      <div class="how-points-card">
+        <div class="how-points-title">How points work</div>
+
+        <div class="how-points-section">
+          <div class="how-points-section-title">Per session</div>
+          <div class="how-points-row"><span>Join a session</span><span class="pts">+5</span></div>
+          <div class="how-points-row"><span>I'm available</span><span class="pts">+15 / +30 under 30s</span></div>
+          <div class="how-points-row"><span>I'll pass</span><span class="pts">+1 / +5 under 30s</span></div>
+          <div class="how-points-row"><span>Selected for a shift</span><span class="pts">+20</span></div>
+          <div class="how-points-row highlight"><span>Complete a shift</span><span class="pts">+60</span></div>
+          <div class="how-points-row highlight"><span>Arrive on time</span><span class="pts">+25</span></div>
+          <div class="how-points-row highlight"><span>Arrive early</span><span class="pts">+40</span></div>
+        </div>
+
+        <div class="how-points-section">
+          <div class="how-points-section-title">Instagram</div>
+          <div class="how-points-row"><span>Follow @glasi_official</span><span class="pts">+50 once</span></div>
+          <div class="how-points-row"><span>Post and tag @glasi_official</span><span class="pts">+15 per day</span></div>
+        </div>
+
+        <div class="how-points-section">
+          <div class="how-points-section-title">Daily login</div>
+          <div class="how-points-row"><span>Open the app</span><span class="pts">+5 per day</span></div>
+          <div class="how-points-row"><span>3-day streak</span><span class="pts">+10</span></div>
+          <div class="how-points-row"><span>7-day streak</span><span class="pts">+25</span></div>
+          <div class="how-points-row"><span>14-day streak</span><span class="pts">+75</span></div>
+          <div class="how-points-row"><span>30-day streak</span><span class="pts">+200</span></div>
+        </div>
+
+        <div class="how-points-section">
+          <div class="how-points-section-title">Shift streaks (85%+ reliability)</div>
+          <div class="how-points-row"><span>5 completed shifts</span><span class="pts">+50</span></div>
+          <div class="how-points-row"><span>10 completed shifts</span><span class="pts">+100</span></div>
+          <div class="how-points-row"><span>20 completed shifts</span><span class="pts">+250</span></div>
+          <div class="how-points-row"><span>50 completed shifts</span><span class="pts">+500</span></div>
+        </div>
+
+        <div class="how-points-section">
+          <div class="how-points-section-title">Negatives</div>
+          <div class="how-points-row negative"><span>No response to a shift</span><span class="pts">−5</span></div>
+          <div class="how-points-row negative"><span>Selected but no-show</span><span class="pts">−100, flagged</span></div>
+        </div>
+
+        <div class="how-points-footnote">
+          Reliability is your attendance percentage on shifts you were selected for. Once it drops below 85%, shift streaks stop accruing until you rebuild it. Show up consistently.
+        </div>
+      </div>
+
     </div>
 
-    <!-- ACTIVITY TAB (Phase 2 placeholder) -->
+    <!-- ACTIVITY TAB -->
     <div id="tab-activity" style="display:none;">
-      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:48px 24px;text-align:center;">
-        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Activity</div>
-        <div style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:6px;">Coming in Phase 2</div>
-        <div style="font-size:12px;color:var(--grey);line-height:1.6;">Recent points, session attendance, and shift activity will live here.</div>
+
+      <!-- Stats summary -->
+      <div class="activity-stats-card">
+        <div class="activity-stats-row">
+          <div class="activity-stat">
+            <div class="activity-stat-value points" id="activity-stat-7d">0</div>
+            <div class="activity-stat-label">Last 7 days</div>
+          </div>
+          <div class="activity-stat">
+            <div class="activity-stat-value" id="activity-stat-sessions">0</div>
+            <div class="activity-stat-label">Sessions</div>
+          </div>
+          <div class="activity-stat">
+            <div class="activity-stat-value" id="activity-stat-shifts">0</div>
+            <div class="activity-stat-label">Shifts</div>
+          </div>
+        </div>
       </div>
+
+      <!-- Recent activity feed (points_ledger entries for this worker) -->
+      <div class="activity-feed-card">
+        <div class="activity-feed-title">Recent activity</div>
+        <div id="activity-feed-list">
+          <div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>
+        </div>
+      </div>
+
     </div>
 
     <!-- SESSIONS TAB -->
@@ -1347,6 +1634,9 @@
       const main = document.getElementById('profile-main');
       if(main) main.style.display = 'block';
     }
+    // Activity is lazy-loaded on entry. The cache window inside loadActivityPage
+    // means rapid back-and-forth doesn't spam fetches.
+    if(tab === 'activity') loadActivityPage();
   }
 
   // ── Burger drawer ─────────────────────────────────────────────────
@@ -1463,6 +1753,10 @@
     // Bars in zone — kicks off the lookup chain (worker postcode → zone →
     // bars → hs_acknowledgements). Renders the list when complete.
     loadBarsInZone();
+
+    // Tiers page renders from currentWorker only (no extra fetch). Painting
+    // it eagerly means the tab opens instantly when the worker switches.
+    loadTiersPage();
 
     // Restore unsubmitted post-shift feedback first; if found, that's the screen
     // they land on. Otherwise check for live session as before.
@@ -1699,6 +1993,201 @@
     if(signedDate) signedDate.textContent = new Date(acknowledgedAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
     // Re-render the bars list so the row's status badge flips on the way back.
     renderBarsInZone();
+  }
+
+  // ── Tiers page ────────────────────────────────────────────────────
+  // Reads from currentWorker (no DB call needed). Renders the current-tier
+  // hero, the 5-row ladder, and the static "How points work" card. Called
+  // eagerly from loadPortal so opening the tab is instant.
+  function loadTiersPage() {
+    if(!currentWorker) return;
+    const TIER_THRESHOLDS = [0, 250, 650, 1500, 3500];
+    const TIER_RATES = [12.71, 13.71, 14.71, 15.71, 16.71];
+    const TIER_NAMES = ['New', 'Reliable', 'Trusted', 'Elite', 'Elite+'];
+
+    const pts = parseInt(currentWorker.total_points) || 0;
+    const tier = currentWorker.tier || 1;
+    const tierIdx = Math.max(0, Math.min(4, tier - 1));
+    const isTopTier = tier >= 5;
+
+    const tierStart = TIER_THRESHOLDS[tierIdx];
+    const tierEnd = isTopTier ? tierStart : TIER_THRESHOLDS[tierIdx + 1];
+    const fillPct = isTopTier ? 100 : Math.min(100, Math.max(0, ((pts - tierStart) / Math.max(1, tierEnd - tierStart)) * 100));
+    const ptsToNext = isTopTier ? 0 : Math.max(0, tierEnd - pts);
+
+    const labelEl = document.getElementById('tiers-current-label');
+    const nameEl = document.getElementById('tiers-current-name');
+    const rateEl = document.getElementById('tiers-current-rate');
+    const fillEl = document.getElementById('tiers-progress-fill');
+    const ptsEl = document.getElementById('tiers-progress-pts');
+    const nextEl = document.getElementById('tiers-progress-next');
+    const nextMetaEl = document.getElementById('tiers-progress-next-meta');
+
+    if(labelEl) labelEl.textContent = 'Tier ' + tier + ' of 5';
+    if(nameEl) nameEl.textContent = TIER_NAMES[tierIdx];
+    if(rateEl) rateEl.textContent = '£' + TIER_RATES[tierIdx].toFixed(2) + '/hr';
+    if(ptsEl) ptsEl.textContent = pts.toLocaleString();
+    // Animate the fill from 0 on first paint so the bar lands smoothly.
+    if(fillEl) {
+      fillEl.style.width = '0%';
+      setTimeout(() => { fillEl.style.width = fillPct + '%'; }, 60);
+    }
+    if(isTopTier) {
+      if(nextMetaEl) nextMetaEl.innerHTML = 'Top tier reached';
+    } else {
+      if(nextEl) nextEl.textContent = ptsToNext.toLocaleString();
+      if(nextMetaEl) nextMetaEl.innerHTML = '<span id="tiers-progress-next">' + ptsToNext.toLocaleString() + '</span> to ' + TIER_NAMES[tierIdx + 1];
+    }
+
+    // Tier ladder.
+    const ladderEl = document.getElementById('tier-ladder-rows');
+    if(ladderEl) {
+      ladderEl.innerHTML = TIER_THRESHOLDS.map((threshold, i) => {
+        const isCurrent = i + 1 === tier;
+        const isAchieved = pts >= threshold;
+        const tName = TIER_NAMES[i];
+        const tRate = TIER_RATES[i];
+        const bg = isCurrent ? 'var(--ice-dim)' : isAchieved ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)';
+        const border = isCurrent ? 'rgba(168,198,232,0.25)' : isAchieved ? 'rgba(74,222,128,0.15)' : 'transparent';
+        const nameColor = isCurrent || isAchieved ? 'var(--white)' : 'var(--grey)';
+        const rateColor = isCurrent ? 'var(--ice)' : isAchieved ? 'var(--green)' : 'var(--grey)';
+        const badge = isCurrent ? '<span style="font-size:9px;letter-spacing:1px;color:var(--ice);background:rgba(168,198,232,0.15);padding:2px 8px;border-radius:4px;text-transform:uppercase;margin-left:6px;">YOU ARE HERE</span>' : '';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;margin-bottom:8px;background:' + bg + ';border:1px solid ' + border + ';">'
+          + '<div>'
+          + '<div style="font-size:14px;font-weight:600;color:' + nameColor + ';">' + tName + ' &nbsp;<span style="font-size:11px;color:var(--grey);font-weight:400;">Tier ' + (i + 1) + '</span>' + badge + '</div>'
+          + '<div style="font-size:11px;color:var(--grey);margin-top:2px;">' + threshold.toLocaleString() + ' points</div>'
+          + '</div>'
+          + '<div style="font-size:16px;font-weight:800;color:' + rateColor + ';">£' + tRate.toFixed(2) + '/hr</div>'
+          + '</div>';
+      }).join('');
+    }
+  }
+
+  // ── Activity page ─────────────────────────────────────────────────
+  // Lazy-loaded on first tab entry per session, then cached. Re-fetches if
+  // the worker explicitly returns to the tab after >60s (so a freshly
+  // awarded ledger entry surfaces without a full reload).
+  let activityLoadedAt = 0;
+  const ACTIVITY_CACHE_MS = 60 * 1000;
+
+  // points_ledger.reason → friendly label. Falls back to the raw reason if
+  // unmapped (catches manual_adjustment + any future reasons).
+  const REASON_LABELS = {
+    joined_session: 'Joined a session',
+    responded_available: "Responded I'm available",
+    responded_available_under_30s: 'Responded under 30 seconds',
+    responded_pass: "Responded I'll pass",
+    responded_pass_under_30s: "Responded I'll pass under 30 seconds",
+    selected_for_shift: 'Selected for a shift',
+    completed_shift: 'Completed a shift',
+    arrived_early: 'Arrived early',
+    arrived_on_time: 'Arrived on time',
+    no_response: 'No response to a shift post',
+    no_show: 'Selected but did not attend',
+    instagram_follow: 'Followed @glasi_official',
+    instagram_post: 'Posted and tagged @glasi_official',
+    daily_login: 'Daily login',
+    login_streak_3: '3-day login streak',
+    login_streak_7: '7-day login streak',
+    login_streak_14: '14-day login streak',
+    login_streak_30: '30-day login streak',
+    shift_streak_5: '5 shifts completed',
+    shift_streak_10: '10 shifts completed',
+    shift_streak_20: '20 shifts completed',
+    shift_streak_50: '50 shifts completed',
+    tier_promoted: 'Promoted to a new tier',
+    cancellation_compensation: 'Dispatch cancelled by Glasi',
+    manual_adjustment: 'Manual adjustment',
+    genesis: 'Starting balance'
+  };
+
+  function reasonToLabel(reason) {
+    if(!reason) return 'Activity';
+    return REASON_LABELS[reason] || reason.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  async function loadActivityPage(force) {
+    if(!currentWorker) return;
+    if(!force && activityLoadedAt && (Date.now() - activityLoadedAt) < ACTIVITY_CACHE_MS) return;
+    activityLoadedAt = Date.now();
+
+    const listEl = document.getElementById('activity-feed-list');
+    if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>';
+
+    try {
+      // Last 50 ledger entries for this worker, plus enough metadata to
+      // render the timeline. session_id is used downstream when wiring
+      // session-context labels in a future phase.
+      const ledger = await fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + currentWorker.id + '&order=awarded_at.desc&limit=50&select=id,amount,reason,session_id,shift_id,awarded_at,metadata,notes', { headers: H }).then(r => r.json());
+
+      // 7-day points sum (amount > 0 only is debatable; spec says "points
+      // earned", so sum positives).
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const last7d = (ledger || []).reduce((sum, r) => {
+        const ts = r.awarded_at ? new Date(r.awarded_at).getTime() : 0;
+        if(ts >= sevenDaysAgo) sum += parseInt(r.amount) || 0;
+        return sum;
+      }, 0);
+
+      const stat7 = document.getElementById('activity-stat-7d');
+      if(stat7) stat7.textContent = (last7d >= 0 ? '+' : '') + last7d.toLocaleString();
+
+      // Lifetime sessions joined: session_workers rows with status in
+      // (available, dispatched, onshift, completed). 'available' covers
+      // the "joined and waited" case.
+      const swCount = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&status=in.(available,dispatched,onshift,completed)&select=id', { headers: H }).then(r => r.json());
+      const stat2 = document.getElementById('activity-stat-sessions');
+      if(stat2) stat2.textContent = String((swCount || []).length);
+
+      // Lifetime shifts completed.
+      const swIdsRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=id', { headers: H }).then(r => r.json());
+      const swIds = (swIdsRows || []).map(r => r.id);
+      let shiftsCount = 0;
+      if(swIds.length) {
+        const sh = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=in.(' + swIds.join(',') + ')&status=eq.completed&select=id', { headers: H }).then(r => r.json());
+        shiftsCount = (sh || []).length;
+      }
+      const stat3 = document.getElementById('activity-stat-shifts');
+      if(stat3) stat3.textContent = String(shiftsCount);
+
+      // Render the feed.
+      if(!ledger || !ledger.length) {
+        if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No activity yet. Join a session to start earning points.</div>';
+        return;
+      }
+
+      if(listEl) {
+        listEl.innerHTML = ledger.map(r => {
+          const amt = parseInt(r.amount) || 0;
+          const cls = amt > 0 ? 'positive' : amt < 0 ? 'negative' : 'zero';
+          const sign = amt > 0 ? '+' : amt < 0 ? '−' : '';
+          const display = sign + Math.abs(amt);
+          const reason = reasonToLabel(r.reason);
+          // tier_promoted carries from_tier/to_tier in metadata.
+          let metaText = '';
+          if(r.reason === 'tier_promoted' && r.metadata && r.metadata.to_tier) {
+            const TIER_NAMES = ['New', 'Reliable', 'Trusted', 'Elite', 'Elite+'];
+            metaText = 'Now ' + (TIER_NAMES[r.metadata.to_tier - 1] || 'Tier ' + r.metadata.to_tier);
+          } else if(r.notes) {
+            metaText = r.notes;
+          }
+          const when = r.awarded_at
+            ? new Date(r.awarded_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+              + ' · ' + new Date(r.awarded_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+            : '';
+          return '<div class="activity-row">'
+            + '<div class="activity-row-pts ' + cls + '">' + display + '</div>'
+            + '<div class="activity-row-body">'
+            + '<div class="activity-row-reason">' + escapeHtml(reason) + '</div>'
+            + '<div class="activity-row-meta">' + escapeHtml(when) + (metaText ? ' · ' + escapeHtml(metaText) : '') + '</div>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    } catch(e) {
+      console.error('loadActivityPage failed', e);
+      if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--red);padding:12px 0;">Could not load activity. Try again later.</div>';
+    }
   }
 
   async function checkForLiveSession() {
