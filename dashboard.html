@@ -864,6 +864,51 @@
   </div>
 </div>
 
+<!-- CANCEL DISPATCH OVERLAY -->
+<div id="ov-cancel-dispatch" class="overlay">
+  <div class="modal" data-stage="1" style="max-width:520px;">
+
+    <div class="cancel-stage cancel-stage-1">
+      <div class="modal-title" id="cancel-title">Recall before leaving</div>
+      <div class="modal-sub" id="cancel-sub">Worker keeps +20 dispatch points. No compensation, no penalty.</div>
+
+      <div style="margin:14px 0;padding:12px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:13px;color:var(--white);line-height:1.5;">
+        <strong style="color:var(--red);">Cancelling dispatch for <span id="cancel-worker-name">worker</span>.</strong>
+        <span id="cancel-warning-detail">The worker has not yet left. Their dispatch will be cleared and the request returns to pending.</span>
+      </div>
+
+      <label>Reason (visible in audit trail, minimum 10 characters)</label>
+      <textarea id="cancel-reason" class="field" rows="3" maxlength="500" style="width:100%;resize:vertical;" placeholder="Why is this dispatch being cancelled?"></textarea>
+      <div id="cancel-reason-count" style="font-size:11px;color:var(--grey);text-align:right;margin-top:4px;">0 / 10 minimum</div>
+
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="closeCancelDispatch()">Keep dispatch</button>
+        <button id="cancel-continue-btn" class="confirm-btn" disabled style="opacity:0.4;background:var(--red);" onclick="cancelStageContinue()">Continue</button>
+      </div>
+    </div>
+
+    <div class="cancel-stage cancel-stage-2" style="display:none;">
+      <div class="modal-title" style="color:var(--red);">Confirm cancellation</div>
+      <div class="modal-sub" id="cancel-final-sub">This will cancel the dispatch and write to the audit trail. It cannot be undone from the dashboard.</div>
+
+      <div style="margin:14px 0;padding:12px 14px;background:var(--navy);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--grey);line-height:1.5;">
+        <div>Worker: <strong style="color:var(--white);" id="cancel-final-worker"></strong></div>
+        <div>Reason: <em style="color:var(--white);" id="cancel-final-reason"></em></div>
+        <div id="cancel-final-points" style="margin-top:6px;color:var(--ice);"></div>
+      </div>
+
+      <label>Type <strong style="color:var(--red);letter-spacing:1px;" id="cancel-phrase-label">CANCEL</strong> to proceed</label>
+      <input id="cancel-confirm-input" class="field" type="text" autocomplete="off" style="width:100%;letter-spacing:1px;" placeholder="CANCEL" />
+
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="cancelStageBack()">Back</button>
+        <button id="cancel-submit-btn" class="confirm-btn" disabled style="opacity:0.4;background:var(--red);" onclick="submitCancellation()">Cancel dispatch</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- OVERLAY: EDIT WORKER -->
 <div class="overlay" id="ov-edit-worker">
   <div class="modal">
@@ -3197,13 +3242,25 @@ function renderShiftCard(w) {
   const clockOutSection = (endingSoon||shiftEnded) ? '<div style="font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600;">Shift ending — send clock out code to bar manager</div><div class="clockout-msg-box" id="com-'+w.id+'">'+clockOutMsg+'</div><button class="code-confirm-btn" style="width:100%;margin-bottom:10px;" onclick="copyClockOutMsg(\''+w.id+'\', this)">Copy Message to Bar Manager</button>' : '';
 
   if(!isOnShift) {
+    const isEnRoute = !!w.departedAt;
+    const cancelLabel = isEnRoute ? 'Emergency cancel' : 'Recall before leaving';
+    const cancelHint = isEnRoute
+      ? 'Worker keeps +20 plus +50 compensation. Use only for genuine emergencies.'
+      : 'Worker keeps +20 dispatch points. No compensation, no penalty.';
     return '<div class="shift-active-card" id="sac-'+w.id+'">'
       +'<div class="sac-top"><div><div class="sac-name">'+w.name+'</div><div class="sac-bar">'+w.bar+'</div></div>'
       +'<div class="sac-details">Clock in code: <strong style="color:var(--ice);font-size:14px;letter-spacing:2px;">'+w.code+'</strong><br>'
       +(w.dispatchedAt?'Dispatched: '+fmtT(w.dispatchedAt):'')+'</div></div>'
       +'<div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Worker sends you their clock in code from the manager</div>'
       +'<div class="code-confirm-row"><input class="code-confirm-input" type="text" placeholder="Enter code" maxlength="4" id="ci-'+w.id+'" />'
-      +'<button class="code-confirm-btn" onclick="confirmClockIn(\''+w.id+'\')">Confirm Arrival</button></div></div>';
+      +'<button class="code-confirm-btn" onclick="confirmClockIn(\''+w.id+'\')">Confirm Arrival</button></div>'
+      +'<div style="margin-top:18px;padding-top:14px;border-top:1px dashed rgba(239,68,68,0.25);">'
+      +  '<button onclick="openCancelDispatch(\''+w.id+'\')" '
+      +    'style="width:100%;background:transparent;color:var(--red);border:1px solid rgba(239,68,68,0.4);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">'
+      +    cancelLabel+'</button>'
+      +  '<div style="font-size:11px;color:var(--grey);margin-top:6px;text-align:center;line-height:1.5;">'+cancelHint+'</div>'
+      +'</div>'
+      +'</div>';
   }
 
   return '<div class="shift-active-card'+endingClass+'" id="sac-'+w.id+'">'
@@ -4354,6 +4411,105 @@ async function buildRecommendations(requestId) {
     }).join('');
 
   feed.insertBefore(panel, feed.firstChild);
+}
+
+// Cancel dispatch UI scaffolding. Logic lands in step 3.
+let cancelCtx = null; // { workerId, state: 'dispatched' | 'en_route', worker, phrase }
+
+function openCancelDispatch(workerId) {
+  const w = sessionWorkers.find(x => x.id === workerId);
+  if (!w) { alert('Worker not found.'); return; }
+  const state = w.departedAt ? 'en_route' : 'dispatched';
+  const firstName = (w.name || '').trim().split(/\s+/)[0] || 'WORKER';
+  const phrase = 'CANCEL ' + firstName.toUpperCase();
+  cancelCtx = { workerId, state, worker: w, phrase };
+
+  const isEnRoute = state === 'en_route';
+  document.getElementById('cancel-title').textContent = isEnRoute ? 'Emergency cancel' : 'Recall before leaving';
+  document.getElementById('cancel-sub').textContent = isEnRoute
+    ? 'Worker keeps +20 dispatch points and receives +50 compensation. Use only for genuine emergencies.'
+    : 'Worker keeps +20 dispatch points. No compensation, no penalty.';
+  document.getElementById('cancel-worker-name').textContent = w.name;
+  document.getElementById('cancel-warning-detail').textContent = isEnRoute
+    ? 'The worker has already left and is en route. They will be notified to turn back and will receive +50 compensation.'
+    : 'The worker has not yet left. Their dispatch will be cleared and the request returns to pending.';
+  document.getElementById('cancel-phrase-label').textContent = phrase;
+  document.getElementById('cancel-confirm-input').placeholder = phrase;
+
+  // Reset stage 1
+  document.getElementById('cancel-reason').value = '';
+  document.getElementById('cancel-reason-count').textContent = '0 / 10 minimum';
+  document.getElementById('cancel-reason-count').style.color = 'var(--grey)';
+  const contBtn = document.getElementById('cancel-continue-btn');
+  contBtn.disabled = true; contBtn.style.opacity = '0.4';
+
+  // Reset stage 2
+  document.getElementById('cancel-confirm-input').value = '';
+  const subBtn = document.getElementById('cancel-submit-btn');
+  subBtn.disabled = true; subBtn.style.opacity = '0.4';
+
+  // Show stage 1
+  document.querySelector('#ov-cancel-dispatch .modal').setAttribute('data-stage', '1');
+  document.querySelector('#ov-cancel-dispatch .cancel-stage-1').style.display = '';
+  document.querySelector('#ov-cancel-dispatch .cancel-stage-2').style.display = 'none';
+
+  openOv('cancel-dispatch');
+
+  const reason = document.getElementById('cancel-reason');
+  reason.oninput = () => {
+    const len = reason.value.trim().length;
+    const cnt = document.getElementById('cancel-reason-count');
+    cnt.textContent = len >= 10 ? len + ' characters' : len + ' / 10 minimum';
+    cnt.style.color = len >= 10 ? 'var(--green)' : 'var(--grey)';
+    contBtn.disabled = len < 10;
+    contBtn.style.opacity = len < 10 ? '0.4' : '1';
+  };
+
+  const conf = document.getElementById('cancel-confirm-input');
+  conf.oninput = () => {
+    const ok = !!cancelCtx && conf.value.trim().toUpperCase() === cancelCtx.phrase;
+    subBtn.disabled = !ok;
+    subBtn.style.opacity = ok ? '1' : '0.4';
+  };
+}
+
+function cancelStageContinue() {
+  if (!cancelCtx) return;
+  const reason = document.getElementById('cancel-reason').value.trim();
+  if (reason.length < 10) return;
+
+  const isEnRoute = cancelCtx.state === 'en_route';
+  document.getElementById('cancel-final-worker').textContent = cancelCtx.worker.name;
+  document.getElementById('cancel-final-reason').textContent = reason;
+  document.getElementById('cancel-final-points').textContent = isEnRoute
+    ? 'Points: worker keeps +20, +50 compensation will be awarded.'
+    : 'Points: worker keeps +20. No compensation.';
+
+  document.querySelector('#ov-cancel-dispatch .modal').setAttribute('data-stage', '2');
+  document.querySelector('#ov-cancel-dispatch .cancel-stage-1').style.display = 'none';
+  document.querySelector('#ov-cancel-dispatch .cancel-stage-2').style.display = '';
+  document.getElementById('cancel-confirm-input').focus();
+}
+
+function cancelStageBack() {
+  document.querySelector('#ov-cancel-dispatch .modal').setAttribute('data-stage', '1');
+  document.querySelector('#ov-cancel-dispatch .cancel-stage-1').style.display = '';
+  document.querySelector('#ov-cancel-dispatch .cancel-stage-2').style.display = 'none';
+}
+
+function closeCancelDispatch() {
+  closeOv('cancel-dispatch');
+  cancelCtx = null;
+}
+
+// Stub. Real implementation lands in step 3 (write to dispatch_cancellations,
+// flip session_workers and shift_requests state, points_ledger entries, push to bar).
+async function submitCancellation() {
+  if (!cancelCtx) return;
+  const reason = document.getElementById('cancel-reason').value.trim();
+  console.log('[cancel-dispatch][stub]', { workerId: cancelCtx.workerId, state: cancelCtx.state, reason });
+  alert('Stub: cancellation logic lands in step 3. State, ledger, and bar push are not yet wired.');
+  closeCancelDispatch();
 }
 
 async function dispatchWorker(applicationId, requestId) {
