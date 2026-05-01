@@ -3574,19 +3574,25 @@ async function updateWorkerReliabilityScores() {
 
 
 // ── POINTS SYSTEM CONSTANTS ────────────────────────────────────────────────
+// Locked spec. No further changes without Sam's explicit instruction.
+// I'm Available: +15 base, +30 total under 30s. I'll Pass: +1 base, +5 total under 30s.
+// No separate speed bonus; only the under-30-second threshold matters.
+// Selected for shift +20 is awarded separately at dispatch time, not here.
 const POINTS = {
-  joined:          5,
-  declined:        10,
-  accepted:        20,
-  speedBonus30:    20,   // responded in under 30s
-  speedBonus60:    15,   // responded in 30-60s
-  speedBonus120:   10,   // responded in 60-120s
-  completedShift:  60,
-  arrivedEarly:    40,
-  arrivedOnTime:   25
+  joined:               5,
+  declined:             1,    // I'll Pass (base). Under 30s total = 5 (handled by structural rewire).
+  accepted:            15,    // I'm Available (base). Under 30s total = 30.
+  speedBonus30:        15,    // Bonus on top of I'm Available base for under-30s responses.
+  speedBonus60:         0,    // Deprecated by new locked spec.
+  speedBonus120:        0,    // Deprecated by new locked spec.
+  completedShift:      60,
+  arrivedEarly:        40,
+  arrivedOnTime:       25,
+  followInstagram:     50,    // One time, verified at onboarding.
+  postAndTagInstagram: 15     // Per post, max one submission per calendar day, claim and verify model.
 };
 
-const TIER_THRESHOLDS = [0, 200, 650, 1500, 3500];
+const TIER_THRESHOLDS = [0, 250, 650, 1500, 3500];
 
 function reliabilityMultiplier(score) {
   if(score == null) return 1.0;
@@ -3609,6 +3615,81 @@ function pointsToNextTier(points) {
   }
   return 0; // already at max tier
 }
+
+// ── POINTS LEDGER HELPER ───────────────────────────────────────────────────
+// Single source of truth for any change to applications.total_points. Writes
+// one row per non-zero award to points_ledger, updates the cached
+// applications.total_points and applications.tier, and logs a tier_promoted
+// row when a threshold is crossed.
+//
+// Usage:
+//   await awardPoints(appId, { amount: 15, reason: 'responded_available', sessionId });
+//   await awardPoints(appId, [
+//     { amount: 5,  reason: 'joined_session', sessionId },
+//     { amount: 60, reason: 'completed_shift', sessionId, shiftId }
+//   ], { awardedBy: 'system' });
+async function awardPoints(applicationId, awards, opts = {}) {
+  if(!Array.isArray(awards)) awards = [awards];
+  const valid = awards.filter(a => a && a.amount !== 0);
+  if(!valid.length) return null;
+
+  const ledgerRows = valid.map(a => ({
+    application_id: applicationId,
+    amount: a.amount,
+    reason: a.reason,
+    session_id: a.sessionId || opts.sessionId || null,
+    shift_id: a.shiftId || opts.shiftId || null,
+    source_type: a.sourceType || opts.sourceType || null,
+    source_id: a.sourceId || opts.sourceId || null,
+    awarded_by: a.awardedBy || opts.awardedBy || 'system',
+    metadata: a.metadata || null,
+    notes: a.notes || null
+  }));
+  await sbPost('points_ledger', ledgerRows);
+
+  const appRows = await sbGet('applications', '?id=eq.'+applicationId+'&select=total_points,tier');
+  const app = appRows[0];
+  if(!app) return null;
+
+  const oldTotal = parseInt(app.total_points) || 0;
+  const oldTier = parseInt(app.tier) || 1;
+  const delta = valid.reduce((s, a) => s + a.amount, 0);
+  const newTotal = oldTotal + delta;
+  const newTier = pointsToTier(newTotal);
+
+  const updates = { total_points: newTotal };
+  if(newTier !== oldTier) updates.tier = newTier;
+  await sbPatch('applications', '?id=eq.'+applicationId, updates);
+
+  if(newTier > oldTier) {
+    await sbPost('points_ledger', {
+      application_id: applicationId,
+      amount: 0,
+      reason: 'tier_promoted',
+      session_id: opts.sessionId || null,
+      awarded_by: opts.awardedBy || 'system',
+      metadata: { from_tier: oldTier, to_tier: newTier, points_at_promotion: newTotal },
+      notes: 'Auto-promotion from points threshold'
+    });
+  }
+
+  return { newTotal, newTier, promoted: newTier > oldTier, oldTier };
+}
+
+// Maps the legacy breakdown labels emitted by calculateSessionPoints to the
+// locked-spec reason codes used in points_ledger. Translation layer until
+// build sequence item #4 rewires calculateSessionPoints to use shift_responses.
+const BREAKDOWN_REASON_MAP = {
+  'Joined session': 'joined_session',
+  'Accepted shift': 'responded_available',
+  'Response under 30s': 'responded_available_under_30s',
+  'Response under 60s': 'responded_available',
+  'Response under 120s': 'responded_available',
+  'Responded (declined)': 'responded_pass',
+  'Completed shift': 'completed_shift',
+  'Arrived early': 'arrived_early',
+  'Arrived on time': 'arrived_on_time'
+};
 
 async function calculateSessionPoints(applicationId, sessionId) {
   let base = 0;
@@ -3681,26 +3762,28 @@ async function calculateSessionPoints(applicationId, sessionId) {
 async function updateWorkerPoints() {
   const appIds = [...new Set(sessionWorkers.map(w => w.applicationId).filter(Boolean))];
   for(const appId of appIds) {
-    // Get current reliability score for multiplier
-    const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=reliability_score,total_points,tier');
-    const app = appRows[0];
-    if(!app) continue;
+    const { breakdown } = await calculateSessionPoints(appId, activeSessionId);
+    if(!breakdown.length) continue;
 
-    const multiplier = reliabilityMultiplier(app.reliability_score ? parseFloat(app.reliability_score) : null);
-    const { base, breakdown } = await calculateSessionPoints(appId, activeSessionId);
-    const earned = Math.round(base * multiplier);
-    const newTotal = (parseInt(app.total_points) || 0) + earned;
-    const newTier = pointsToTier(newTotal);
+    // Idempotency: skip if this session has already been ledger-recorded for this worker.
+    const existing = await sbGet('points_ledger',
+      '?application_id=eq.'+appId+'&session_id=eq.'+activeSessionId+'&reason=neq.tier_promoted&select=id');
+    if(existing.length) continue;
 
-    // Update session_workers points_earned
-    await sbPatch('session_workers', '?application_id=eq.'+appId+'&session_id=eq.'+activeSessionId, {
-      points_earned: earned
-    });
+    const awards = breakdown
+      .filter(b => b.pts !== 0)
+      .map(b => ({
+        amount: b.pts,
+        reason: BREAKDOWN_REASON_MAP[b.action] || 'manual_adjustment',
+        notes: BREAKDOWN_REASON_MAP[b.action] ? null : 'Unmapped breakdown label: ' + b.action
+      }));
 
-    // Update applications total_points and tier if changed
-    const updates = { total_points: newTotal };
-    if(newTier !== parseInt(app.tier)) updates.tier = newTier;
-    await sbPatch('applications', '?id=eq.'+appId, updates);
+    await awardPoints(appId, awards, { sessionId: activeSessionId });
+    const earned = awards.reduce((s, a) => s + a.amount, 0);
+
+    await sbPatch('session_workers',
+      '?application_id=eq.'+appId+'&session_id=eq.'+activeSessionId,
+      { points_earned: earned });
   }
 }
 
@@ -3716,9 +3799,8 @@ async function generateSessionReports() {
     const app = appRows[0];
     if(!app) continue;
 
-    const multiplier = reliabilityMultiplier(app.reliability_score ? parseFloat(app.reliability_score) : null);
     const { base, breakdown } = await calculateSessionPoints(appId, activeSessionId);
-    const earned = Math.round(base * multiplier);
+    const earned = base;
     const newTotal = (parseInt(app.total_points) || 0) + earned;
     const currentTier = pointsToTier(newTotal);
     const toNext = pointsToNextTier(newTotal);
@@ -3726,7 +3808,7 @@ async function generateSessionReports() {
     const prevThreshold = TIER_THRESHOLDS[currentTier - 1] || 0;
     const progress = nextThreshold ? Math.round(((newTotal - prevThreshold) / (nextThreshold - prevThreshold)) * 100) : 100;
 
-    reports.push({ name: app.name, phone: app.phone, earned, breakdown, newTotal, currentTier, toNext, progress, multiplier });
+    reports.push({ name: app.name, phone: app.phone, earned, breakdown, newTotal, currentTier, toNext, progress });
   }
 
   return reports;
@@ -3754,7 +3836,6 @@ function downloadSessionReports(reports) {
 
     if(r.breakdown.length) {
       r.breakdown.forEach(b => lines.push('  ' + b.action + ': +' + b.pts + 'pts'));
-      if(r.multiplier !== 1.0) lines.push('  Reliability multiplier: x' + r.multiplier);
     } else {
       lines.push('  You were invited but did not join this session.');
     }
@@ -6461,7 +6542,6 @@ async function openSessionDetail(sessionId) {
     const totalPts = app ? (parseInt(app.total_points) || 0) : 0;
     const tier = app ? (parseInt(app.tier) || 1) : 1;
     const reliability = app ? parseFloat(app.reliability_score || 0) : 0;
-    const multiplier = reliabilityMultiplier(reliability);
     const toNext = pointsToNextTier(totalPts);
     const nextThresholdPts = TIER_THRESHOLDS[tier] || null;
     const prevThresholdPts = TIER_THRESHOLDS[tier-1] || 0;
@@ -6522,7 +6602,6 @@ ${lines.length
         ? '<p style="font-size:14px;color:#374151;margin:0 0 16px;">Every session you join moves you closer to a higher tier. Accepting shifts moves you further. And your performance on the night, how fast you respond and how promptly you arrive, has the biggest impact of all. Higher tiers mean higher pay. Keep performing like tonight and you will move through them quickly.</p>'
         : '<p style="font-size:14px;color:#374151;margin:0 0 16px;">We know you were ready and wanted to work tonight. We cannot dispatch everyone, but we do notice. Making yourself available still earns you points toward your next tier. The more you show up, the higher your tier climbs. And a higher tier means higher pay when you do get a shift. Keep showing up.</p>')
   : '<p style="font-size:14px;color:#374151;margin:0 0 16px;">We know you were ready and wanted to work tonight. We cannot dispatch everyone, but we do notice. Making yourself available still earns you points toward your next tier. The more you show up, the higher your tier climbs. And a higher tier means higher pay when you do get a shift. Keep showing up.</p>'}
-${multiplier !== 1.0 ? '<p style="font-size:12px;color:#6b7280;margin:0 0 16px;">Reliability multiplier applied: x'+multiplier+'</p>' : ''}
 <p style="font-size:14px;color:#374151;margin:0 0 4px;">Current rate: <strong>£${tierRate}/hr</strong></p>
 ${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Tier '+(tier+1)+' pays £'+nextTierRate+'/hr.</p>' : ''}
 <p style="font-size:14px;color:#374151;margin:16px 0 0;">Glasi<br><span style="color:#9ca3af;font-size:12px;">glasi.co.uk</span></p>
@@ -6552,10 +6631,6 @@ ${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Tier '
         <div style="text-align:center;">
           <div style="font-size:22px;font-weight:700;color:var(--white);">${totalPts}</div>
           <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">TOTAL PTS</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:22px;font-weight:700;color:var(--amber);">x${multiplier}</div>
-          <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">MULTIPLIER</div>
         </div>
         <div style="text-align:center;">
           <div style="font-size:22px;font-weight:700;color:var(--green);">${toNext > 0 ? toNext : '—'}</div>
