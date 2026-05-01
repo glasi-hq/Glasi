@@ -1008,8 +1008,8 @@
             <div class="shift-timer" id="shift-timer">Respond within 60 seconds</div>
             <div class="shift-disclaimer">Responding does not guarantee you will be selected. We will notify you immediately if you are chosen.</div>
             <div class="shift-buttons">
-              <button class="available-btn" onclick="handleAvailable()">I'm available</button>
-              <button class="pass-btn" onclick="handlePass()">I'll pass</button>
+              <button id="response-available-btn" class="available-btn" onclick="handleAvailable()">I'm available</button>
+              <button id="response-pass-btn" class="pass-btn" onclick="handlePass()">I'll pass</button>
             </div>
           </div>
         </div>
@@ -1049,7 +1049,7 @@
               <div style="font-size:11px;font-weight:600;letter-spacing:1px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;text-align:left;">Clock-in Code</div>
               <div style="display:flex;gap:8px;">
                 <input type="text" id="worker-clockin-input" maxlength="6" placeholder="Enter code from bar manager" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:16px;color:var(--white);font-family:'Inter',sans-serif;outline:none;letter-spacing:4px;text-align:center;">
-                <button onclick="workerClockIn()" style="background:var(--green);color:var(--navy);border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Confirm</button>
+                <button id="worker-clockin-btn" onclick="workerClockIn()" style="background:var(--green);color:var(--navy);border:none;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Confirm</button>
               </div>
               <div id="worker-clockin-error" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px;"></div>
             </div>
@@ -1067,7 +1067,7 @@
                 <div style="font-size:18px;font-weight:700;color:var(--white);margin-bottom:6px;text-align:center;">Shift complete</div>
                 <div style="font-size:13px;color:var(--grey);text-align:center;margin-bottom:20px;">Enter the clock-out code from your bar manager.</div>
                 <input type="text" id="worker-clockout-input" maxlength="6" placeholder="Clock-out code" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:20px;color:var(--white);font-family:'Inter',sans-serif;outline:none;letter-spacing:6px;text-align:center;margin-bottom:10px;">
-                <button onclick="workerClockOut()" style="width:100%;background:var(--ice);color:var(--navy);border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-bottom:12px;">Confirm</button>
+                <button id="worker-clockout-btn" onclick="workerClockOut()" style="width:100%;background:var(--ice);color:var(--navy);border:none;border-radius:8px;padding:14px;font-size:14px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;margin-bottom:12px;">Confirm</button>
                 <div id="worker-clockout-error" style="font-size:12px;color:var(--red);margin-bottom:8px;min-height:16px;text-align:center;"></div>
                 <div style="text-align:center;">
                   <a href="https://wa.me/447803856078?text=I%20cannot%20get%20my%20clock-out%20code" target="_blank" style="font-size:12px;color:var(--grey);text-decoration:underline;">Can't get my code?</a>
@@ -1271,76 +1271,34 @@
     const liveInvite = rows ? rows.find(r => r.sessions?.status === 'live') : null;
     if(!liveInvite) return;
 
-    // Check if worker was dispatched in this session
-    const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&session_id=eq.' + liveInvite.session_id + '&select=id,status,bar_id,shift_length_hours,departed_at', { headers: H }).then(r => r.json());
+    // Check if worker was dispatched in this session. Widened SELECT — the
+    // render helpers route on (status, departed_at, clock_in_at), so all
+    // three need to be in the row we feed them.
+    const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&session_id=eq.' + liveInvite.session_id + '&select=id,status,bar_id,shift_length_hours,departed_at,clock_in_at,dispatched_at', { headers: H }).then(r => r.json());
     const sw = swRows?.[0];
 
     if(sw && (sw.status === 'dispatched' || sw.status === 'onshift')) {
-      // Dispatched workers always see the dispatched screen -- ignore left_at
       currentSessionWorkerId = sw.id;
       currentSessionInvite = liveInvite;
-      // Attach realtime now so future status flips (cancelled/completed) hit
-      // the worker's screen without a refresh. Bug B fix: the old code skipped
-      // startLiveSession on these restore paths, leaving the portal blind.
+      // Restoring into an already-dispatched state — left_at was written on
+      // the original dispatch. Don't fire it again.
+      sessionInviteLeftAtMarked = true;
       subscribeToSessionWorkers(liveInvite.session_id);
 
-      // If already onshift -- show clocked in state directly
-      if(sw.status === 'onshift') {
-        document.getElementById('sessions-empty').style.display = 'none';
-        document.getElementById('sessions-live').style.display = 'block';
-        document.getElementById('live-waiting').style.display = 'none';
-        document.getElementById('live-dispatched').style.display = 'block';
-        document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
-        const dispCard = document.querySelector('.dispatched-card');
-        if(dispCard) dispCard.style.display = 'none';
-        const warningBox = document.querySelector('#live-dispatched .warning-box');
-        if(warningBox) warningBox.style.display = 'none';
-        document.getElementById('leaving-section').style.display = 'none';
-        document.getElementById('leaving-confirmed').style.display = 'block';
-        const heading = document.getElementById('on-your-way-heading');
-        if(heading) heading.style.display = 'none';
-        document.getElementById('clockin-input-section').style.display = 'none';
-        document.getElementById('clockin-confirmed-section').style.display = 'block';
+      const zoneEl = document.getElementById('live-zone');
+      if(zoneEl) zoneEl.textContent = liveInvite.sessions?.zones?.name || '';
 
-        // Fetch shift data for countdown
-        try {
-          const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + sw.id + '&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours', { headers: H }).then(r => r.json());
-          const shift = shiftRows?.[0];
-          if(shift) startShiftCountdown(shift.clock_in_confirmed_at, shift.shift_length_hours);
-        } catch(e) {}
-        return;
+      // Same routing logic as the realtime handler — restore and realtime
+      // paths now share the helpers, so the worker lands on the same screen
+      // regardless of how they got here.
+      if(sw.status === 'onshift') {
+        await renderClockedIn(sw);
+      } else if(sw.departed_at) {
+        await renderEnRoute(sw);
+      } else {
+        await renderDispatchedFresh(sw);
       }
-      // Check if already confirmed leaving
-      if(sw.departed_at) {
-        // Will show leaving-confirmed after dispatch screen renders
-        setTimeout(() => {
-          const leavingSection = document.getElementById('leaving-section');
-          const leavingConfirmed = document.getElementById('leaving-confirmed');
-          if(leavingSection) leavingSection.style.display = 'none';
-          if(leavingConfirmed) leavingConfirmed.style.display = 'block';
-        }, 100);
-      }
-      // Worker was dispatched -- show dispatched screen with venue details
-      currentSessionInvite = liveInvite;
-      document.getElementById('sessions-empty').style.display = 'none';
-      document.getElementById('sessions-live').style.display = 'block';
-      document.getElementById('live-waiting').style.display = 'none';
-      document.getElementById('live-dispatched').style.display = 'block';
-      document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
-      // Fetch bar details
-      if(sw.bar_id) {
-        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + sw.bar_id + '&select=name,address,google_maps_link,manager_name', { headers: H }).then(r => r.json());
-        const bar = barRows?.[0];
-        if(bar) {
-          document.getElementById('dispatched-venue').textContent = bar.name || '';
-          document.getElementById('dispatched-address').textContent = bar.address || '';
-          const mapsBtn = document.getElementById('dispatched-maps');
-          if(mapsBtn) mapsBtn.href = bar.google_maps_link || '#';
-          const managerName = bar.manager_name || 'the bar manager';
-          const warningEl = document.getElementById('dispatched-instructions');
-          if(warningEl) warningEl.innerHTML = 'Share your live location with Glasi on <strong><a href="https://wa.me/447803856078" style="color:var(--amber);">07803856078</a></strong>, start heading to the venue and ask for <strong style="color:var(--white);">' + managerName + '</strong> who will have your clock-in code.';
-        }
-      }
+      return;
     } else if(liveInvite.joined_at && (!liveInvite.left_at || new Date(liveInvite.joined_at) > new Date(liveInvite.left_at))) {
       // Worker already joined -- restore to live waiting room
       currentSessionInvite = liveInvite;
@@ -1446,7 +1404,7 @@
   let hasRespondedToCurrentShift = false;
   // Set when the active shift_request flips to 'dispatched' on the realtime
   // shift_requests UPDATE feed. Gives the session_workers UPDATE for self a
-  // brief window to fire (showDispatched takes over). If it doesn't, this
+  // brief window to fire (renderEnRoute/renderClockedIn takes over). If it doesn't, this
   // worker wasn't selected, so we drop them back into the waiting room.
   let awaitingDispatchConfirmation = null;
 
@@ -1585,9 +1543,6 @@
     ws.onmessage = async (e) => {
       try {
         const msg = JSON.parse(e.data);
-        // Diagnostic: surface every session_workers payload so Bug 2 can be
-        // traced live in the browser console. Remove once the realtime gap
-        // is fully understood.
         console.log('[session_workers ws]', msg.event, msg.payload?.data?.type, msg.payload?.data?.record?.id, msg.payload?.data?.record?.status);
         const record = (msg.event === 'postgres_changes')
           ? msg.payload?.data?.record
@@ -1595,26 +1550,27 @@
             ? (msg.payload?.record || msg.payload)
             : null;
         if(!record) return;
-        if(record.status === 'dispatched' || record.status === 'onshift') {
-          showDispatched(record);
+
+        // Route on the (status, departed_at, clock_in_at) triple — status
+        // alone can't disambiguate dispatched-fresh from en-route, both of
+        // which carry status='dispatched'. Each helper is idempotent so a
+        // realtime echo that re-fires the same state is harmless.
+        if(record.status === 'dispatched') {
+          if(record.departed_at) await renderEnRoute(record);
+          else await renderDispatchedFresh(record);
+        } else if(record.status === 'onshift') {
+          await renderClockedIn(record);
         } else if(record.status === 'completed') {
-          // Dashboard-driven completion (or local clock-out trigger) lands here.
           console.log('[session_workers ws] completed → showPostShiftScreen', record);
           await showPostShiftScreen(record);
         } else if(record.status === 'cancelled' || record.status === 'available') {
-          // Recall (back to available) or emergency cancel (cancelled) -- bail
-          // the worker out of the dispatched screen and back to the waiting room
-          // if they still have an active session. The dashboard reset the
-          // request to pending, so live-waiting is the right state.
-          if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
-          document.getElementById('live-dispatched').style.display = 'none';
-          document.getElementById('live-shift-post').style.display = 'none';
-          document.getElementById('live-responded').style.display = 'none';
-          document.getElementById('live-waiting').style.display = 'block';
-          const msgEl = document.getElementById('live-ticker');
-          if(msgEl) msgEl.textContent = record.status === 'cancelled'
+          // Recall (status='available') or en-route emergency cancel
+          // (status='cancelled') — drop the worker back into the waiting room.
+          // returnToWaitingRoom resets the dispatch-flow state flags so a
+          // subsequent dispatch starts clean.
+          returnToWaitingRoom(record.status === 'cancelled'
             ? 'Glasi recalled the dispatch. Stand by — a fresh shift may come through shortly.'
-            : 'Dispatch cancelled. You are back in the waiting room.';
+            : 'Dispatch cancelled. You are back in the waiting room.');
         }
       } catch(err) { console.error('session_workers realtime error:', err); }
     };
@@ -1689,6 +1645,8 @@
     realtimeChannels = [];
     sessionWorkersWs = null;
     sessionWorkersWsSessionId = null;
+    sessionInviteLeftAtMarked = false;
+    lastRenderedDispatchBarId = null;
     currentSessionInvite = null;
     currentSessionWorkerId = null;
     document.getElementById('sessions-live').style.display = 'none';
@@ -1704,8 +1662,8 @@
   }
 
   async function showShiftPost(record) {
-    // Bug 2 follow-on: showDispatched no longer closes the shift_requests WS,
-    // so an INSERT for a fresh shift post can still arrive after this worker
+    // The shift_requests WS stays open through the dispatch lifecycle, so
+    // INSERT events for fresh shift posts can still arrive after this worker
     // is dispatched / on shift / clocked out. Suppress the surface in those
     // states — the worker shouldn't see new shift posts mid-shift.
     const dispatched = document.getElementById('live-dispatched');
@@ -1726,6 +1684,13 @@
     if(selecting) selecting.style.display = 'none';
     const timerColor = document.getElementById('shift-timer');
     if(timerColor) timerColor.style.color = 'var(--amber)';
+
+    // Re-enable the response buttons (handleAvailable/handlePass disable
+    // them on submit; this fresh shift gets fresh buttons).
+    const aBtn = document.getElementById('response-available-btn');
+    const pBtn = document.getElementById('response-pass-btn');
+    if(aBtn) aBtn.disabled = false;
+    if(pBtn) pBtn.disabled = false;
 
     // Fetch bar details
     let barName = 'Venue';
@@ -1763,8 +1728,8 @@
         if(hasRespondedToCurrentShift) {
           // Worker responded; swap from the live countdown to the
           // "Selecting a Glasi..." state. Persists until either the worker
-          // is dispatched (showDispatched via session_workers UPDATE) or
-          // the request resolves elsewhere (handleActiveRequestUpdate).
+          // is dispatched (renderDispatchedFresh via session_workers UPDATE)
+          // or the request resolves elsewhere (handleActiveRequestUpdate).
           const winState = document.getElementById('responded-window-state');
           const selecting = document.getElementById('responded-selecting');
           if(winState) winState.style.display = 'none';
@@ -1819,6 +1784,14 @@
   }
 
   async function handleAvailable() {
+    // Lock both response buttons immediately so a fast user can't double-tap
+    // or change their answer mid-flight. The buttons are inside live-shift-post
+    // which is hidden below, but the disabled flag also prevents the keyboard
+    // re-firing the click while the PATCH is in flight.
+    const aBtn = document.getElementById('response-available-btn');
+    const pBtn = document.getElementById('response-pass-btn');
+    if(aBtn) aBtn.disabled = true;
+    if(pBtn) pBtn.disabled = true;
     // Don't clear shiftTimerInterval -- the response window keeps counting
     // down visibly in the live-responded panel until it hits 0.
     hasRespondedToCurrentShift = true;
@@ -1848,6 +1821,10 @@
   }
 
   async function handlePass() {
+    const aBtn = document.getElementById('response-available-btn');
+    const pBtn = document.getElementById('response-pass-btn');
+    if(aBtn) aBtn.disabled = true;
+    if(pBtn) pBtn.disabled = true;
     // Same as handleAvailable: keep the timer running so the worker sees the
     // window close. They still can't change their answer.
     hasRespondedToCurrentShift = true;
@@ -1866,7 +1843,7 @@
 
   // Drives the transition out of "Selecting a Glasi..." when the active
   // request resolves on the realtime shift_requests UPDATE feed. If our
-  // session_workers status flips to 'dispatched' first, showDispatched cancels
+  // session_workers status flips to 'dispatched' first, renderDispatchedFresh cancels
   // this and takes over.
   function handleActiveRequestUpdate(record) {
     if(!record || record.id !== activeShiftRequestId) return;
@@ -1885,16 +1862,23 @@
   }
 
   function returnToWaitingRoom(tickerMsg) {
-    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
+    if(shiftCountdownInterval) { clearInterval(shiftCountdownInterval); shiftCountdownInterval = null; }
     if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
-    document.getElementById('live-shift-post').style.display = 'none';
-    document.getElementById('live-responded').style.display = 'none';
-    document.getElementById('live-filled').style.display = 'none';
-    document.getElementById('live-waiting').style.display = 'block';
+    ['live-shift-post','live-responded','live-filled','live-dispatched'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
+    const empty = document.getElementById('sessions-empty'); if(empty) empty.style.display = 'none';
+    const live = document.getElementById('sessions-live'); if(live) live.style.display = 'block';
+    const waiting = document.getElementById('live-waiting'); if(waiting) waiting.style.display = 'block';
     const tickerEl = document.getElementById('live-ticker');
     if(tickerEl && tickerMsg) tickerEl.textContent = tickerMsg;
     hasRespondedToCurrentShift = false;
     activeShiftRequestId = null;
+    // Reset dispatch-flow state so a subsequent dispatch starts fresh —
+    // session_invites.left_at fires again, bar details re-fetch.
+    sessionInviteLeftAtMarked = false;
+    lastRenderedDispatchBarId = null;
   }
 
   let shiftCountdownInterval = null;
@@ -2265,16 +2249,32 @@
   async function workerClockOut() {
     const code = document.getElementById('worker-clockout-input')?.value.trim();
     const errorEl = document.getElementById('worker-clockout-error');
+    const btn = document.getElementById('worker-clockout-btn');
     if(errorEl) errorEl.textContent = '';
     if(!code) { if(errorEl) errorEl.textContent = 'Please enter the clock-out code.'; return; }
     if(!currentSessionWorkerId) { if(errorEl) errorEl.textContent = 'Session error. Please contact hello@glasi.co.uk.'; return; }
 
-    // Fetch full session_worker record for calculation
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=clock_out_code,shift_length_hours,application_id,session_id', { headers: H }).then(r => r.json());
-    const sw = rows?.[0];
-    if(!sw) { if(errorEl) errorEl.textContent = 'Could not find your shift. Please contact hello@glasi.co.uk.'; return; }
+    // Lock the button so a fast double-tap can't run the whole multi-step
+    // flow twice. Reset on every error path below.
+    if(btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
+
+    let sw;
+    try {
+      const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=clock_out_code,shift_length_hours,application_id,session_id,bar_id,shift_request_id', { headers: H }).then(r => r.json());
+      sw = rows?.[0];
+    } catch(e) {
+      if(errorEl) errorEl.textContent = 'Network error. Try again.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+      return;
+    }
+    if(!sw) {
+      if(errorEl) errorEl.textContent = 'Could not find your shift. Please contact hello@glasi.co.uk.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+      return;
+    }
     if(sw.clock_out_code && code !== sw.clock_out_code) {
       if(errorEl) errorEl.textContent = 'Incorrect code. Please check with the bar manager.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
       return;
     }
 
@@ -2310,15 +2310,23 @@
     } catch(e) {}
 
     // 2. Patch the shift to completed.
-    await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + currentSessionWorkerId + '&status=eq.onshift', {
-      method: 'PATCH',
-      headers: { ...H, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        status: 'completed',
-        clock_out_confirmed_at: now,
-        total_earned: totalEarned
-      })
-    });
+    try {
+      const shiftResp = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + currentSessionWorkerId + '&status=eq.onshift', {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          status: 'completed',
+          clock_out_confirmed_at: now,
+          total_earned: totalEarned
+        })
+      });
+      if(!shiftResp.ok) throw new Error('shifts PATCH HTTP ' + shiftResp.status);
+    } catch(e) {
+      console.error('workerClockOut shift patch failed', e);
+      if(errorEl) errorEl.textContent = 'Could not record clock-out. Try again or call 07803856078.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+      return;
+    }
 
     // 3. Compute arrival timing for ledger using clock_in_at vs dispatched_at.
     let arrivalReason = null, arrivalAmount = 0;
@@ -2333,38 +2341,51 @@
       }
     } catch(e) {}
 
-    // 4. Locked-spec ledger awards via portalAwardPoints. Updates total_points
-    // cache and writes tier_promoted ledger row if a threshold was crossed.
-    const ledgerAwards = [{ amount: 60, reason: 'completed_shift', shiftId: shiftId }];
-    if(arrivalReason) ledgerAwards.push({ amount: arrivalAmount, reason: arrivalReason, shiftId: shiftId });
-    const awardResult = await portalAwardPoints(currentWorker.id, ledgerAwards, { sessionId: sw.session_id });
+    let awardResult = null;
+    try {
+      // 4. Locked-spec ledger awards via portalAwardPoints. Updates total_points
+      // cache and writes tier_promoted ledger row if a threshold was crossed.
+      const ledgerAwards = [{ amount: 60, reason: 'completed_shift', shiftId: shiftId }];
+      if(arrivalReason) ledgerAwards.push({ amount: arrivalAmount, reason: arrivalReason, shiftId: shiftId });
+      awardResult = await portalAwardPoints(currentWorker.id, ledgerAwards, { sessionId: sw.session_id });
 
-    // 5. Speed bonus stays as a direct total_points write for now. Re-check
-    // tier afterwards in case the bonus pushed across a threshold.
-    if(speedBonus > 0) {
-      const newTotal = (awardResult?.newTotal || preShiftTotal) + speedBonus;
-      const updates = { total_points: newTotal };
-      const newTier = pointsToTier(newTotal);
-      if(newTier > (awardResult?.newTier || preShiftTier)) updates.tier = newTier;
-      await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
+      // 5. Speed bonus stays as a direct total_points write for now. Re-check
+      // tier afterwards in case the bonus pushed across a threshold.
+      if(speedBonus > 0) {
+        const newTotal = (awardResult?.newTotal || preShiftTotal) + speedBonus;
+        const updates = { total_points: newTotal };
+        const newTier = pointsToTier(newTotal);
+        if(newTier > (awardResult?.newTier || preShiftTier)) updates.tier = newTier;
+        await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
+          method: 'PATCH',
+          headers: { ...H, 'Prefer': 'return=minimal' },
+          body: JSON.stringify(updates)
+        });
+        currentWorker.total_points = newTotal;
+        currentWorker.tier = updates.tier || awardResult?.newTier || preShiftTier;
+      } else {
+        currentWorker.total_points = awardResult?.newTotal || preShiftTotal;
+        currentWorker.tier = awardResult?.newTier || preShiftTier;
+      }
+
+      // 6. Patch session_workers last so the realtime UPDATE fires after the
+      // ledger and applications writes have landed.
+      const swResp = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
         method: 'PATCH',
         headers: { ...H, 'Prefer': 'return=minimal' },
-        body: JSON.stringify(updates)
+        body: JSON.stringify({ status: 'completed' })
       });
-      currentWorker.total_points = newTotal;
-      currentWorker.tier = updates.tier || awardResult?.newTier || preShiftTier;
-    } else {
-      currentWorker.total_points = awardResult?.newTotal || preShiftTotal;
-      currentWorker.tier = awardResult?.newTier || preShiftTier;
+      if(!swResp.ok) throw new Error('session_workers PATCH HTTP ' + swResp.status);
+    } catch(e) {
+      // The shifts row is already 'completed' from step 2 above. Surface the
+      // error and re-enable the button so the worker can retry — the retry
+      // is safe because portalAwardPoints is per-reason idempotent and the
+      // session_workers PATCH is the same target value either way.
+      console.error('workerClockOut failed', e);
+      if(errorEl) errorEl.textContent = 'Could not finalise clock-out. Try again or call 07803856078.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+      return;
     }
-
-    // 6. Patch session_workers last so the realtime UPDATE fires after the
-    // ledger and applications writes have landed.
-    await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
-      method: 'PATCH',
-      headers: { ...H, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: 'completed' })
-    });
 
     // 7. Hand off to the unified post-shift screen with explicit snapshots so
     // the animation reads the correct pre/post values.
@@ -2387,61 +2408,91 @@
   async function workerClockIn() {
     const code = document.getElementById('worker-clockin-input')?.value.trim();
     const errorEl = document.getElementById('worker-clockin-error');
+    const btn = document.getElementById('worker-clockin-btn');
     if(errorEl) errorEl.textContent = '';
 
     if(!code) { if(errorEl) errorEl.textContent = 'Please enter the code from the bar manager.'; return; }
     if(!currentSessionWorkerId) { if(errorEl) errorEl.textContent = 'Session error. Please contact hello@glasi.co.uk.'; return; }
 
-    // Validate code against session_workers
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=id,clock_in_code,session_id,bar_id,shift_length_hours,shift_request_id', { headers: H }).then(r => r.json());
-    const sw = rows?.[0];
+    // Lock the button before the validation fetch so a fast double-tap can't
+    // submit twice. Reset on every error path below + the optimistic render
+    // helper resets it on idempotent re-entry.
+    if(btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
 
-    if(!sw) { if(errorEl) errorEl.textContent = 'Could not find your shift. Please contact hello@glasi.co.uk.'; return; }
+    let sw;
+    try {
+      const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=id,clock_in_code,session_id,bar_id,shift_length_hours,shift_request_id', { headers: H }).then(r => r.json());
+      sw = rows?.[0];
+    } catch(e) {
+      if(errorEl) errorEl.textContent = 'Network error. Try again.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+      return;
+    }
+
+    if(!sw) {
+      if(errorEl) errorEl.textContent = 'Could not find your shift. Please contact hello@glasi.co.uk.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+      return;
+    }
     if(sw.clock_in_code && code !== sw.clock_in_code) {
       if(errorEl) errorEl.textContent = 'Incorrect code. Please check with the bar manager.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
       return;
     }
 
     const now = new Date().toISOString();
-
-    // Update session_workers status to onshift
-    await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
-      method: 'PATCH',
-      headers: { ...H, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: 'onshift', clock_in_at: now, clock_in_code: code })
-    });
-
-    // Create shift record
     const shiftRef = 'GS' + String(Date.now()).slice(-6);
-    await fetch(SUPABASE_URL + '/rest/v1/shifts', {
-      method: 'POST',
-      headers: { ...H, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        session_id: sw.session_id,
-        session_worker_id: currentSessionWorkerId,
-        bar_id: sw.bar_id,
-        shift_request_id: sw.shift_request_id,
-        shift_length_hours: sw.shift_length_hours,
-        clock_in_confirmed_at: now,
-        status: 'onshift',
-        glasi_ref: shiftRef,
-        hourly_rate: currentWorker?.hourly_rate || 12.71
-      })
-    });
 
-    // Show confirmed state
-    document.getElementById('clockin-input-section').style.display = 'none';
-    document.getElementById('clockin-confirmed-section').style.display = 'block';
-    // Hide the venue card, WhatsApp instruction and On your way heading
-    const dispCard = document.querySelector('.dispatched-card');
-    if(dispCard) dispCard.style.display = 'none';
-    const warningBox = document.querySelector('#live-dispatched .warning-box');
-    if(warningBox) warningBox.style.display = 'none';
-    const heading = document.getElementById('on-your-way-heading');
-    if(heading) heading.style.display = 'none';
+    try {
+      // 1. Patch session_workers → onshift, clock_in_at, clock_in_code.
+      const swResp = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: 'onshift', clock_in_at: now, clock_in_code: code })
+      });
+      if(!swResp.ok) throw new Error('session_workers PATCH HTTP ' + swResp.status);
 
-    // Start shift countdown
+      // 2. Create shifts row. If this fails after the session_workers PATCH
+      // succeeded, the row is in onshift but no shift exists — workerClockOut
+      // will fail later. Surface the error so the worker can call us.
+      const shiftResp = await fetch(SUPABASE_URL + '/rest/v1/shifts', {
+        method: 'POST',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          session_id: sw.session_id,
+          session_worker_id: currentSessionWorkerId,
+          bar_id: sw.bar_id,
+          shift_request_id: sw.shift_request_id,
+          shift_length_hours: sw.shift_length_hours,
+          clock_in_confirmed_at: now,
+          status: 'onshift',
+          glasi_ref: shiftRef,
+          hourly_rate: currentWorker?.hourly_rate || 12.71
+        })
+      });
+      if(!shiftResp.ok) throw new Error('shifts POST HTTP ' + shiftResp.status);
+    } catch(e) {
+      console.error('workerClockIn failed', e);
+      if(errorEl) errorEl.textContent = 'Could not clock in. Call 07803856078.';
+      if(btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+      return;
+    }
+
+    // Start the countdown directly with the values we just wrote — saves
+    // renderClockedIn from re-fetching the shift row (it checks
+    // shiftCountdownInterval and skips the fetch if already running).
     startShiftCountdown(now, sw.shift_length_hours || 2);
+
+    // Optimistic render. Realtime echo from the session_workers PATCH lands
+    // here too, idempotent.
+    await renderClockedIn({
+      id: currentSessionWorkerId,
+      status: 'onshift',
+      clock_in_at: now,
+      bar_id: sw.bar_id,
+      session_id: sw.session_id,
+      shift_request_id: sw.shift_request_id
+    });
   }
 
   function openLeavingConfirm() {
@@ -2460,71 +2511,192 @@
     closeLeavingOverlay();
     if(!currentSessionWorkerId) return;
     const btn = document.getElementById('leaving-btn');
-    if(btn) btn.disabled = true;
+    if(btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
+    const departedAt = new Date().toISOString();
     try {
-      await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
+      const resp = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId, {
         method: 'PATCH',
         headers: { ...H, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ departed_at: new Date().toISOString() })
+        body: JSON.stringify({ departed_at: departedAt })
       });
-    } catch(e) {}
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    } catch(e) {
+      // Reset the button so the worker can retry. Stay on dispatched-fresh.
+      console.error('confirmLeaving failed', e);
+      if(btn) { btn.disabled = false; btn.textContent = 'I am leaving now'; }
+      alert('Could not confirm leaving. Try again or call 07803856078.');
+      return;
+    }
 
-    document.getElementById('leaving-section').style.display = 'none';
-    document.getElementById('leaving-confirmed').style.display = 'block';
+    // Optimistic render. The realtime echo for this PATCH will arrive next
+    // and call renderEnRoute again with the persisted record — idempotent,
+    // so no flicker.
+    await renderEnRoute({
+      id: currentSessionWorkerId,
+      status: 'dispatched',
+      departed_at: departedAt,
+      bar_id: null  // bar details cached by lastRenderedDispatchBarId; skip refetch
+    });
   }
 
-  async function showDispatched(swRecord) {
-    // Cancel any pending "wait for self-dispatch" timeout — we got the
-    // confirmation, this worker is the one selected.
-    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
-    if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
-    currentSessionWorkerId = swRecord.id || swRecord.session_worker_id || null;
-    document.getElementById('live-shift-post').style.display = 'none';
-    document.getElementById('live-waiting').style.display = 'none';
-    document.getElementById('live-responded').style.display = 'none';
-    document.getElementById('live-filled').style.display = 'none';
-    document.getElementById('live-dispatched').style.display = 'block';
-    document.getElementById('leaving-section').style.display = 'block';
-    document.getElementById('leaving-confirmed').style.display = 'none';
-    // Bug 2 fix: only stop the waiting-room timers; keep the session_workers
-    // and shift_requests WS open so the worker receives the later 'completed'
-    // UPDATE from the dashboard's clock-out. The previous stopRealtime() call
-    // closed every WS in realtimeChannels and left the worker blind for the
-    // rest of the lifecycle.
-    stopWaitingTimers();
+  // ── Dispatch-flow render helpers ──────────────────────────────────────
+  // The live-dispatched container holds four nested visual states. The right
+  // one to show is determined by (status, departed_at, clock_in_at), not by
+  // status alone — that was the root cause of the dispatch-flow flicker that
+  // bumped the worker back to "I'm leaving now" every time their session_workers
+  // row UPDATE'd. Each helper below is idempotent so realtime echoes that
+  // re-fire the same state are harmless.
 
-    // Fetch bar details
+  // Cache for the bar-details fetch so repeated renders don't re-hit the DB.
+  // Reset whenever the worker leaves the dispatch flow (recall/cancel/sign-out).
+  let lastRenderedDispatchBarId = null;
+  // One-shot flag for the session_invites.left_at write. The worker should
+  // be marked as "left the live waiting room because dispatched" exactly
+  // once per dispatch — used to live in showDispatched and re-fired on every
+  // realtime echo, overwriting left_at repeatedly. Now gated by this flag.
+  let sessionInviteLeftAtMarked = false;
+
+  async function _loadDispatchedBarDetails(barId) {
+    if(!barId || lastRenderedDispatchBarId === barId) return;
     try {
-      if(swRecord.bar_id) {
-        const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + swRecord.bar_id + '&select=name,address,google_maps_link,manager_name', { headers: H }).then(r => r.json());
-        const bar = barRows?.[0];
-        if(bar) {
-          document.getElementById('dispatched-venue').textContent = bar.name || '';
-          document.getElementById('dispatched-address').textContent = bar.address || '';
-          const mapsBtn = document.getElementById('dispatched-maps');
-          if(mapsBtn && bar.google_maps_link) {
-            mapsBtn.href = bar.google_maps_link;
-            mapsBtn.style.display = 'inline-block';
-          } else if(mapsBtn) {
-            mapsBtn.style.display = 'none';
-          }
-          // Update dispatched copy with manager name
-          const managerName = bar.manager_name || 'the bar manager';
-          const warningEl = document.querySelector('#live-dispatched .warning-box p');
-          if(warningEl) warningEl.innerHTML = 'Share your live location with Glasi on <strong><a href="https://wa.me/447803856078" style="color:var(--amber);">07803856078</a></strong>, start heading to the venue and ask for <strong style="color:var(--white);">' + managerName + '</strong> who will have your clock-in code.';
+      const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + barId + '&select=name,address,google_maps_link,manager_name', { headers: H }).then(r => r.json());
+      const bar = barRows?.[0];
+      if(!bar) return;
+      const venueEl = document.getElementById('dispatched-venue');
+      const addrEl = document.getElementById('dispatched-address');
+      const mapsBtn = document.getElementById('dispatched-maps');
+      if(venueEl) venueEl.textContent = bar.name || '';
+      if(addrEl) addrEl.textContent = bar.address || '';
+      if(mapsBtn) {
+        if(bar.google_maps_link) {
+          mapsBtn.href = bar.google_maps_link;
+          mapsBtn.style.display = 'inline-block';
+        } else {
+          mapsBtn.style.display = 'none';
         }
       }
-    } catch(e) {}
+      const managerName = bar.manager_name || 'the bar manager';
+      const warningEl = document.querySelector('#live-dispatched .warning-box p');
+      if(warningEl) warningEl.innerHTML = 'Share your live location with Glasi on <strong><a href="https://wa.me/447803856078" style="color:var(--amber);">07803856078</a></strong>, start heading to the venue and ask for <strong style="color:var(--white);">' + managerName + '</strong> who will have your clock-in code.';
+      lastRenderedDispatchBarId = barId;
+    } catch(e) { console.error('_loadDispatchedBarDetails failed', e); }
+  }
 
-    // Write left_at automatically for dispatched worker
-    if(currentSessionInvite) {
-      fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
+  async function markSessionLeftAtOnce() {
+    if(sessionInviteLeftAtMarked) return;
+    if(!currentSessionInvite) return;
+    sessionInviteLeftAtMarked = true;
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
         method: 'PATCH',
         headers: { ...H, 'Prefer': 'return=minimal' },
         body: JSON.stringify({ left_at: new Date().toISOString(), rejoin_reason: 'Dispatched to shift' })
-      }).catch(()=>{});
+      });
+    } catch(e) { /* best-effort, audit-only field */ }
+  }
+
+  function _showLiveDispatchedShell() {
+    const empty = document.getElementById('sessions-empty'); if(empty) empty.style.display = 'none';
+    const live = document.getElementById('sessions-live'); if(live) live.style.display = 'block';
+    ['live-waiting','live-shift-post','live-responded','live-filled'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
+    const disp = document.getElementById('live-dispatched'); if(disp) disp.style.display = 'block';
+  }
+
+  async function renderDispatchedFresh(record) {
+    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+    if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
+    if(record?.id) currentSessionWorkerId = record.id;
+
+    _showLiveDispatchedShell();
+
+    // Sub-state: dispatched-fresh — venue card + warning visible, leaving button visible.
+    const dispCard = document.querySelector('.dispatched-card'); if(dispCard) dispCard.style.display = 'block';
+    const warn = document.querySelector('#live-dispatched .warning-box'); if(warn) warn.style.display = 'block';
+    const leavingSection = document.getElementById('leaving-section'); if(leavingSection) leavingSection.style.display = 'block';
+    const leavingConfirmed = document.getElementById('leaving-confirmed'); if(leavingConfirmed) leavingConfirmed.style.display = 'none';
+
+    // Reset the leaving button so a recall-then-redispatch cycle gives the
+    // worker a clickable button (not a stale disabled "Sending…").
+    const leavingBtn = document.getElementById('leaving-btn');
+    if(leavingBtn) { leavingBtn.disabled = false; leavingBtn.textContent = 'I am leaving now'; }
+
+    if(record?.bar_id) await _loadDispatchedBarDetails(record.bar_id);
+    await markSessionLeftAtOnce();
+    stopWaitingTimers();
+  }
+
+  async function renderEnRoute(record) {
+    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+    if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
+    if(record?.id) currentSessionWorkerId = record.id;
+
+    _showLiveDispatchedShell();
+
+    // Sub-state: en-route — venue card + warning still visible (manager name
+    // is useful en-route), leaving button hidden, leaving-confirmed shown,
+    // clock-in input ready.
+    const dispCard = document.querySelector('.dispatched-card'); if(dispCard) dispCard.style.display = 'block';
+    const warn = document.querySelector('#live-dispatched .warning-box'); if(warn) warn.style.display = 'block';
+    const leavingSection = document.getElementById('leaving-section'); if(leavingSection) leavingSection.style.display = 'none';
+    const leavingConfirmed = document.getElementById('leaving-confirmed'); if(leavingConfirmed) leavingConfirmed.style.display = 'block';
+    const heading = document.getElementById('on-your-way-heading'); if(heading) heading.style.display = 'block';
+    const clockinInput = document.getElementById('clockin-input-section'); if(clockinInput) clockinInput.style.display = 'block';
+    const clockinConfirmed = document.getElementById('clockin-confirmed-section'); if(clockinConfirmed) clockinConfirmed.style.display = 'none';
+
+    // Idempotent reset of the clock-in button + error.
+    const ciBtn = document.getElementById('worker-clockin-btn');
+    if(ciBtn) { ciBtn.disabled = false; ciBtn.textContent = 'Confirm'; }
+    const ciErr = document.getElementById('worker-clockin-error');
+    if(ciErr) ciErr.textContent = '';
+
+    if(record?.bar_id) await _loadDispatchedBarDetails(record.bar_id);
+    // Don't fire markSessionLeftAtOnce here — by the time we're en-route,
+    // either renderDispatchedFresh ran first (and fired it) or we restored
+    // mid-flow (in which case checkForLiveSession set the flag pre-render).
+    stopWaitingTimers();
+  }
+
+  async function renderClockedIn(record) {
+    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+    if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
+    if(record?.id) currentSessionWorkerId = record.id;
+
+    _showLiveDispatchedShell();
+
+    // Sub-state: clocked-in — hide venue card, warning, on-your-way copy,
+    // and the clock-in input. Show the confirmed section + onshift card.
+    const dispCard = document.querySelector('.dispatched-card'); if(dispCard) dispCard.style.display = 'none';
+    const warn = document.querySelector('#live-dispatched .warning-box'); if(warn) warn.style.display = 'none';
+    const heading = document.getElementById('on-your-way-heading'); if(heading) heading.style.display = 'none';
+    const leavingSection = document.getElementById('leaving-section'); if(leavingSection) leavingSection.style.display = 'none';
+    const leavingConfirmed = document.getElementById('leaving-confirmed'); if(leavingConfirmed) leavingConfirmed.style.display = 'block';
+    const clockinInput = document.getElementById('clockin-input-section'); if(clockinInput) clockinInput.style.display = 'none';
+    const clockinConfirmed = document.getElementById('clockin-confirmed-section'); if(clockinConfirmed) clockinConfirmed.style.display = 'block';
+
+    // Don't downgrade if the post-shift screen is already up — that means
+    // we transitioned through onshift → completed and are now waiting for
+    // feedback. A late onshift echo (shouldn't happen but defensive) would
+    // otherwise wipe the post-shift screen.
+    const completeEl = document.getElementById('portal-shift-complete');
+    if(!completeEl || completeEl.style.display !== 'block') {
+      const onshiftCard = document.getElementById('portal-onshift-card'); if(onshiftCard) onshiftCard.style.display = 'block';
+      const endedCard = document.getElementById('portal-shift-ended-card'); if(endedCard) endedCard.style.display = 'none';
     }
+
+    // Start the shift countdown if not already running. workerClockIn
+    // starts it directly with known clock_in_at; the realtime/restore paths
+    // come through here and need a fetch.
+    if(record?.id && !shiftCountdownInterval) {
+      try {
+        const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + record.id + '&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours&order=id.desc&limit=1', { headers: H }).then(r => r.json());
+        const shift = shiftRows?.[0];
+        if(shift?.clock_in_confirmed_at) startShiftCountdown(shift.clock_in_confirmed_at, shift.shift_length_hours || 2);
+      } catch(e) { console.error('renderClockedIn shift fetch failed', e); }
+    }
+    stopWaitingTimers();
   }
 
   function openLeaveSession() {
@@ -2575,17 +2747,21 @@
     // on a closed-but-still-referenced WS.
     sessionWorkersWs = null;
     sessionWorkersWsSessionId = null;
+    // Reset dispatch-flow flags. Sign-out / session-close ends the lifecycle;
+    // next sign-in is a clean slate.
+    sessionInviteLeftAtMarked = false;
+    lastRenderedDispatchBarId = null;
     stopWaitingTimers();
   }
 
-  // Bug 2 fix: showDispatched used to call stopRealtime() which closed every
-  // WS in realtimeChannels — including the session_workers subscription that
-  // the worker needs to receive the later 'completed' UPDATE from the
-  // dashboard. After dispatch, we only need to stop the waiting-room timers,
-  // not tear down realtime. The session_workers WS stays alive through the
-  // rest of the lifecycle so clock-out (and cancellation) propagate without
-  // a refresh. New shift posts after dispatch are filtered by the guard at
-  // the top of showShiftPost.
+  // Stops only the waiting-room timers (response-window, elapsed clock,
+  // ticker). The render helpers call this when transitioning into a
+  // post-waiting state; signals like recall/cancel route through
+  // returnToWaitingRoom which calls stopWaitingTimers and also reactivates
+  // the waiting UI. The session_workers and shift_requests WS connections
+  // are NOT closed here — they need to stay alive through the entire
+  // dispatch lifecycle so the dashboard's later 'completed' UPDATE reaches
+  // the worker without a refresh.
   function stopWaitingTimers() {
     if(shiftTimerInterval) clearInterval(shiftTimerInterval);
     if(elapsedInterval) clearInterval(elapsedInterval);
