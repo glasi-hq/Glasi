@@ -2843,6 +2843,7 @@ const liveSessionOps = {
       for(const t of responseWindowTimers.values()) clearInterval(t);
       responseWindowTimers.clear();
     }
+    if(typeof liveSessionResponses !== 'undefined') liveSessionResponses.clear();
     if(typeof responseWindowInterval !== 'undefined' && responseWindowInterval) {
       clearInterval(responseWindowInterval);
       responseWindowInterval = null;
@@ -2948,6 +2949,7 @@ const liveSessionOps = {
       for(let i = liveSessionOps.requests.length - 1; i >= 0; i--) {
         if(!ids.has(liveSessionOps.requests[i].id)) liveSessionOps.requests.splice(i, 1);
       }
+      await syncResponsesForPendingRequests();
       this.emit('state:resynced', { workers: swData.length, requests: reqData.length });
       console.log('liveSessionOps: resync complete (' + swData.length + ' workers, ' + reqData.length + ' requests)');
     } catch(e) {
@@ -2968,7 +2970,7 @@ function isLiveViewActive() {
 // liveSessionOps.start/stop cycles (the object is reused).
 function setupLiveViewListeners() {
   const renderOrDirty = () => {
-    if(isLiveViewActive()) { renderRoom(); renderRequestCards(); }
+    if(isLiveViewActive()) { renderRoom(); renderRequestCards(); renderLiveResponses(); }
     else liveSessionOps.markDirty('live');
   };
   liveSessionOps.on('worker:joined', renderOrDirty);
@@ -2976,6 +2978,7 @@ function setupLiveViewListeners() {
   liveSessionOps.on('worker:updated', renderOrDirty);
   liveSessionOps.on('request:new', renderOrDirty);
   liveSessionOps.on('request:updated', renderOrDirty);
+  liveSessionOps.on('response:new', renderOrDirty);
   liveSessionOps.on('state:resynced', renderOrDirty);
   liveSessionOps.on('session:started', renderOrDirty);
   liveSessionOps.on('session:resumed', renderOrDirty);
@@ -2983,6 +2986,152 @@ function setupLiveViewListeners() {
   // flows do their own UI transitions.
 }
 setupLiveViewListeners();
+
+// State-driven Live Responses + Dispatch Recommendations rendering. Replaces
+// the append-only DOM mutation that handleNewShiftResponse and the old
+// buildRecommendations did. Cache keyed by shift_request_id; cleared when a
+// request stops being pending or is dispatched/cancelled.
+const liveSessionResponses = new Map();
+
+async function syncResponsesForPendingRequests() {
+  const pending = liveSessionOps.requests.filter(r => r.status === 'pending');
+  for(const req of pending) {
+    if(liveSessionResponses.has(req.id)) continue;
+    const rows = await sbGet('shift_responses', '?shift_request_id=eq.'+req.id+'&select=application_id,response,response_seconds');
+    liveSessionResponses.set(req.id, rows || []);
+  }
+  // Drop cache entries for requests no longer pending or no longer in state.
+  const live = new Set(pending.map(r => r.id));
+  for(const id of [...liveSessionResponses.keys()]) {
+    if(!live.has(id)) liveSessionResponses.delete(id);
+  }
+}
+
+// Score available responders for a request. Filters out workers not in a
+// dispatchable state: must be 'available' in liveSessionOps. Excludes
+// 'dispatched', 'onshift', 'completed', 'left', 'invited', 'noshow',
+// 'cancelled'. Same scoring weights the old buildRecommendations used.
+function scoreResponders(requestId, distancesByApp) {
+  const responses = liveSessionResponses.get(requestId) || [];
+  const available = responses.filter(r => r.response === 'available');
+  const workedTonight = liveSessionOps.workers
+    .filter(w => w.status === 'onshift' || w.status === 'completed')
+    .map(w => Number(w.applicationId));
+
+  return available.map(r => {
+    const appId = Number(r.application_id);
+    const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === appId);
+    if(!worker) return null;
+    // Dispatchable filter: in-room, not yet dispatched, not on-shift, not
+    // clocked out for the night, not left, not invited/noshow/cancelled.
+    if(worker.status !== 'available') return null;
+
+    let score = 0;
+    score += (worker.tier || 1) * 20;
+    score += ((worker.reliability_score || 50) * 0.3);
+    const secs = r.response_seconds != null ? r.response_seconds : 60;
+    if(secs <= 10) score += 30;
+    else if(secs <= 20) score += 20;
+    else if(secs <= 30) score += 10;
+    const mins = distancesByApp[appId];
+    if(mins != null) {
+      if(mins <= 10) score += 40;
+      else if(mins <= 20) score += 25;
+      else if(mins <= 30) score += 10;
+    }
+    if(worker.has_transport) score += 15;
+    if(workedTonight.includes(appId)) score -= 20;
+    return { worker, appId, score, secs, mins, workedTonight: workedTonight.includes(appId) };
+  }).filter(Boolean).sort((a, b) => b.score - a.score);
+}
+
+async function renderLiveResponses() {
+  const section = document.getElementById('live-response-feed-section');
+  const feed = document.getElementById('live-response-feed');
+  if(!section || !feed) return;
+
+  const pending = liveSessionOps.requests.filter(r => r.status === 'pending');
+  if(!pending.length) {
+    section.style.display = 'none';
+    feed.innerHTML = '';
+    return;
+  }
+
+  // Distances fetched once per render, keyed by bar.
+  const barIds = [...new Set(pending.map(r => r.bar_id).filter(Boolean))];
+  const distByBar = {};
+  for(const bid of barIds) {
+    const rows = await sbGet('worker_bar_distances', '?bar_id=eq.'+bid+'&select=application_id,walking_minutes');
+    const m = {};
+    (rows || []).forEach(d => { m[Number(d.application_id)] = d.walking_minutes; });
+    distByBar[bid] = m;
+  }
+
+  const blocks = pending.map(req => {
+    const responses = liveSessionResponses.get(req.id) || [];
+    if(!responses.length) return '';
+
+    const elapsed = req.posted_at ? (Date.now() - new Date(req.posted_at).getTime()) / 1000 : 0;
+    const windowExpired = elapsed >= 60;
+
+    const responseItems = responses.map(r => {
+      const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === Number(r.application_id));
+      const name = worker?.name || 'Unknown';
+      const label = r.response === 'available' ? "I'm available" : r.response === 'pass' ? "I'll pass" : 'No response';
+      const colour = r.response === 'available' ? 'var(--green)' : r.response === 'pass' ? 'var(--amber)' : 'var(--grey)';
+      const secs = r.response_seconds != null ? r.response_seconds + 's' : '';
+      return '<div class="response-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:8px;">'
+        + '<div style="font-size:13px;color:var(--white);font-weight:500;">' + name + '</div>'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+        + (secs ? '<span style="font-size:11px;color:var(--grey);">' + secs + '</span>' : '')
+        + '<span style="font-size:12px;font-weight:600;color:' + colour + ';">' + label + '</span>'
+        + '</div></div>';
+    }).join('');
+
+    let recHtml = '';
+    if(windowExpired) {
+      const scored = scoreResponders(req.id, distByBar[req.bar_id] || {});
+      if(scored.length) {
+        recHtml = '<div id="recommendations-panel-'+req.id+'" style="margin-bottom:12px;">'
+          + '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">Dispatch Recommendations</div>'
+          + scored.map((s, i) => {
+            const isTop = i === 0;
+            const distStr = s.mins != null ? s.mins + ' min walk' : 'distance unknown';
+            const speedStr = s.secs + 's response';
+            const transportStr = s.worker.has_transport ? 'Has transport' : '';
+            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:'+(isTop?'rgba(168,198,232,0.08)':'rgba(255,255,255,0.02)')+';border:1px solid '+(isTop?'rgba(168,198,232,0.25)':'var(--border)')+';border-radius:10px;margin-bottom:8px;">'
+              + '<div>'
+              + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+              + '<span style="font-size:14px;font-weight:600;color:var(--white);">'+s.worker.name+'</span>'
+              + (isTop ? '<span style="font-size:9px;letter-spacing:1px;background:var(--ice);color:var(--navy);padding:2px 8px;border-radius:4px;font-weight:700;">RECOMMENDED</span>' : '')
+              + (s.workedTonight ? '<span style="font-size:9px;color:var(--amber);">Worked tonight</span>' : '')
+              + '</div>'
+              + '<div style="font-size:11px;color:var(--grey);display:flex;gap:10px;flex-wrap:wrap;">'
+              + '<span>Tier '+s.worker.tier+'</span>'
+              + '<span>'+distStr+'</span>'
+              + '<span>'+speedStr+'</span>'
+              + (transportStr ? '<span style="color:var(--green);">'+transportStr+'</span>' : '')
+              + '</div></div>'
+              + '<button onclick="dispatchWorker('+s.worker.applicationId+','+req.id+')" style="background:'+(isTop?'var(--ice)':'var(--navy-mid)')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:\'Inter\',sans-serif;">Dispatch</button>'
+              + '</div>';
+          }).join('') + '</div>';
+      } else {
+        recHtml = '<div style="padding:12px 16px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:8px;font-size:13px;color:var(--red);text-align:center;margin-bottom:8px;">No dispatchable responders for this request.</div>';
+      }
+    }
+
+    const heading = '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin:12px 0 8px;">Request &middot; '+(req._barName || 'Unknown')+'</div>';
+    return heading + recHtml + responseItems;
+  }).filter(Boolean).join('');
+
+  if(!blocks) {
+    section.style.display = 'none';
+    feed.innerHTML = '';
+    return;
+  }
+  section.style.display = 'block';
+  feed.innerHTML = blocks;
+}
 
 function makeRealtimeWs(topic, pgChanges, onRecord, onClose) {
   const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY + '&vsn=1.0.0';
@@ -3034,30 +3183,20 @@ function startScheduleRealtime() {
 }
 
 async function handleNewShiftResponse(record) {
-  // Get worker name
-  const apps = await sbGet('applications', '?id=eq.'+record.application_id+'&select=name');
-  const name = apps[0] ? apps[0].name : 'Unknown';
-  const responseLabel = record.response === 'available' ? "I'm available" : record.response === 'pass' ? "I'll pass" : 'No response';
-  const responseColor = record.response === 'available' ? 'var(--green)' : record.response === 'pass' ? 'var(--amber)' : 'var(--grey)';
-  const secs = record.response_seconds ? record.response_seconds + 's' : '';
-
-  // Show response feed
-  const feedSection = document.getElementById('response-feed-section');
-  const feed = document.getElementById('response-feed');
-  if(feedSection) feedSection.style.display = 'block';
-  if(feed) {
-    const item = document.createElement('div');
-    item.className = 'response-item';
-    item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:8px;';
-    item.innerHTML = '<div style="font-size:13px;color:var(--white);font-weight:500;">' + name + '</div>' +
-      '<div style="display:flex;align-items:center;gap:10px;">' +
-      (secs ? '<span style="font-size:11px;color:var(--grey);">' + secs + '</span>' : '') +
-      '<span style="font-size:12px;font-weight:600;color:' + responseColor + ';">' + responseLabel + '</span>' +
-      '</div>';
-    feed.insertBefore(item, feed.firstChild);
+  // State-only mutation. Render runs via the response:new listener wired in
+  // setupLiveViewListeners. Worker name is resolved at render time from
+  // liveSessionOps.workers, no per-response applications lookup.
+  if(!record || !record.shift_request_id) return;
+  const reqId = record.shift_request_id;
+  const arr = liveSessionResponses.get(reqId) || [];
+  if(!arr.some(r => Number(r.application_id) === Number(record.application_id))) {
+    arr.push({
+      application_id: record.application_id,
+      response: record.response,
+      response_seconds: record.response_seconds
+    });
+    liveSessionResponses.set(reqId, arr);
   }
-
-  // Response feed updated -- no need to re-render room
 }
 
 async function handleWorkerPortalLeave(record) {
@@ -3918,6 +4057,48 @@ async function awardPoints(applicationId, awards, opts = {}) {
   return { newTotal, newTier, promoted: newTier > oldTier, oldTier };
 }
 
+// Per-shift ledger writes for the worker who just clocked out. Covers the
+// completed_shift +60 plus arrived_early +40 / arrived_on_time +25 from the
+// locked spec. Called from confirmClockOut on the dashboard side; the portal's
+// workerClockOut writes the same reasons via portalAwardPoints. Per-reason
+// idempotency keeps both paths safe to run in either order.
+async function awardShiftCompletionPoints(worker) {
+  if(!worker?.applicationId || !worker?.sessionWorkerId) return null;
+
+  const shiftRows = await sbGet('shifts',
+    '?session_worker_id=eq.'+worker.sessionWorkerId+'&order=id.desc&limit=1&select=id,clock_in_confirmed_at,accepted_at,expected_arrival_minutes');
+  const shift = shiftRows[0];
+  if(!shift) return null;
+
+  const awards = [{ amount: POINTS.completedShift, reason: 'completed_shift', shiftId: shift.id }];
+
+  // Arrival timing mirrors calculateSessionPoints so dashboard- and portal-
+  // driven clock-outs land identical ledger amounts.
+  if(shift.clock_in_confirmed_at && shift.accepted_at && shift.expected_arrival_minutes) {
+    const actualMins = Math.round((new Date(shift.clock_in_confirmed_at) - new Date(shift.accepted_at)) / 60000);
+    const delta = actualMins - shift.expected_arrival_minutes;
+    if(delta < 0) awards.push({ amount: POINTS.arrivedEarly, reason: 'arrived_early', shiftId: shift.id });
+    else if(delta <= 2) awards.push({ amount: POINTS.arrivedOnTime, reason: 'arrived_on_time', shiftId: shift.id });
+  }
+
+  // Per-reason idempotency. Skip awards already in the ledger.
+  const existing = await sbGet('points_ledger',
+    '?application_id=eq.'+worker.applicationId+'&session_id=eq.'+liveSessionOps.sessionId+'&select=reason');
+  const existingReasons = new Set((existing || []).map(r => r.reason));
+  const filtered = awards.filter(a => !existingReasons.has(a.reason));
+  if(!filtered.length) return null;
+
+  const result = await awardPoints(worker.applicationId, filtered, { sessionId: liveSessionOps.sessionId });
+
+  // Sync in-memory allWorkers cache so the dashboard UI reflects the change.
+  const workerApp = (typeof allWorkers !== 'undefined') ? allWorkers.find(a => a.id === worker.applicationId) : null;
+  if(workerApp && result) {
+    workerApp.total_points = result.newTotal;
+    if(result.promoted) workerApp.tier = result.newTier;
+  }
+  return result;
+}
+
 // Maps the legacy breakdown labels emitted by calculateSessionPoints to the
 // locked-spec reason codes used in points_ledger. Translation layer until
 // build sequence item #4 rewires calculateSessionPoints to use shift_responses.
@@ -4002,30 +4183,43 @@ async function calculateSessionPoints(applicationId, sessionId) {
 }
 
 async function updateWorkerPoints() {
+  // Per-reason idempotent. Shift-completion + arrival are written at clock-out
+  // (confirmClockOut on dashboard, workerClockOut on portal). This catches
+  // anything calculateSessionPoints derives that wasn't already in the ledger,
+  // typically joined_session and the legacy session_chat_log response inferences.
   const appIds = [...new Set(liveSessionOps.workers.map(w => w.applicationId).filter(Boolean))];
   for(const appId of appIds) {
     const { breakdown } = await calculateSessionPoints(appId, liveSessionOps.sessionId);
-    if(!breakdown.length) continue;
 
-    // Idempotency: skip if this session has already been ledger-recorded for this worker.
     const existing = await sbGet('points_ledger',
-      '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId+'&reason=neq.tier_promoted&select=id');
-    if(existing.length) continue;
+      '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId+'&select=reason,amount');
+    const existingReasons = new Set((existing || []).map(r => r.reason));
 
-    const awards = breakdown
+    const awards = (breakdown || [])
       .filter(b => b.pts !== 0)
       .map(b => ({
         amount: b.pts,
         reason: BREAKDOWN_REASON_MAP[b.action] || 'manual_adjustment',
         notes: BREAKDOWN_REASON_MAP[b.action] ? null : 'Unmapped breakdown label: ' + b.action
-      }));
+      }))
+      .filter(a => !existingReasons.has(a.reason));
 
-    await awardPoints(appId, awards, { sessionId: liveSessionOps.sessionId });
-    const earned = awards.reduce((s, a) => s + a.amount, 0);
+    if(awards.length) {
+      await awardPoints(appId, awards, { sessionId: liveSessionOps.sessionId });
+    }
 
-    await sbPatch('session_workers',
-      '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId,
-      { points_earned: earned });
+    // points_earned = sum of all ledger entries for this (worker, session),
+    // not just the awards written this run.
+    const ledger = (awards.length)
+      ? await sbGet('points_ledger', '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId+'&select=amount')
+      : (existing || []);
+    const totalEarned = (ledger || []).reduce((s, r) => s + (parseInt(r.amount) || 0), 0);
+
+    if(totalEarned !== 0 || awards.length) {
+      await sbPatch('session_workers',
+        '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId,
+        { points_earned: totalEarned });
+    }
   }
 }
 
@@ -4129,7 +4323,7 @@ async function confirmCloseSession() {
 
   showScreen('sessions');
   setActiveNav('sessions');
-  switchSessionsTab('schedule');
+  switchSessionsTab('history', { sessionId });
   await loadSessionsList();
 
   // offer worker reports download
@@ -4421,14 +4615,13 @@ function startResponseWindow(requestId) {
   responseWindowSeconds = 60;
   if(responseWindowInterval) clearInterval(responseWindowInterval);
 
-  const feedSection = document.getElementById('response-feed-section');
-  if(feedSection) feedSection.style.display = 'block';
-
+  // The Live Responses section is shown by renderLiveResponses when there are
+  // responses to display. No more pre-show of an empty container.
   responseWindowInterval = setInterval(() => {
     responseWindowSeconds--;
     if(responseWindowSeconds <= 0) {
       clearInterval(responseWindowInterval);
-      buildRecommendations(requestId);
+      renderLiveResponses();
     }
   }, 1000);
 }
@@ -4441,150 +4634,28 @@ const responseWindowTimers = new Map();
 function startResponseWindowFor(requestId, seconds) {
   if(responseWindowTimers.has(requestId)) return;
 
-  const feedSection = document.getElementById('response-feed-section');
-  if(feedSection) feedSection.style.display = 'block';
-
   let remaining = Math.max(1, Math.floor(seconds));
   const handle = setInterval(() => {
     remaining--;
     if(remaining <= 0) {
       clearInterval(handle);
       responseWindowTimers.delete(requestId);
-      buildRecommendations(requestId);
+      renderLiveResponses();
     }
   }, 1000);
   responseWindowTimers.set(requestId, handle);
 }
 
 async function bootstrapPendingRequestTimers() {
+  await syncResponsesForPendingRequests();
   for(const req of liveSessionOps.requests) {
     if(req.status !== 'pending' || !req.posted_at) continue;
     const elapsedSecs = (Date.now() - new Date(req.posted_at).getTime()) / 1000;
-    if(elapsedSecs >= 60) {
-      // Window already expired before we got here. Run recommendations now.
-      await buildRecommendations(req.id);
-    } else {
-      // Window still open. Start a per-request timer for the remaining time.
+    if(elapsedSecs < 60) {
       startResponseWindowFor(req.id, 60 - Math.floor(elapsedSecs));
     }
   }
-}
-
-async function buildRecommendations(requestId) {
-  const feed = document.getElementById('response-feed');
-
-  const request = liveSessionOps.requests.find(r => r.id === requestId);
-  if(!request) {
-    if(feed) {
-      const el = document.createElement('div');
-      el.style.cssText = 'padding:12px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:13px;color:var(--amber);text-align:center;';
-      el.textContent = 'Request not found in the active list. Refresh the session view.';
-      feed.insertBefore(el, feed.firstChild);
-    }
-    return;
-  }
-
-  // Fetch available responses for this request
-  const responses = await sbGet('shift_responses', '?shift_request_id=eq.'+requestId+'&response=eq.available&select=application_id,response_seconds');
-  if(!responses || !responses.length) {
-    if(feed) {
-      const el = document.createElement('div');
-      el.style.cssText = 'padding:12px 16px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:8px;font-size:13px;color:var(--red);text-align:center;';
-      el.textContent = 'No available responses for this request.';
-      feed.insertBefore(el, feed.firstChild);
-    }
-    return;
-  }
-
-  // Fetch distances for this bar
-  const barId = request.bar_id;
-  const distances = await sbGet('worker_bar_distances', '?bar_id=eq.'+barId+'&select=application_id,walking_minutes');
-
-  // Check who has already worked tonight
-  const workedTonight = liveSessionOps.workers.filter(w => w.status === 'onshift' || w.status === 'completed').map(w => w.applicationId);
-
-  // Score each responder
-  const scored = responses.map(r => {
-    const appId = Number(r.application_id);
-    const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === appId);
-    if(!worker) return null;
-
-    let score = 0;
-
-    // Tier bonus
-    score += (worker.tier || 1) * 20;
-
-    // Reliability bonus
-    score += ((worker.reliability_score || 50) * 0.3);
-
-    // Speed bonus
-    const secs = r.response_seconds || 60;
-    if(secs <= 10) score += 30;
-    else if(secs <= 20) score += 20;
-    else if(secs <= 30) score += 10;
-
-    // Distance bonus
-    const dist = distances?.find(d => Number(d.application_id) === appId);
-    const mins = dist ? dist.walking_minutes : null;
-    if(mins !== null) {
-      if(mins <= 10) score += 40;
-      else if(mins <= 20) score += 25;
-      else if(mins <= 30) score += 10;
-    }
-
-    // Transport bonus
-    if(worker.has_transport) score += 15;
-
-    // Already worked tonight penalty
-    if(workedTonight.includes(appId)) score -= 20;
-
-    return { worker, appId, score, secs, mins, workedTonight: workedTonight.includes(appId) };
-  }).filter(Boolean).sort((a, b) => b.score - a.score);
-
-  if(!scored.length) {
-    if(feed) {
-      const el = document.createElement('div');
-      el.style.cssText = 'padding:12px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:13px;color:var(--amber);text-align:center;';
-      el.textContent = 'Responders not in the room. Refresh the session view to reload workers.';
-      feed.insertBefore(el, feed.firstChild);
-    }
-    return;
-  }
-
-  // Render recommendation panel
-  if(!feed) return;
-
-  const panel = document.createElement('div');
-  panel.id = 'recommendations-panel-'+requestId;
-  panel.style.cssText = 'margin-bottom:12px;';
-
-  panel.innerHTML = '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">Dispatch Recommendations</div>'
-    + scored.map((s, i) => {
-      const isTop = i === 0;
-      const distStr = s.mins !== null ? s.mins + ' min walk' : 'distance unknown';
-      const speedStr = s.secs + 's response';
-      const transportStr = s.worker.has_transport ? 'Has transport' : '';
-      const workedStr = s.workedTonight ? 'Worked tonight' : '';
-
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:'+(isTop?'rgba(168,198,232,0.08)':'rgba(255,255,255,0.02)')+';border:1px solid '+(isTop?'rgba(168,198,232,0.25)':'var(--border)')+';border-radius:10px;margin-bottom:8px;">'
-        + '<div>'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
-        + '<span style="font-size:14px;font-weight:600;color:var(--white);">'+s.worker.name+'</span>'
-        + (isTop ? '<span style="font-size:9px;letter-spacing:1px;background:var(--ice);color:var(--navy);padding:2px 8px;border-radius:4px;font-weight:700;">RECOMMENDED</span>' : '')
-        + (s.workedTonight ? '<span style="font-size:9px;color:var(--amber);">Worked tonight</span>' : '')
-        + '</div>'
-        + '<div style="font-size:11px;color:var(--grey);display:flex;gap:10px;flex-wrap:wrap;">'
-        + '<span>Tier '+s.worker.tier+'</span>'
-        + '<span>'+distStr+'</span>'
-        + '<span>'+speedStr+'</span>'
-        + (transportStr ? '<span style="color:var(--green);">'+transportStr+'</span>' : '')
-        + '</div>'
-        + '</div>'
-        + '<button onclick="dispatchWorker('+s.worker.applicationId+','+requestId+')" style="background:'+(isTop?'var(--ice)':'var(--navy-mid)')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:\'Inter\',sans-serif;">Dispatch</button>'
-        + '</div>';
-    }).join('');
-
-  feed.insertBefore(panel, feed.firstChild);
+  await renderLiveResponses();
 }
 
 // Cancel dispatch UI scaffolding. Logic lands in step 3.
@@ -4854,6 +4925,9 @@ async function submitCancellation() {
         responseWindowInterval = null;
         responseWindowRequestId = null;
       }
+      // Old responses were keyed to the previous posted_at; drop them so the
+      // fresh 60s window starts clean.
+      liveSessionResponses.delete(requestId);
       startResponseWindow(requestId);
     }
 
@@ -4977,21 +5051,14 @@ async function dispatchWorker(applicationId, requestId) {
   const req = liveSessionOps.requests.find(r => r.id === requestId);
   if(req) req.status = 'dispatched';
 
-  // 4. Re-render request cards only -- don't wipe the response feed
+  // 4. State-driven re-render. The request just flipped to 'dispatched' in
+  // liveSessionOps state, so renderLiveResponses will hide its panel; the
+  // worker just flipped to 'dispatched', so the recommendations filter drops
+  // them. No manual DOM clearing needed.
+  liveSessionResponses.delete(requestId);
   renderRequestCards();
-  // Update worker card status directly
-  const workerCard = document.getElementById('wc-'+worker.id);
-  if(workerCard) workerCard.style.borderColor = 'var(--green)';
-
-  // 5. Clear live responses feed, recommendations, and remove worker from room/expected
-  const feed = document.getElementById('response-feed');
-  if(feed) feed.innerHTML = '';
-  const feedSection = document.getElementById('response-feed-section');
-  if(feedSection) feedSection.style.display = 'none';
-
-  // Remove worker from liveSessionOps.workers visible lists by re-rendering room without them
   renderRoom();
-
+  renderLiveResponses();
 }
 
 async function confirmClockIn(requestId, applicationId) {
@@ -5076,22 +5143,28 @@ async function confirmClockOut(requestId) {
 
   const now = new Date().toISOString();
 
-  // Update session_workers
-  await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
-    status: 'completed',
-    clock_out_code: code
-  });
-
-  // Update shift record
+  // Patch shifts first so the row is in 'completed' state when
+  // awardShiftCompletionPoints reads timing fields off it.
   await sbPatch('shifts', '?session_worker_id=eq.'+worker.sessionWorkerId+'&status=eq.onshift', {
     status: 'completed',
     clock_out_confirmed_at: now
   });
 
+  // Award shift-completion + arrival to the ledger now (not at session close).
+  // Idempotent per-reason: if the portal's portalAwardPoints already wrote
+  // these for this worker+session, this is a no-op.
+  await awardShiftCompletionPoints(worker);
+
+  // Patch session_workers last so realtime UPDATE for portal/manager fires
+  // after ledger and shift writes have landed.
+  await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
+    status: 'completed',
+    clock_out_code: code
+  });
+
   // Update local state
   worker.status = 'completed';
   worker.clockOutAt = now;
-
   if(request) request.status = 'completed';
 
   renderRequestCards();
@@ -6588,7 +6661,7 @@ function openOv(name) { document.getElementById(`ov-${name}`).classList.add('ope
 function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove('open'); }
 
 // â”€â”€ SESSIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function switchSessionsTab(tab) {
+function switchSessionsTab(tab, opts) {
   const isLive = tab === 'live';
   const isHistory = tab === 'history';
   const isSchedule = tab === 'schedule';
@@ -6607,7 +6680,12 @@ function switchSessionsTab(tab) {
     btn.style.fontWeight = active ? '600' : '400';
   });
 
-  if(isHistory) loadSessionsHistory();
+  if(isHistory) {
+    // Optional sessionId opens that session's detail directly. Used by
+    // confirmCloseSession so the just-closed session is in view immediately.
+    if(opts && opts.sessionId) loadSessionDetail(opts.sessionId);
+    else loadSessionsHistory();
+  }
 
   if(isLive && liveSessionOps.sessionId) {
     document.getElementById('sessions-live-empty').style.display = 'none';
@@ -6638,6 +6716,7 @@ function renderLiveRoom() {
     if(zoneEl) zoneEl.textContent = activeZone?.name || '';
     renderRequestCards();
     renderRoom();
+    renderLiveResponses();
     return;
   }
 
@@ -6688,10 +6767,10 @@ function renderLiveRoom() {
       <div class="worker-grid" id="invited-grid"></div>
     </div>
 
-    <!-- Live response feed -->
-    <div id="response-feed-section" style="margin-top:24px;display:none;">
+    <!-- Live response feed (state-driven, populated by renderLiveResponses) -->
+    <div id="live-response-feed-section" style="margin-top:24px;display:none;">
       <div class="request-section-label" style="color:var(--ice);">Live Responses</div>
-      <div id="response-feed" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+      <div id="live-response-feed" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
     </div>
   `;
 
@@ -6708,6 +6787,7 @@ function renderLiveRoom() {
 
   renderRequestCards();
   renderRoom();
+  renderLiveResponses();
 }
 
 async function goToSessions() {
