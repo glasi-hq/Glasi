@@ -692,6 +692,58 @@
       margin-bottom: 12px;
     }
 
+    /* RESPONDED state — visible after worker says yes/pass, before dispatch resolves */
+    .responded-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .responded-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .responded-msg {
+      font-size: 13px;
+      color: var(--grey);
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .responded-state {
+      font-size: 14px;
+      color: var(--amber);
+      font-weight: 600;
+    }
+    .responded-selecting {
+      font-size: 14px;
+      color: var(--ice);
+      font-weight: 600;
+    }
+    .selecting-dots {
+      display: inline-block;
+      width: 1.6em;
+      text-align: left;
+      vertical-align: bottom;
+      margin-left: 2px;
+    }
+    .selecting-dots::before {
+      content: '...';
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      width: 0.4em;
+      animation: dotCycle 1.5s steps(3, end) infinite;
+    }
+    @keyframes dotCycle {
+      0%   { width: 0.4em; }
+      100% { width: 1.6em; }
+    }
+
     /* SECTION HEADING */
     .section-label {
       font-size: 11px;
@@ -964,7 +1016,12 @@
 
         <!-- Responded but not dispatched -->
         <div id="live-responded" style="display:none;">
-          <div class="filled-card" id="live-responded-msg">Response recorded. Stand by.</div>
+          <div class="responded-card">
+            <div class="responded-label" id="live-responded-label">Response Recorded</div>
+            <div class="responded-msg" id="live-responded-msg">Stand by while the response window closes. You cannot change your answer.</div>
+            <div id="responded-window-state" class="responded-state">Window closes in <span id="responded-timer-secs">--</span>s</div>
+            <div id="responded-selecting" class="responded-selecting" style="display:none;">Selecting a Glasi<span class="selecting-dots" aria-hidden="true"></span></div>
+          </div>
         </div>
 
         <!-- Shift filled (not selected) -->
@@ -1383,6 +1440,15 @@
   let shiftPostedAt = null;
   let shiftTimerInterval = null;
   let realtimeChannels = [];
+  // Tracks whether the worker has answered the current shift post. Used by the
+  // response-window timer to decide what to render at expiry: a "Selecting a
+  // Glasi..." state if responded, or the "Time expired" message otherwise.
+  let hasRespondedToCurrentShift = false;
+  // Set when the active shift_request flips to 'dispatched' on the realtime
+  // shift_requests UPDATE feed. Gives the session_workers UPDATE for self a
+  // brief window to fire (showDispatched takes over). If it doesn't, this
+  // worker wasn't selected, so we drop them back into the waiting room.
+  let awaitingDispatchConfirmation = null;
 
   let sessionStartTime = null;
   let elapsedInterval = null;
@@ -1440,7 +1506,10 @@
       ws.send(JSON.stringify({
         topic: 'realtime:public:shift_requests',
         event: 'phx_join',
-        payload: { config: { postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }] } },
+        payload: { config: { postgres_changes: [
+          { event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId },
+          { event: 'UPDATE', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }
+        ] } },
         ref: '1'
       }));
       hb = setInterval(() => {
@@ -1455,6 +1524,7 @@
           const record = msg.payload?.data?.record;
           const type = msg.payload?.data?.type;
           if(record && type === 'INSERT') await showShiftPost(record);
+          else if(record && type === 'UPDATE') handleActiveRequestUpdate(record);
         }
         if(msg.event === 'INSERT' && msg.topic?.includes('shift_requests')) {
           const record = msg.payload?.record || msg.payload;
@@ -1488,6 +1558,10 @@
     ws.onmessage = async (e) => {
       try {
         const msg = JSON.parse(e.data);
+        // Diagnostic: surface every session_workers payload so Bug 2 can be
+        // traced live in the browser console. Remove once the realtime gap
+        // is fully understood.
+        console.log('[session_workers ws]', msg.event, msg.payload?.data?.type, msg.payload?.data?.record?.id, msg.payload?.data?.record?.status);
         const record = (msg.event === 'postgres_changes')
           ? msg.payload?.data?.record
           : (msg.event === 'UPDATE' && msg.topic?.includes('session_workers'))
@@ -1498,6 +1572,7 @@
           showDispatched(record);
         } else if(record.status === 'completed') {
           // Dashboard-driven completion (or local clock-out trigger) lands here.
+          console.log('[session_workers ws] completed → showPostShiftScreen', record);
           await showPostShiftScreen(record);
         } else if(record.status === 'cancelled' || record.status === 'available') {
           // Recall (back to available) or emergency cancel (cancelled) -- bail
@@ -1517,7 +1592,8 @@
       } catch(err) { console.error('session_workers realtime error:', err); }
     };
 
-    ws.onclose = () => { if(hb) clearInterval(hb); };
+    ws.onclose = () => { if(hb) clearInterval(hb); console.log('[session_workers ws] closed'); };
+    ws.onerror = (err) => { console.error('[session_workers ws] error', err); };
   }
 
   let sessionsWatchWs = null;
@@ -1589,8 +1665,28 @@
   }
 
   async function showShiftPost(record) {
+    // Bug 2 follow-on: showDispatched no longer closes the shift_requests WS,
+    // so an INSERT for a fresh shift post can still arrive after this worker
+    // is dispatched / on shift / clocked out. Suppress the surface in those
+    // states — the worker shouldn't see new shift posts mid-shift.
+    const dispatched = document.getElementById('live-dispatched');
+    if(dispatched && dispatched.style.display === 'block') return;
+    const completed = document.getElementById('portal-shift-complete');
+    if(completed && completed.style.display === 'block') return;
+
     activeShiftRequestId = record.id;
-    shiftPostedAt = Date.now();
+    shiftPostedAt = record.posted_at ? new Date(record.posted_at).getTime() : Date.now();
+    hasRespondedToCurrentShift = false;
+    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+
+    // Reset the live-responded sub-states so a stale "Selecting a Glasi..." or
+    // "Time expired" panel from a previous shift doesn't leak across.
+    const winState = document.getElementById('responded-window-state');
+    const selecting = document.getElementById('responded-selecting');
+    if(winState) winState.style.display = 'block';
+    if(selecting) selecting.style.display = 'none';
+    const timerColor = document.getElementById('shift-timer');
+    if(timerColor) timerColor.style.color = 'var(--amber)';
 
     // Fetch bar details
     let barName = 'Venue';
@@ -1609,8 +1705,11 @@
     document.getElementById('live-filled').style.display = 'none';
     document.getElementById('live-shift-post').style.display = 'block';
 
-    // Start countdown timer
-    startShiftTimer(60);
+    // Start countdown timer. Use posted_at if available so a portal that joins
+    // mid-window picks up the correct remaining time.
+    const elapsedSecs = Math.floor((Date.now() - shiftPostedAt) / 1000);
+    const remainingSecs = Math.max(1, 60 - elapsedSecs);
+    startShiftTimer(remainingSecs);
   }
 
   function startShiftTimer(seconds) {
@@ -1622,19 +1721,44 @@
       updateTimerDisplay(remaining);
       if(remaining <= 0) {
         clearInterval(shiftTimerInterval);
-        // No response -- record it and hide shift post
-        recordResponse('no_response');
-        document.getElementById('live-shift-post').style.display = 'none';
-        document.getElementById('live-responded').style.display = 'block';
-        document.getElementById('live-responded-msg').textContent = 'Time expired. Stand by for the next shift post.';
+        if(hasRespondedToCurrentShift) {
+          // Worker responded; swap from the live countdown to the
+          // "Selecting a Glasi..." state. Persists until either the worker
+          // is dispatched (showDispatched via session_workers UPDATE) or
+          // the request resolves elsewhere (handleActiveRequestUpdate).
+          const winState = document.getElementById('responded-window-state');
+          const selecting = document.getElementById('responded-selecting');
+          if(winState) winState.style.display = 'none';
+          if(selecting) selecting.style.display = 'block';
+        } else {
+          // Worker did not respond. Record no_response, surface the timeout
+          // state. Shift post is still visible -- swap to live-responded.
+          recordResponse('no_response');
+          document.getElementById('live-shift-post').style.display = 'none';
+          document.getElementById('live-responded').style.display = 'block';
+          const label = document.getElementById('live-responded-label');
+          const msg = document.getElementById('live-responded-msg');
+          const winState = document.getElementById('responded-window-state');
+          const selecting = document.getElementById('responded-selecting');
+          if(label) label.textContent = 'No Response';
+          if(msg) msg.textContent = 'Time expired. Stand by for the next shift post.';
+          if(winState) winState.style.display = 'none';
+          if(selecting) selecting.style.display = 'none';
+        }
       }
     }, 1000);
   }
 
   function updateTimerDisplay(secs) {
+    // Pre-response timer in live-shift-post.
     const el = document.getElementById('shift-timer');
-    if(el) el.textContent = 'Respond within ' + secs + ' second' + (secs !== 1 ? 's' : '');
-    if(secs <= 10 && el) el.style.color = 'var(--red)';
+    if(el) {
+      el.textContent = 'Respond within ' + secs + ' second' + (secs !== 1 ? 's' : '');
+      el.style.color = secs <= 10 ? 'var(--red)' : 'var(--amber)';
+    }
+    // Post-response mirror in live-responded. Same countdown, different home.
+    const secsEl = document.getElementById('responded-timer-secs');
+    if(secsEl) secsEl.textContent = secs;
   }
 
   async function recordResponse(type) {
@@ -1656,13 +1780,23 @@
   }
 
   async function handleAvailable() {
-    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    // Don't clear shiftTimerInterval -- the response window keeps counting
+    // down visibly in the live-responded panel until it hits 0.
+    hasRespondedToCurrentShift = true;
     await recordResponse('available');
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-responded').style.display = 'block';
-    document.getElementById('live-responded-msg').textContent = 'Response recorded. Stand by while we select.';
+    const label = document.getElementById('live-responded-label');
+    const msg = document.getElementById('live-responded-msg');
+    const winState = document.getElementById('responded-window-state');
+    const selecting = document.getElementById('responded-selecting');
+    if(label) label.textContent = 'Response Recorded';
+    if(msg) msg.textContent = 'You said yes. Stand by while we close the response window. You cannot change your answer.';
+    if(winState) winState.style.display = 'block';
+    if(selecting) selecting.style.display = 'none';
 
-    // Award +10 points for responding
+    // Award +10 points for responding (legacy direct-write pattern, flagged
+    // for awardPoints-on-portal refactor in BUILD_STATE item 14).
     if(currentWorker) {
       const newPoints = (currentWorker.total_points || 0) + 10;
       await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
@@ -1675,11 +1809,53 @@
   }
 
   async function handlePass() {
-    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    // Same as handleAvailable: keep the timer running so the worker sees the
+    // window close. They still can't change their answer.
+    hasRespondedToCurrentShift = true;
     await recordResponse('pass');
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-responded').style.display = 'block';
-    document.getElementById('live-responded-msg').textContent = 'No problem. Stand by for the next shift post.';
+    const label = document.getElementById('live-responded-label');
+    const msg = document.getElementById('live-responded-msg');
+    const winState = document.getElementById('responded-window-state');
+    const selecting = document.getElementById('responded-selecting');
+    if(label) label.textContent = 'Response Recorded';
+    if(msg) msg.textContent = 'You passed. Stand by for the next shift post.';
+    if(winState) winState.style.display = 'block';
+    if(selecting) selecting.style.display = 'none';
+  }
+
+  // Drives the transition out of "Selecting a Glasi..." when the active
+  // request resolves on the realtime shift_requests UPDATE feed. If our
+  // session_workers status flips to 'dispatched' first, showDispatched cancels
+  // this and takes over.
+  function handleActiveRequestUpdate(record) {
+    if(!record || record.id !== activeShiftRequestId) return;
+    if(record.status === 'dispatched') {
+      if(awaitingDispatchConfirmation) clearTimeout(awaitingDispatchConfirmation);
+      awaitingDispatchConfirmation = setTimeout(() => {
+        // No self-dispatch UPDATE arrived -- someone else got the shift.
+        returnToWaitingRoom('Shift filled. Stand by for the next one.');
+      }, 3000);
+    } else if(record.status === 'expired' || record.status === 'cancelled') {
+      if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+      returnToWaitingRoom(record.status === 'expired'
+        ? 'That request expired. Stand by for the next one.'
+        : 'That request was cancelled. Stand by for the next one.');
+    }
+  }
+
+  function returnToWaitingRoom(tickerMsg) {
+    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+    document.getElementById('live-shift-post').style.display = 'none';
+    document.getElementById('live-responded').style.display = 'none';
+    document.getElementById('live-filled').style.display = 'none';
+    document.getElementById('live-waiting').style.display = 'block';
+    const tickerEl = document.getElementById('live-ticker');
+    if(tickerEl && tickerMsg) tickerEl.textContent = tickerMsg;
+    hasRespondedToCurrentShift = false;
+    activeShiftRequestId = null;
   }
 
   let shiftCountdownInterval = null;
@@ -1802,7 +1978,7 @@
   }
 
   async function showPostShiftScreen(sw, opts) {
-    if(!sw || !sw.id) return;
+    if(!sw || !sw.id) { console.warn('[showPostShiftScreen] missing sw or sw.id', sw); return; }
     // Idempotency: realtime UPDATE for self-clock-out arrives just after the
     // direct call from workerClockOut. Bail if we're already on the screen.
     if(postShiftSwId === sw.id && document.getElementById('portal-shift-complete')?.style.display === 'block') return;
@@ -1810,6 +1986,20 @@
     postShiftRating = 0;
 
     if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
+
+    // Diagnostic wrapper: any uncaught error inside the function leaves the
+    // worker stuck on the previous screen with no visible failure. Wrapping
+    // the body forces the error to surface instead of silently failing.
+    try {
+      await _renderPostShiftBody(sw, opts);
+    } catch(err) {
+      console.error('[showPostShiftScreen] failed', err, { sw, opts });
+      // Reset the idempotency guard so a follow-up trigger can retry.
+      postShiftSwId = null;
+    }
+  }
+
+  async function _renderPostShiftBody(sw, opts) {
 
     document.getElementById('sessions-empty').style.display = 'none';
     document.getElementById('sessions-code-entry').style.display = 'none';
@@ -2246,6 +2436,10 @@
   }
 
   async function showDispatched(swRecord) {
+    // Cancel any pending "wait for self-dispatch" timeout — we got the
+    // confirmation, this worker is the one selected.
+    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+    if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
     currentSessionWorkerId = swRecord.id || swRecord.session_worker_id || null;
     document.getElementById('live-shift-post').style.display = 'none';
     document.getElementById('live-waiting').style.display = 'none';
@@ -2254,7 +2448,12 @@
     document.getElementById('live-dispatched').style.display = 'block';
     document.getElementById('leaving-section').style.display = 'block';
     document.getElementById('leaving-confirmed').style.display = 'none';
-    stopRealtime();
+    // Bug 2 fix: only stop the waiting-room timers; keep the session_workers
+    // and shift_requests WS open so the worker receives the later 'completed'
+    // UPDATE from the dashboard's clock-out. The previous stopRealtime() call
+    // closed every WS in realtimeChannels and left the worker blind for the
+    // rest of the lifecycle.
+    stopWaitingTimers();
 
     // Fetch bar details
     try {
@@ -2332,6 +2531,18 @@
   function stopRealtime() {
     realtimeChannels.forEach(ws => { try { ws.close(); } catch(e) {} });
     realtimeChannels = [];
+    stopWaitingTimers();
+  }
+
+  // Bug 2 fix: showDispatched used to call stopRealtime() which closed every
+  // WS in realtimeChannels — including the session_workers subscription that
+  // the worker needs to receive the later 'completed' UPDATE from the
+  // dashboard. After dispatch, we only need to stop the waiting-room timers,
+  // not tear down realtime. The session_workers WS stays alive through the
+  // rest of the lifecycle so clock-out (and cancellation) propagate without
+  // a refresh. New shift posts after dispatch are filtered by the guard at
+  // the top of showShiftPost.
+  function stopWaitingTimers() {
     if(shiftTimerInterval) clearInterval(shiftTimerInterval);
     if(elapsedInterval) clearInterval(elapsedInterval);
     if(tickerTimeout) clearTimeout(tickerTimeout);
