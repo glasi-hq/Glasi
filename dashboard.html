@@ -3585,6 +3585,7 @@ const POINTS = {
   speedBonus30:        15,    // Bonus on top of I'm Available base for under-30s responses.
   speedBonus60:         0,    // Deprecated by new locked spec.
   speedBonus120:        0,    // Deprecated by new locked spec.
+  selectedForShift:    20,    // Awarded at dispatch time, separate from response action.
   completedShift:      60,
   arrivedEarly:        40,
   arrivedOnTime:       25,
@@ -4399,12 +4400,18 @@ async function dispatchWorker(applicationId, requestId) {
   // 2. Update shift_request status
   await sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'dispatched' });
 
-  // Award +20 points for being selected
+  // Award +20 points for being selected (writes to ledger, updates cache, logs tier promotion if crossed)
+  const result = await awardPoints(worker.applicationId, {
+    amount: POINTS.selectedForShift,
+    reason: 'selected_for_shift',
+    sessionId: activeSessionId,
+    sourceType: 'shift_request',
+    sourceId: requestId
+  });
   const workerApp = allWorkers.find(w => w.id === worker.applicationId);
-  if(workerApp) {
-    const currentPts = workerApp.total_points || 0;
-    await sbPatch('applications', '?id=eq.'+worker.applicationId, { total_points: currentPts + 20 });
-    workerApp.total_points = currentPts + 20;
+  if(workerApp && result) {
+    workerApp.total_points = result.newTotal;
+    if(result.promoted) workerApp.tier = result.newTier;
   }
 
   // 3. Update local state
