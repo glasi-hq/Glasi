@@ -4998,6 +4998,12 @@ async function dispatchWorker(applicationId, requestId) {
   const now = new Date().toISOString();
   const gsRef = 'GS' + String(Date.now()).slice(-6);
   const clockInCode = String(Math.floor(1000 + Math.random() * 9000)); // 4 digit code
+  // Generated alongside clockInCode so the manager portal has a code to
+  // reveal at end of shift and the worker portal has something to validate
+  // against on clock-out. The manager-side ensureClockOutCode workaround
+  // stays in place as belt-and-suspenders for any session_workers row that
+  // somehow lands in onshift state without this column populated.
+  const clockOutCode = String(Math.floor(1000 + Math.random() * 9000)); // 4 digit code
 
   // 1. Update session_workers
   await sbPatch('session_workers', '?id=eq.'+worker.sessionWorkerId, {
@@ -5006,7 +5012,8 @@ async function dispatchWorker(applicationId, requestId) {
     shift_request_id: requestId,
     shift_length_hours: shiftLength,
     dispatched_at: now,
-    clock_in_code: clockInCode
+    clock_in_code: clockInCode,
+    clock_out_code: clockOutCode
   });
 
   // 2. Update shift_request status
