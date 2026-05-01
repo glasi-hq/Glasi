@@ -2128,6 +2128,7 @@ async function tryRestoreSession() {
   setTimeout(() => {
     renderRequestCards();
     renderRoom();
+    bootstrapPendingRequestTimers();
   }, 100);
 
   console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers', activeShiftRequests.length, 'requests');
@@ -2842,13 +2843,21 @@ async function handleWorkerPortalLeave(record) {
 }
 
 async function handleWorkerPortalJoin(record) {
-  // Worker joined via portal -- update their status in sessionWorkers and re-render
+  // Worker joined via portal -- update their status in sessionWorkers and re-render.
+  // The DB-side trigger sync_session_worker_status_on_join also flips
+  // session_workers.status, so this local write is the fast path; the trigger
+  // is the safety net for any client that doesn't update the row directly.
   if(!activeSessionId) return;
   const appId = Number(record.application_id);
   const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
   if(worker) {
     worker.status = 'available';
     worker.joinedAt = record.joined_at;
+    if(worker.sessionWorkerId) {
+      await sbPatch('session_workers',
+        '?id=eq.'+worker.sessionWorkerId+'&status=eq.invited',
+        { status: 'available' });
+    }
   } else {
     // Worker not in list yet -- reload all
     await loadLiveSessionWorkers(activeSessionId);
@@ -4193,94 +4202,60 @@ function startResponseWindow(requestId) {
   }, 1000);
 }
 
-async function buildRecommendations(requestId) {
-  const request = activeShiftRequests.find(r => r.id === requestId);
-  if(!request) return;
+// Per-request response window timers, keyed by shift_request_id. Coexists with
+// the legacy single-timer responseWindow* globals. Used by the bootstrap path
+// to recover when the dashboard loaded with pre-existing pending requests.
+const responseWindowTimers = new Map();
 
-  const responses = await sbGet('shift_responses', '?shift_request_id=eq.'+requestId+'&response=eq.available&select=application_id,response_seconds');
-  if(!responses || !responses.length) return;
+function startResponseWindowFor(requestId, seconds) {
+  if(responseWindowTimers.has(requestId)) return;
 
-  const barId = request.bar_id;
-  const distances = await sbGet('worker_bar_distances', '?bar_id=eq.'+barId+'&select=application_id,walking_minutes');
-  const workedTonight = sessionWorkers.filter(w => w.status === 'onshift' || w.status === 'completed').map(w => w.applicationId);
+  const feedSection = document.getElementById('response-feed-section');
+  if(feedSection) feedSection.style.display = 'block';
 
-  // Score each responder
-  const scored = responses.map(r => {
-    const appId = Number(r.application_id);
-    const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
-    if(!worker) return null;
-
-    let score = 0;
-    score += (worker.tier || 1) * 20;
-    score += ((worker.reliability_score || 50) * 0.3);
-
-    const secs = r.response_seconds || 60;
-    if(secs <= 10) score += 30;
-    else if(secs <= 20) score += 20;
-    else if(secs <= 30) score += 10;
-
-    const dist = distances?.find(d => Number(d.application_id) === appId);
-    const mins = dist ? dist.walking_minutes : null;
-    if(mins !== null) {
-      if(mins <= 10) score += 40;
-      else if(mins <= 20) score += 25;
-      else if(mins <= 30) score += 10;
+  let remaining = Math.max(1, Math.floor(seconds));
+  const handle = setInterval(() => {
+    remaining--;
+    if(remaining <= 0) {
+      clearInterval(handle);
+      responseWindowTimers.delete(requestId);
+      buildRecommendations(requestId);
     }
+  }, 1000);
+  responseWindowTimers.set(requestId, handle);
+}
 
-    if(worker.has_transport) score += 15;
-    if(workedTonight.includes(appId)) score -= 20;
-
-    return { worker, appId, score, secs, mins };
-  }).filter(Boolean).sort((a, b) => b.score - a.score);
-
-  if(!scored.length) return;
-
-  // Re-sort the response feed cards in rank order
-  const feed = document.getElementById('response-feed');
-  if(!feed) return;
-
-  // Add a header
-  const header = document.createElement('div');
-  header.style.cssText = 'font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);';
-  header.textContent = 'Window closed -- select to dispatch';
-  feed.insertBefore(header, feed.firstChild);
-
-  // Clear existing response cards and rebuild in rank order
-  // Remove all existing response items
-  Array.from(feed.querySelectorAll('.response-item')).forEach(el => el.remove());
-
-  // Rebuild in rank order
-  scored.forEach((s, i) => {
-    const isTop = i === 0;
-    const distStr = s.mins !== null ? s.mins + ' min walk' : '';
-    const el = document.createElement('div');
-    el.className = 'response-item';
-    el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:'+(isTop?'rgba(168,198,232,0.08)':'rgba(255,255,255,0.02)')+';border:1px solid '+(isTop?'rgba(168,198,232,0.3)':'var(--border)')+';border-radius:10px;margin-bottom:8px;';
-    el.innerHTML = '<div>'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">'
-      + '<span style="font-size:14px;font-weight:600;color:var(--white);">'+s.worker.name+'</span>'
-      + (isTop ? '<span style="font-size:9px;letter-spacing:1px;background:var(--ice);color:var(--navy);padding:2px 8px;border-radius:4px;font-weight:700;">RECOMMENDED</span>' : '')
-      + '</div>'
-      + '<div style="font-size:11px;color:var(--grey);display:flex;gap:10px;">'
-      + '<span>Tier '+s.worker.tier+'</span>'
-      + (distStr ? '<span>'+distStr+'</span>' : '')
-      + '<span>'+s.secs+'s response</span>'
-      + (s.worker.has_transport ? '<span style="color:var(--green);">Has transport</span>' : '')
-      + '</div>'
-      + '</div>'
-      + '<button onclick="dispatchWorker('+s.worker.applicationId+','+requestId+')" style="background:'+(isTop?'var(--ice)':'none')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;">Dispatch</button>';
-    feed.appendChild(el);
-  });
+async function bootstrapPendingRequestTimers() {
+  for(const req of activeShiftRequests) {
+    if(req.status !== 'pending' || !req.posted_at) continue;
+    const elapsedSecs = (Date.now() - new Date(req.posted_at).getTime()) / 1000;
+    if(elapsedSecs >= 60) {
+      // Window already expired before we got here. Run recommendations now.
+      await buildRecommendations(req.id);
+    } else {
+      // Window still open. Start a per-request timer for the remaining time.
+      startResponseWindowFor(req.id, 60 - Math.floor(elapsedSecs));
+    }
+  }
 }
 
 async function buildRecommendations(requestId) {
+  const feed = document.getElementById('response-feed');
+
   const request = activeShiftRequests.find(r => r.id === requestId);
-  if(!request) return;
+  if(!request) {
+    if(feed) {
+      const el = document.createElement('div');
+      el.style.cssText = 'padding:12px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:13px;color:var(--amber);text-align:center;';
+      el.textContent = 'Request not found in the active list. Refresh the session view.';
+      feed.insertBefore(el, feed.firstChild);
+    }
+    return;
+  }
 
   // Fetch available responses for this request
   const responses = await sbGet('shift_responses', '?shift_request_id=eq.'+requestId+'&response=eq.available&select=application_id,response_seconds');
   if(!responses || !responses.length) {
-    const feed = document.getElementById('response-feed');
     if(feed) {
       const el = document.createElement('div');
       el.style.cssText = 'padding:12px 16px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:8px;font-size:13px;color:var(--red);text-align:center;';
@@ -4335,10 +4310,17 @@ async function buildRecommendations(requestId) {
     return { worker, appId, score, secs, mins, workedTonight: workedTonight.includes(appId) };
   }).filter(Boolean).sort((a, b) => b.score - a.score);
 
-  if(!scored.length) return;
+  if(!scored.length) {
+    if(feed) {
+      const el = document.createElement('div');
+      el.style.cssText = 'padding:12px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:13px;color:var(--amber);text-align:center;';
+      el.textContent = 'Responders not in the room. Refresh the session view to reload workers.';
+      feed.insertBefore(el, feed.firstChild);
+    }
+    return;
+  }
 
   // Render recommendation panel
-  const feed = document.getElementById('response-feed');
   if(!feed) return;
 
   const panel = document.createElement('div');
@@ -4399,6 +4381,19 @@ async function dispatchWorker(applicationId, requestId) {
 
   // 2. Update shift_request status
   await sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'dispatched' });
+
+  // Cancel any pending response-window timer for this request so the
+  // recommendations engine doesn't fire after dispatch (no amber "request not
+  // found" message, no late panel render).
+  if(responseWindowTimers.has(requestId)) {
+    clearInterval(responseWindowTimers.get(requestId));
+    responseWindowTimers.delete(requestId);
+  }
+  if(responseWindowRequestId === requestId && responseWindowInterval) {
+    clearInterval(responseWindowInterval);
+    responseWindowInterval = null;
+    responseWindowRequestId = null;
+  }
 
   // Award +20 points for being selected (writes to ledger, updates cache, logs tier promotion if crossed)
   const result = await awardPoints(worker.applicationId, {
