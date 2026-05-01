@@ -405,6 +405,26 @@
     .past-meta { font-size: 11px; color: var(--grey); margin-top: 2px; }
     .past-status { font-size: 12px; color: var(--green); font-weight: 600; }
 
+    /* Compact pill that replaces the full request form while a request is in flight. */
+    .request-pill-btn {
+      display: block;
+      width: 100%;
+      background: var(--navy-mid);
+      border: 1px dashed rgba(168,198,232,0.3);
+      color: var(--ice);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .request-pill-btn:hover {
+      border-color: var(--ice);
+      background: rgba(168,198,232,0.06);
+    }
+
     /* Sonar pulse on pending Recent Requests rows (silent, visual only). */
     .sonar-dot {
       position: relative;
@@ -594,10 +614,19 @@
       </div>
     </div>
 
+    <!-- Compact pill: shown while at least one request is in flight. Manager
+         taps to expand the full request form below. -->
+    <div id="request-form-pill" style="display:none;margin-bottom:24px;">
+      <button onclick="expandRequestForm()" class="request-pill-btn">+ Request another Glasi</button>
+    </div>
+
     <!-- Request form -->
     <div id="request-form">
       <div class="request-card">
-        <div class="request-title">Request a Glasi</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px;">
+          <div class="request-title">Request a Glasi</div>
+          <button id="request-form-cancel" onclick="collapseRequestForm()" style="display:none;background:none;border:none;color:var(--grey);font-size:24px;line-height:1;cursor:pointer;padding:0 4px;font-family:'Inter',sans-serif;" title="Cancel">×</button>
+        </div>
         <div class="request-sub">Select how long you need cover for and submit your request. We will dispatch someone to you as quickly as possible.</div>
 
         <div style="font-size:11px;font-weight:600;letter-spacing:1px;color:var(--ice);text-transform:uppercase;margin-bottom:10px;">Shift Length</div>
@@ -788,7 +817,11 @@
               document.getElementById('request-form').style.display = 'block';
             } else if(record.status === 'onshift') {
               showStatus('onshift', record);
-              startManagerShiftCountdown(record.clock_out_code, record.shift_length_hours, record.clock_in_at);
+              // Same workaround as in checkForDispatchedWorker: ensure the
+              // clock_out_code is populated before the countdown starts.
+              const ensuredCode = await ensureClockOutCode(record);
+              record.clock_out_code = ensuredCode;
+              startManagerShiftCountdown(ensuredCode, record.shift_length_hours, record.clock_in_at);
               loadPastRequests();
             } else if(record.status === 'completed') {
               if(managerShiftInterval) clearInterval(managerShiftInterval);
@@ -838,15 +871,26 @@
         const record = msg.payload?.data?.record;
         if(!record) return;
         if(record.status === 'live') {
-          // Session in this bar's zone just went live: surface the request form.
+          // Session in this bar's zone just went live. Surface the form only
+          // if no active card is up; otherwise leave the in-flight UI alone
+          // and just hide the no-session card.
           document.getElementById('no-session-card').style.display = 'none';
-          document.getElementById('request-form').style.display = 'block';
+          const onActiveLive = document.getElementById('active-status-card').style.display === 'block';
+          if(!onActiveLive) {
+            const pill = document.getElementById('request-form-pill');
+            if(pill) pill.style.display = 'none';
+            const cancel = document.getElementById('request-form-cancel');
+            if(cancel) cancel.style.display = 'none';
+            document.getElementById('request-form').style.display = 'block';
+          }
         } else if(record.status === 'closed') {
           // Active card stays put if a shift is still in progress; only the
-          // request form gets hidden behind the no-session card.
+          // request form / pill gets hidden behind the no-session card.
           const onActive = document.getElementById('active-status-card').style.display === 'block';
           if(!onActive) {
             document.getElementById('request-form').style.display = 'none';
+            const pill = document.getElementById('request-form-pill');
+            if(pill) pill.style.display = 'none';
             document.getElementById('no-session-card').style.display = 'block';
           }
         }
@@ -981,13 +1025,41 @@
       showStatus('onway', active);
     } else if(active.status === 'onshift') {
       showStatus('onshift', active);
+      // Workaround for the modern dispatch flow not writing clock_out_code at
+      // dispatch time. If the column is null, generate one now and patch it
+      // back so the manager has a code to reveal and the worker has something
+      // to validate against on clock-out.
+      const ensuredCode = await ensureClockOutCode(active);
+      active.clock_out_code = ensuredCode;
       // Fetch shift for countdown
       try {
         const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=eq.' + active.id + '&status=eq.onshift&select=clock_in_confirmed_at,shift_length_hours', { headers: H }).then(r => r.json());
         const shift = shiftRows?.[0];
-        if(shift) startManagerShiftCountdown(active.clock_out_code, shift.shift_length_hours, shift.clock_in_confirmed_at);
+        if(shift) startManagerShiftCountdown(ensuredCode, shift.shift_length_hours, shift.clock_in_confirmed_at);
       } catch(e) {}
     }
+  }
+
+  // Ensure session_workers.clock_out_code is populated. Returns the resolved
+  // code (existing or newly generated). Conditional patch (status filter +
+  // clock_out_code IS NULL) guards against races between manager tabs.
+  async function ensureClockOutCode(sw) {
+    if(sw && sw.clock_out_code) return sw.clock_out_code;
+    if(!sw || !sw.id) return null;
+    const code = String(Math.floor(1000 + Math.random() * 9000));
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + sw.id + '&clock_out_code=is.null', {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ clock_out_code: code })
+      });
+    } catch(e) {}
+    // Re-fetch to read whichever value won the race (ours, another tab's, or
+    // a value the dashboard wrote between our null-check and our patch).
+    try {
+      const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + sw.id + '&select=clock_out_code', { headers: H }).then(r => r.json());
+      return rows?.[0]?.clock_out_code || code;
+    } catch(e) { return code; }
   }
 
   function showStatus(state, sw) {
@@ -1002,19 +1074,21 @@
       document.getElementById('status-clockin-code').textContent = sw.clock_in_code || '----';
       const dispMins = sw.dispatched_at ? Math.floor((Date.now() - new Date(sw.dispatched_at).getTime()) / 60000) : 0;
       document.getElementById('status-onway-eta').textContent = 'Dispatched ' + dispMins + ' min ago';
-      document.getElementById('request-form').style.display = 'none';
     }
 
     if(state === 'onshift' && sw) {
       document.getElementById('status-onshift-name').textContent = sw.worker_name || '';
-      document.getElementById('request-form').style.display = 'none';
     }
 
     if(state !== 'finding') stopPendingRequestExpiry();
     if(state === 'cancelled' || state === 'expired') {
-      document.getElementById('request-form').style.display = 'none';
       if(managerShiftInterval) clearInterval(managerShiftInterval);
     }
+
+    // Active card up: hide the full form, show the compact pill so the
+    // manager can submit a parallel request without losing sight of the
+    // in-flight one.
+    showRequestPill();
   }
 
   // Wraps showStatus('finding') and starts the 30-minute expiry timer for the
@@ -1038,8 +1112,63 @@
   }
 
   function showRequestForm() {
+    // Default-state full form. Used on dismiss handlers and when the session
+    // becomes idle. No Cancel button — there's no active card to cancel back to.
     document.getElementById('active-status-card').style.display = 'none';
+    const pill = document.getElementById('request-form-pill');
+    if(pill) pill.style.display = 'none';
+    const cancel = document.getElementById('request-form-cancel');
+    if(cancel) cancel.style.display = 'none';
+    resetRequestFormState();
     document.getElementById('request-form').style.display = 'block';
+  }
+
+  // Compact pill <-> full form helpers. The pill replaces the full request
+  // form while at least one request is in flight; the manager taps it to
+  // expand the form, fill it in, and submit a parallel request.
+  function showRequestPill() {
+    document.getElementById('request-form').style.display = 'none';
+    const pill = document.getElementById('request-form-pill');
+    if(pill) pill.style.display = 'block';
+  }
+
+  function expandRequestForm() {
+    const pill = document.getElementById('request-form-pill');
+    if(pill) pill.style.display = 'none';
+    const cancel = document.getElementById('request-form-cancel');
+    if(cancel) cancel.style.display = 'inline-block';
+    resetRequestFormState();
+    document.getElementById('request-form').style.display = 'block';
+  }
+
+  function collapseRequestForm() {
+    const cancel = document.getElementById('request-form-cancel');
+    if(cancel) cancel.style.display = 'none';
+    document.getElementById('request-form').style.display = 'none';
+    const pill = document.getElementById('request-form-pill');
+    if(pill) pill.style.display = 'block';
+  }
+
+  // Centralised state reset. Used by every entry that re-shows the form, so a
+  // half-filled stale form (or the "Sending..." stuck button) can never linger.
+  function resetRequestFormState() {
+    selectedShiftLength = null;
+    document.querySelectorAll('.shift-option').forEach(o => o.classList.remove('selected'));
+    const btn = document.getElementById('request-btn');
+    if(btn) {
+      btn.disabled = true;
+      btn.textContent = 'Request a Glasi';
+    }
+    const termsCheck = document.getElementById('manager-check-terms');
+    if(termsCheck) termsCheck.checked = false;
+    const pinSection = document.getElementById('manager-pin-section');
+    if(pinSection) pinSection.style.display = 'none';
+    const pinInput = document.getElementById('manager-pin-input');
+    if(pinInput) pinInput.value = '';
+    const pinError = document.getElementById('manager-pin-error');
+    if(pinError) pinError.textContent = '';
+    const errorEl = document.getElementById('request-error');
+    if(errorEl) errorEl.textContent = '';
   }
 
   let managerShiftInterval = null;
@@ -1310,49 +1439,59 @@
     const btn = document.getElementById('request-btn');
     btn.disabled = true;
     btn.textContent = 'Sending...';
+    const errorEl = document.getElementById('request-error');
+    if(errorEl) errorEl.textContent = '';
 
-    // Find the active session for this bar's zone
-    const sessions = await fetch(SUPABASE_URL + '/rest/v1/sessions?zone_id=eq.' + currentBar.zone_id + '&status=eq.live&select=id&limit=1', { headers: H }).then(r => r.json());
-    const sessionId = sessions?.[0]?.id || null;
+    try {
+      // Find the active session for this bar's zone
+      const sessions = await fetch(SUPABASE_URL + '/rest/v1/sessions?zone_id=eq.' + currentBar.zone_id + '&status=eq.live&select=id&limit=1', { headers: H }).then(r => r.json());
+      const sessionId = sessions?.[0]?.id || null;
 
-    const now = new Date();
-    const timeStr = now.toTimeString().slice(0, 8);
+      const now = new Date();
 
-    const result = await fetch(SUPABASE_URL + '/rest/v1/shift_requests', {
-      method: 'POST',
-      headers: { ...H, 'Prefer': 'return=representation' },
-      body: JSON.stringify({
-        bar_id: currentBar.id,
-        session_id: sessionId,
-        shift_length_hours: selectedShiftLength,
-        request_time: now.toISOString(),
-        posted_at: now.toISOString(),
-        status: 'pending',
-        raw_message: 'Bar manager request via portal'
-      })
-    }).then(r => r.json());
+      const resp = await fetch(SUPABASE_URL + '/rest/v1/shift_requests', {
+        method: 'POST',
+        headers: { ...H, 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          bar_id: currentBar.id,
+          session_id: sessionId,
+          shift_length_hours: selectedShiftLength,
+          request_time: now.toISOString(),
+          posted_at: now.toISOString(),
+          status: 'pending',
+          raw_message: 'Bar manager request via portal'
+        })
+      });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const result = await resp.json();
+      const newRequest = Array.isArray(result) ? result[0] : result;
 
-    const newRequest = Array.isArray(result) ? result[0] : result;
-    document.getElementById('request-form').style.display = 'none';
-    showFindingState(newRequest);
-    loadPastRequests();
+      // Reset form state BEFORE the form gets hidden, so re-expanding later
+      // never surfaces the stale "Sending..." disabled button.
+      resetRequestFormState();
+      // Active card surfaces; showFindingState calls showStatus('finding')
+      // which surfaces the pill via showRequestPill().
+      showFindingState(newRequest);
+      loadPastRequests();
+    } catch(e) {
+      // Reset button so the manager can retry. Form stays expanded with the
+      // error visible.
+      btn.disabled = false;
+      btn.textContent = 'Request a Glasi';
+      if(errorEl) errorEl.textContent = 'Request failed. Try again.';
+    }
   }
 
   function resetRequest() {
-    selectedShiftLength = null;
-    document.querySelectorAll('.shift-option').forEach(o => o.classList.remove('selected'));
-    document.getElementById('request-btn').disabled = true;
-    document.getElementById('request-btn').textContent = 'Request a Glasi';
-    const termsCheck = document.getElementById('manager-check-terms');
-    if(termsCheck) termsCheck.checked = false;
-    const pinSection = document.getElementById('manager-pin-section');
-    if(pinSection) pinSection.style.display = 'none';
-    const pinInput = document.getElementById('manager-pin-input');
-    if(pinInput) pinInput.value = '';
-    const pinError = document.getElementById('manager-pin-error');
-    if(pinError) pinError.textContent = '';
+    // Legacy entry point kept for any external caller. Delegates to the
+    // shared reset + show flow.
+    resetRequestFormState();
     document.getElementById('request-form').style.display = 'block';
     document.getElementById('active-status-card').style.display = 'none';
+    const pill = document.getElementById('request-form-pill');
+    if(pill) pill.style.display = 'none';
+    const cancel = document.getElementById('request-form-cancel');
+    if(cancel) cancel.style.display = 'none';
   }
 
   async function loadPastRequests() {
