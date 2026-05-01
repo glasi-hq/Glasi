@@ -467,7 +467,7 @@
     <!-- LIVE TAB -->
     <div id="sessions-live-tab" style="display:none;">
       <div id="sessions-live-empty" style="text-align:center;padding:60px 24px;">
-        <div style="font-size:40px;margin-bottom:16px;opacity:0.4;">📡</div>
+        <div style="font-size:40px;margin-bottom:16px;opacity:0.4;">ðŸ“¡</div>
         <div style="font-size:16px;font-weight:600;color:var(--white);margin-bottom:8px;">No active session</div>
         <div style="font-size:13px;color:var(--grey);">Go live on a scheduled session to start dispatching.</div>
       </div>
@@ -724,7 +724,7 @@
     </div>
     <div class="page-sub">Click workers to invite them to tonight's session. Click again to uninvite.</div>
     <div style="margin-top:24px;">
-      <div class="section-label">Workers in Zone — click to invite</div>
+      <div class="section-label">Workers in Zone â€” click to invite</div>
       <div id="invite-worker-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:28px;"></div>
       <div class="section-label">Invited (<span id="invite-count">0</span>)</div>
       <div id="invited-worker-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:28px;"></div>
@@ -770,7 +770,7 @@
           <div style="margin-top:12px;font-size:12px;color:var(--grey);">Waiting for a request from a bar manager</div>
         </div>
         <div id="request-cards-container" style="display:none;">
-          <div class="request-section-label">Active Requests — select one to dispatch against</div>
+          <div class="request-section-label">Active Requests â€” select one to dispatch against</div>
           <div id="request-cards"></div>
           <button class="ghost-btn" style="margin-bottom:20px;" onclick="openRequestReceived()">+ New Request</button>
         </div>
@@ -782,7 +782,7 @@
       </div>
       <!-- Invited workers -->
       <div id="invited-section" style="margin-top:24px;">
-        <div class="request-section-label" style="color:var(--amber);">Invited — awaiting confirmation</div>
+        <div class="request-section-label" style="color:var(--amber);">Invited â€” awaiting confirmation</div>
         <div class="worker-grid" id="invited-grid"></div>
       </div>
       <!-- Live response feed -->
@@ -922,13 +922,13 @@
     <input class="field" type="text" id="edit-worker-postcode" />
     <label>Tier</label>
 <select class="field" id="edit-worker-tier" onchange="autoUpdateRate()">
-  <option value="1">Tier 1 — £12.71/hr</option>
-  <option value="2">Tier 2 — £13.71/hr</option>
-  <option value="3">Tier 3 — £14.71/hr</option>
-  <option value="4">Tier 4 — £15.71/hr</option>
-  <option value="5">Tier 5 — £16.71/hr</option>
+  <option value="1">Tier 1 â€” Â£12.71/hr</option>
+  <option value="2">Tier 2 â€” Â£13.71/hr</option>
+  <option value="3">Tier 3 â€” Â£14.71/hr</option>
+  <option value="4">Tier 4 â€” Â£15.71/hr</option>
+  <option value="5">Tier 5 â€” Â£16.71/hr</option>
 </select>
-    <label>Hourly Rate (£)</label>
+    <label>Hourly Rate (Â£)</label>
     <input class="field" type="number" id="edit-worker-rate" step="0.01" />
     <label>Availability Notes</label>
     <input class="field" type="text" id="edit-worker-availability" placeholder="e.g. fri_20_00,sat_20_00" />
@@ -954,6 +954,10 @@
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
       <div class="section-label">Walking Distance to Bars (minutes)</div>
       <div id="edit-worker-distances"></div>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="section-label">Cancellation History</div>
+      <div id="edit-worker-cancellations" style="font-size:12px;"></div>
     </div>
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('edit-worker')">Cancel</button>
@@ -987,6 +991,10 @@
         <div id="rd-status-badge" style="font-size:13px;"></div>
       </div>
     </div>
+    <div style="margin-top:8px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="section-label">Cancellation History</div>
+      <div id="rd-cancellations" style="font-size:12px;"></div>
+    </div>
     <div class="modal-actions">
       <button class="confirm-btn" onclick="closeOv('request-detail')">Close</button>
     </div>
@@ -1018,7 +1026,7 @@
       <option value="paused">Paused</option>
     </select>
     <label>Zoom Keyword</label>
-    <input class="field" type="text" id="bar-keyword" placeholder="e.g. WOOL — workers reply this to accept" />
+    <input class="field" type="text" id="bar-keyword" placeholder="e.g. WOOL â€” workers reply this to accept" />
     <label>Notes</label>
     <textarea class="field" id="bar-notes" rows="3" placeholder="Entrance details, parking, anything useful..."></textarea>
     <div class="modal-actions">
@@ -1167,9 +1175,8 @@ let activeZone = null;
 let workerBarDistances = [];
 let allWorkers = [];
 let setupWorkers = []; // workers added to room in setup
-let sessionWorkers = []; // workers in live session with status
 let shifts = []; // shift log
-let activeSessionId = null;
+// Live session state (sessionId, workers, requests) lives on liveSessionOps (defined below).
 let dispatchingWorkerId = null;
 let dispatchingBar = null;
 let dispatchCode = null;
@@ -1209,8 +1216,8 @@ async function doLogin() {
     await Promise.all([loadZones(), loadAllWorkers()]);
     loadWorkerFunnel();
 
-    // check for open session today
-    const restored = await tryRestoreSession();
+    // check for open session today (resume into liveSessionOps if one is live)
+    const restored = await liveSessionOps.resumeIfLive();
     if(!restored) {
       showScreen('home');
       setActiveNav(null);
@@ -1228,7 +1235,8 @@ function doLogout() {
   clearInterval(sessionTimerInterval);
   showScreen(null);
   setActiveNav(null);
-  activeZone=null; setupWorkers=[]; sessionWorkers=[]; shifts=[];
+  liveSessionOps.stop();
+  activeZone=null; setupWorkers=[]; shifts=[];
 }
 
 // SCREENS
@@ -1243,13 +1251,8 @@ function setActiveNav(name) {
 }
 
 function safeNavigate(fn) {
-  if(!activeSessionId || document.getElementById('sessions-live-tab')?.style.display === 'none') { fn(); return; }
-  if(!confirm('You have an active session in progress. Navigating away will lose all session state including dispatched workers and shift data. Are you sure?')) return;
-  if(!confirm('This cannot be undone. All unsaved session data will be lost. Continue?')) return;
-  clearInterval(sessionTimerInterval);
-  clearInterval(shiftCountdownInterval);
-  activeSessionId = null;
-  setupWorkers = []; sessionWorkers = []; shifts = [];
+  // Live session state survives view changes (owned by liveSessionOps).
+  // Navigation is no longer destructive.
   fn();
 }
 
@@ -1304,7 +1307,7 @@ async function loadChatSessionSelect() {
   sel.innerHTML = '<option value="">Select session to log against...</option>'
     + sessions.map(s =>
         '<option value="'+s.id+'">'
-        +(s.zones?.name||'Unknown zone')+' — '
+        +(s.zones?.name||'Unknown zone')+' â€” '
         +new Date(s.session_date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})
         +(s.start_time?' '+s.start_time.slice(0,5):'')
         +'</option>'
@@ -1340,7 +1343,7 @@ function parseZoomChat() {
 
   if(!messages.length) { alert('Could not parse any messages. Check the format matches Zoom chat export.'); return; }
 
-  // identify shift posts — messages from Sam/dispatcher containing keywords
+  // identify shift posts â€” messages from Sam/dispatcher containing keywords
   // keywords are typically uppercase short words
   // shift posts are messages that contain a keyword prompt
   const keywordPattern = /^[A-Z0-9]{2,8}$/i;
@@ -1439,14 +1442,14 @@ function parseZoomChat() {
     +'</tr></thead><tbody>'
     +parsedChatData.map((d,i) => {
       const matchBadge = d.matched
-        ? '<span style="color:var(--green);font-size:11px;">✓ '+d.worker.name+'</span>'
+        ? '<span style="color:var(--green);font-size:11px;">âœ“ '+d.worker.name+'</span>'
         : '<span style="color:var(--red);font-size:11px;">No match</span>';
 
       const responsesSummary = d.responses.map(r =>
         r.responseSeconds !== null
           ? '<span style="color:var(--green);font-size:11px;">'+r.responseSeconds+'s</span>'
           : '<span style="color:var(--grey);font-size:11px;">No response</span>'
-      ).join(' · ') || '—';
+      ).join(' Â· ') || 'â€”';
 
       const overrideSelect = '<select class="field" style="max-width:160px;margin-bottom:0;font-size:11px;" onchange="overrideChatMatch('+i+', this.value)">'
         +'<option value="">Override...</option>'
@@ -1456,13 +1459,13 @@ function parseZoomChat() {
       return '<tr>'
         +'<td style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+d.sender+'</td>'
         +'<td>'+matchBadge+'</td>'
-        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+(d.checkIn||'—')+'</span></td>'
+        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+(d.checkIn||'â€”')+'</span></td>'
         +'<td>'+responsesSummary+'</td>'
         +'<td>'+overrideSelect+'</td>'
         +'</tr>';
     }).join('')
     +'</tbody></table>'
-    +'<div style="font-size:11px;color:var(--grey);margin-top:12px;">'+messages.length+' messages parsed · '+parsedChatData.length+' workers found · '+shiftPosts.length+' shift posts detected</div>';
+    +'<div style="font-size:11px;color:var(--grey);margin-top:12px;">'+messages.length+' messages parsed Â· '+parsedChatData.length+' workers found Â· '+shiftPosts.length+' shift posts detected</div>';
 }
 
 function overrideChatMatch(index, workerId) {
@@ -1518,7 +1521,7 @@ async function saveChatData() {
 function parseSessionChat() {
   const raw = document.getElementById('session-chat-input').value.trim();
   if(!raw) { alert('Paste your Zoom chat first.'); return; }
-  if(!activeSessionId) { alert('No active session found.'); return; }
+  if(!liveSessionOps.sessionId) { alert('No active session found.'); return; }
 
   const lines = raw.split('\n');
   const messages = [];
@@ -1579,15 +1582,15 @@ function parseSessionChat() {
 
   const resultsDiv = document.getElementById('session-chat-results');
   resultsDiv.style.display = 'block';
-  resultsDiv.innerHTML = '<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Parsed — '+messages.length+' messages · '+parsedChatData.length+' workers · '+shiftPosts.length+' shift posts</div>'
+  resultsDiv.innerHTML = '<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Parsed â€” '+messages.length+' messages Â· '+parsedChatData.length+' workers Â· '+shiftPosts.length+' shift posts</div>'
     +'<table class="history-table"><thead><tr><th>Zoom Name</th><th>Matched Worker</th><th>Check-in</th><th>Response Time</th><th>Override</th></tr></thead><tbody>'
     +parsedChatData.map((d,i) => {
       const bestResp = d.responses.filter(r=>r.responseSeconds!==null).sort((a,b)=>a.responseSeconds-b.responseSeconds)[0];
       return '<tr>'
         +'<td style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+d.sender+'</td>'
-        +'<td>'+(d.matched?'<span style="color:var(--green);font-size:11px;">✓ '+d.worker.name+'</span>':'<span style="color:var(--red);font-size:11px;">No match</span>')+'</td>'
-        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+(d.checkIn||'—')+'</span></td>'
-        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--green);">'+(bestResp?bestResp.responseSeconds+'s':'—')+'</span></td>'
+        +'<td>'+(d.matched?'<span style="color:var(--green);font-size:11px;">âœ“ '+d.worker.name+'</span>':'<span style="color:var(--red);font-size:11px;">No match</span>')+'</td>'
+        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">'+(d.checkIn||'â€”')+'</span></td>'
+        +'<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--green);">'+(bestResp?bestResp.responseSeconds+'s':'â€”')+'</span></td>'
         +'<td><select class="field" style="max-width:150px;margin-bottom:0;font-size:11px;" onchange="overrideChatMatch('+i+', this.value)">'
         +'<option value="">Override...</option>'
         +allWorkers.map(w=>'<option value="'+w.id+'">'+w.name+'</option>').join('')
@@ -1606,7 +1609,7 @@ async function saveSessionChatData() {
   for(const d of matched) {
     const bestResp = d.responses.filter(r=>r.responseSeconds!==null).sort((a,b)=>a.responseSeconds-b.responseSeconds)[0];
     await sbUpsert('session_chat_log', {
-      session_id: activeSessionId,
+      session_id: liveSessionOps.sessionId,
       application_id: d.worker.id,
       zoom_display_name: d.sender,
       checked_in: !!d.checkIn,
@@ -1643,10 +1646,10 @@ async function loadReports() {
       +'<td><span class="mono">'+(r.total_shifts||0)+'</span></td>'
       +'<td><span class="mono">'+(r.total_hours||0)+'hrs</span></td>'
       +'<td><span class="mono">'+(r.requests_filled||0)+'/'+(r.requests_total||0)+'</span></td>'
-      +'<td><span class="mono">'+(r.avg_response_minutes!=null?r.avg_response_minutes+'m':'—')+'</span></td>'
-      +'<td><span class="mono">'+(r.customers_per_hour!=null?r.customers_per_hour:'—')+'</span></td>'
-      +'<td><span class="mono">'+(r.revenue_protected!=null?'£'+parseFloat(r.revenue_protected).toFixed(0):'—')+'</span></td>'
-      +'<td><span class="mono" style="color:var(--green);">'+(r.net_value!=null?'£'+parseFloat(r.net_value).toFixed(0):'—')+'</span></td>'
+      +'<td><span class="mono">'+(r.avg_response_minutes!=null?r.avg_response_minutes+'m':'â€”')+'</span></td>'
+      +'<td><span class="mono">'+(r.customers_per_hour!=null?r.customers_per_hour:'â€”')+'</span></td>'
+      +'<td><span class="mono">'+(r.revenue_protected!=null?'Â£'+parseFloat(r.revenue_protected).toFixed(0):'â€”')+'</span></td>'
+      +'<td><span class="mono" style="color:var(--green);">'+(r.net_value!=null?'Â£'+parseFloat(r.net_value).toFixed(0):'â€”')+'</span></td>'
       +'</tr>'
     ).join('')
     +'</tbody></table>';
@@ -1689,7 +1692,7 @@ async function openSavedReport(index) {
 
   const barName = barData?.name || r.bars?.name || 'Unknown venue';
   const date = r.report_date ? new Date(r.report_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
-  reportSubtitle.textContent = barName + ' · ' + date;
+  reportSubtitle.textContent = barName + ' Â· ' + date;
 
   // load on duty contact
   let onDutyName = 'your manager';
@@ -1734,18 +1737,18 @@ async function openSavedReport(index) {
     const glasiCost = parseFloat(r.total_hours||0) * 25;
     impactNarrative = '<div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy-mid) 100%);border:1px solid var(--ice);border-radius:16px;padding:24px;margin-bottom:20px;">'
       +'<div style="font-size:9px;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:14px;">The Impact</div>'
-      +'<p style="margin:0 0 16px;font-size:15px;line-height:1.8;">'+onDutyName+' using Glasi at the right time meant that approximately <strong style="color:var(--white);font-size:18px;">'+(r.customers_per_hour||'—')+' additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at, getting the level of service you strive to deliver.</p>'
+      +'<p style="margin:0 0 16px;font-size:15px;line-height:1.8;">'+onDutyName+' using Glasi at the right time meant that approximately <strong style="color:var(--white);font-size:18px;">'+(r.customers_per_hour||'â€”')+' additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at, getting the level of service you strive to deliver.</p>'
       +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">As a result, those customers are more likely to come back. That\'s another benefit of using Glasi at the right moment.</p>'
-      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">Over '+r.total_hours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);font-size:18px;">£'+parseFloat(r.revenue_protected).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+glasiCost.toFixed(0)+'.</p>'
+      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">Over '+r.total_hours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);font-size:18px;">Â£'+parseFloat(r.revenue_protected).toFixed(0)+' in revenue protected</strong> against a Glasi cost of Â£'+glasiCost.toFixed(0)+'.</p>'
       +'<div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">'
       +'<div style="font-size:12px;color:var(--grey);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Tonight in numbers</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">'
       +'<div style="color:var(--grey);">Request from</div><div style="'+monoStyle+'">'+onDutyName+(firstRequestTime?', '+firstRequestTime:'')+'</div>'
-      +'<div style="color:var(--grey);">Response time</div><div style="'+monoStyle+'">'+(r.avg_response_minutes!=null?r.avg_response_minutes+' minutes':'—')+'</div>'
+      +'<div style="color:var(--grey);">Response time</div><div style="'+monoStyle+'">'+(r.avg_response_minutes!=null?r.avg_response_minutes+' minutes':'â€”')+'</div>'
       +'<div style="color:var(--grey);">Floor support</div><div style="'+monoStyle+'">'+r.total_hours+' hours</div>'
-      +'<div style="color:var(--grey);">Customers per hour</div><div style="'+monoStyle+'">'+(r.customers_per_hour||'—')+' additional</div>'
-      +'<div style="color:var(--grey);">Revenue protected</div><div style="color:var(--green);'+monoStyle+'">£'+parseFloat(r.revenue_protected).toFixed(0)+'</div>'
-      +'<div style="color:var(--grey);">Glasi cost</div><div style="'+monoStyle+'">£'+glasiCost.toFixed(0)+'</div>'
+      +'<div style="color:var(--grey);">Customers per hour</div><div style="'+monoStyle+'">'+(r.customers_per_hour||'â€”')+' additional</div>'
+      +'<div style="color:var(--grey);">Revenue protected</div><div style="color:var(--green);'+monoStyle+'">Â£'+parseFloat(r.revenue_protected).toFixed(0)+'</div>'
+      +'<div style="color:var(--grey);">Glasi cost</div><div style="'+monoStyle+'">Â£'+glasiCost.toFixed(0)+'</div>'
       +'</div></div></div>';
   }
 
@@ -1836,8 +1839,8 @@ function renderPromotionBanner() {
       +'<div>'
       +'<div style="font-size:13px;font-weight:500;">'+w.name+'</div>'
       +'<div style="font-size:11px;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'
-      +'Tier '+(w.tier||1)+' → Tier '+w._suggestedTier+' · '
-      +w._shiftsCompleted+' shifts · '
+      +'Tier '+(w.tier||1)+' â†’ Tier '+w._suggestedTier+' Â· '
+      +w._shiftsCompleted+' shifts Â· '
       +parseFloat(w.reliability_score).toFixed(1)+'% reliability'
       +'</div>'
       +'</div>'
@@ -1881,7 +1884,7 @@ function renderWorkerList() {
       +'<td><span class="mono" style="font-size:11px;">'+(w.email||'')+'</span></td>'
       +'<td><span class="mono">'+(w.phone||'')+'</span></td>'
       +'<td><span class="status-badge badge-pending">Tier '+(w.tier||1)+'</span></td>'
-      +'<td><span class="mono">£'+(w.hourly_rate||tierRate(w.tier)).toFixed(2)+'/hr</span></td>'
+      +'<td><span class="mono">Â£'+(w.hourly_rate||tierRate(w.tier)).toFixed(2)+'/hr</span></td>'
       +'<td><span class="mono">'+(w._shiftsCompleted||0)+'</span></td>'
       +'<td>'+(w.reliability_score!=null?scorebadge(w.reliability_score):'<span style="color:var(--grey);font-size:11px;">No data</span>')+'</td>'
       +'<td><span class="status-badge '+(statusColour(w.worker_status||'registered'))+'">'+(w.worker_status||'registered')+'</span></td>'
@@ -1915,7 +1918,7 @@ async function openEditWorker(id) {
     scoreEl.innerHTML = scorebadge(w.reliability_score)+' <span style="font-size:11px;color:var(--grey);font-weight:400;margin-left:8px;">'+(w._shiftsCompleted||0)+' shifts completed</span>';
     scoreUpdatedEl.textContent = w.reliability_updated_at ? 'Last updated '+fmtT(w.reliability_updated_at) : '';
   } else {
-    scoreEl.textContent = 'No data yet — '+(w._shiftsCompleted||0)+' shifts completed';
+    scoreEl.textContent = 'No data yet â€” '+(w._shiftsCompleted||0)+' shifts completed';
     scoreEl.style.color = 'var(--grey)';
     scoreUpdatedEl.textContent = 'Score calculated on session close';
   }
@@ -1937,6 +1940,7 @@ async function openEditWorker(id) {
   }
   window._editWorkerBars = allBars;
   openOv('edit-worker');
+  loadWorkerCancellations(id);
 }
 
 function autoUpdateRate() {
@@ -2027,7 +2031,7 @@ async function tryRestoreSession() {
   if(!openSessions.length) return false;
 
   const session = openSessions[0];
-  activeSessionId = session.id;
+  liveSessionOps.sessionId = session.id;
 
   // restore zone
   const zone = ZONES.find(z => z.dbId === session.zone_id);
@@ -2049,7 +2053,7 @@ async function tryRestoreSession() {
       '?session_id=eq.'+session.id+'&order=request_time.asc&select=*,bars(name)'
     )
   ]);
-  activeShiftRequests = reqData.map(r => ({
+  liveSessionOps.requests = reqData.map(r => ({
     ...r,
     _barName: r.bars?.name || ''
   }));
@@ -2082,8 +2086,8 @@ async function tryRestoreSession() {
     }));
   }
 
-  // rebuild sessionWorkers from session_workers table
-  sessionWorkers = await Promise.all(swData.map(async sw => {
+  // rebuild liveSessionOps.workers from session_workers table
+  liveSessionOps.workers = await Promise.all(swData.map(async sw => {
     const appWorker = allWorkers.find(w => w.id === sw.application_id) || {};
     const barRecord = bars.find(b => b.id === sw.bar_id) || null;
 
@@ -2095,7 +2099,7 @@ async function tryRestoreSession() {
     }
 
     // get shift request info if linked
-    const linkedRequest = activeShiftRequests.find(r => r.id === sw.shift_request_id);
+    const linkedRequest = liveSessionOps.requests.find(r => r.id === sw.shift_request_id);
 
     return {
       ...appWorker,
@@ -2139,10 +2143,10 @@ async function tryRestoreSession() {
   }
 
   // start shift countdown for any onshift workers
-  if(sessionWorkers.some(w=>w.status==='onshift')) startShiftCountdown();
+  if(liveSessionOps.workers.some(w=>w.status==='onshift')) startShiftCountdown();
 
   // Load worker bar distances
-  const appIds = sessionWorkers.map(w => w.applicationId).join(',');
+  const appIds = liveSessionOps.workers.map(w => w.applicationId).join(',');
   if(appIds) {
     try {
       const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&select=application_id,bar_id,walking_minutes');
@@ -2154,7 +2158,7 @@ async function tryRestoreSession() {
   try {
     const activeShifts = await sbGet('shifts', '?session_id=eq.'+session.id+'&select=session_worker_id,glasi_ref,clock_in_confirmed_at,shift_length_hours&order=id.desc');
     activeShifts.forEach(s => {
-      const worker = sessionWorkers.find(w => w.sessionWorkerId === s.session_worker_id);
+      const worker = liveSessionOps.workers.find(w => w.sessionWorkerId === s.session_worker_id);
       if(worker) {
         worker.gsRef = s.glasi_ref;
         worker.clockInAt = s.clock_in_confirmed_at;
@@ -2164,7 +2168,7 @@ async function tryRestoreSession() {
   } catch(e) {}
 
   // Navigate to Sessions Live tab
-  startDashboardRealtime(session.id);
+  liveSessionOps.start(session.id);
   showScreen('sessions');
   setActiveNav('sessions');
   switchSessionsTab('live');
@@ -2176,7 +2180,7 @@ async function tryRestoreSession() {
     bootstrapPendingRequestTimers();
   }, 100);
 
-  console.log('Session restored:', session.id, 'with', sessionWorkers.length, 'workers', activeShiftRequests.length, 'requests');
+  console.log('Session restored:', session.id, 'with', liveSessionOps.workers.length, 'workers', liveSessionOps.requests.length, 'requests');
   return true;
 }
 
@@ -2308,12 +2312,12 @@ async function goToZoneDetail(zoneId) {
   const tomorrowLabel = tomorrowSlot.slice(0,3).charAt(0).toUpperCase()+tomorrowSlot.slice(0,3).slice(1);
 
   const bannerColor = availableTonightAny.length < 3 ? 'var(--red)' : availableTonightAny.length < 5 ? 'var(--amber)' : 'var(--green)';
-  const bannerText = availableTonightAny.length < 3 ? 'Low coverage tonight — consider recruiting more workers in this zone'
+  const bannerText = availableTonightAny.length < 3 ? 'Low coverage tonight â€” consider recruiting more workers in this zone'
     : availableTonightAny.length < 5 ? 'Moderate coverage tonight'
     : 'Good coverage tonight';
 
   const availBanner = '<div style="background:var(--navy-mid);border:1px solid '+bannerColor+';border-radius:16px;padding:20px;margin-bottom:24px;">'
-    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Workers Available — '+dayLabel+'</div>'
+    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Workers Available â€” '+dayLabel+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:12px;">'
     +'<div style="text-align:center;">'
     +'<div style="font-size:28px;font-weight:700;color:'+bannerColor+';font-family:\'JetBrains Mono\',monospace;">'+availableTonightAny.length+'</div>'
@@ -2351,7 +2355,7 @@ async function goToZoneDetail(zoneId) {
 
   const workersHtml = '<div>'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
-    +'<div class="section-label">Workers in this zone ('+zoneWorkers.length+') — '+availableTonight.length+' available tonight</div>'
+    +'<div class="section-label">Workers in this zone ('+zoneWorkers.length+') â€” '+availableTonight.length+' available tonight</div>'
     +'</div>'
     +(zoneWorkers.length
       ? '<table class="history-table"><thead><tr><th>Name</th><th>Postcode</th><th>Tier</th><th>Score</th><th>Tonight</th></tr></thead><tbody>'
@@ -2435,7 +2439,7 @@ function renderInviteGrid() {
       +'<div class="invite-worker-name">'+w.name+'</div>'
       +(w.reliability_score!=null?scorebadge(w.reliability_score):'')
       +'</div>'
-      +'<div class="invite-worker-meta">'+(w.phone||'')+' · '+(w.postcode_full||'')+'</div>'
+      +'<div class="invite-worker-meta">'+(w.phone||'')+' Â· '+(w.postcode_full||'')+'</div>'
       +'</div>'
     ).join('');
   }
@@ -2446,8 +2450,8 @@ function renderInviteGrid() {
   } else {
     invList.innerHTML=invited.map(w=>
       '<div class="invite-worker-card invited" onclick="toggleInvite(\''+w.email+'\', false)">'
-      +'<div class="invite-worker-name">'+w.name+' <span style="font-size:10px;color:var(--amber);">✓ Invited</span></div>'
-      +'<div class="invite-worker-meta">'+(w.phone||'')+' · '+(w.postcode_full||'')+'</div>'
+      +'<div class="invite-worker-name">'+w.name+' <span style="font-size:10px;color:var(--amber);">âœ“ Invited</span></div>'
+      +'<div class="invite-worker-meta">'+(w.phone||'')+' Â· '+(w.postcode_full||'')+'</div>'
       +'</div>'
     ).join('');
   }
@@ -2483,13 +2487,13 @@ async function startSession() {
     return;
   }
 
-  activeSessionId = sessionData[0].id;
-  startDashboardRealtime(activeSessionId);
+  liveSessionOps.sessionId = sessionData[0].id;
+  liveSessionOps.start(liveSessionOps.sessionId);
 
   // write each worker to session_workers as invited
   for(const w of setupWorkers) {
     const sw = await sbPost('session_workers', {
-      session_id: activeSessionId,
+      session_id: liveSessionOps.sessionId,
       application_id: w.id,
       worker_name: w.name,
       worker_phone: w.phone||null,
@@ -2498,7 +2502,7 @@ async function startSession() {
     w.sessionWorkerId = sw?.[0]?.id || null;
   }
 
-  sessionWorkers=setupWorkers.map(w=>({
+  liveSessionOps.workers=setupWorkers.map(w=>({
     ...w,
     applicationId: w.id,
     id: uid(),
@@ -2710,9 +2714,9 @@ async function toggleOnDuty(contactId, newVal, barId) {
 }
 
 function updateCounts() {
-  const avail=sessionWorkers.filter(w=>w.status==='available'||w.status==='left').length;
-  const invited=sessionWorkers.filter(w=>w.status==='invited'||w.status==='noshow').length;
-  const onshift=sessionWorkers.filter(w=>w.status==='dispatched'||w.status==='onshift').length;
+  const avail=liveSessionOps.workers.filter(w=>w.status==='available'||w.status==='left').length;
+  const invited=liveSessionOps.workers.filter(w=>w.status==='invited'||w.status==='noshow').length;
+  const onshift=liveSessionOps.workers.filter(w=>w.status==='dispatched'||w.status==='onshift').length;
   const done=shifts.length;
   const roomTotal=avail+invited;
   document.getElementById('count-room').textContent=roomTotal||'';
@@ -2723,13 +2727,264 @@ function updateCounts() {
 }
 
 // REALTIME
-let dashboardRealtimeWs = null;
+//
+// liveSessionOps is the single owner of session state and realtime
+// subscriptions for the duration of a live session. Survives view changes.
+// Owns four WS subscriptions, a per-subscription reconnect loop with
+// exponential backoff, debounced state resync on recovery, and a pub/sub API
+// that views subscribe to. State (sessionId, workers, requests) lives here,
+// not as module-level globals.
+const liveSessionOps = {
+  // identity and state owned here. No module-level globals mirror these.
+  sessionId: null,
+  workers: [],
+  requests: [],
 
-let dashboardRealtimeWs2 = null;
-let dashboardRealtimeWs3 = null;
-let dashboardRealtimeWs4 = null;
+  // realtime + pub/sub
+  _subs: [],
+  _listeners: {},
+  _resyncTimer: null,
 
-function makeRealtimeWs(topic, pgChanges, onRecord) {
+  // visible-while-away tracking. Listeners that mutate state mark views dirty.
+  // Views consume the flag on next entry and re-render once.
+  _dirty: new Set(),
+  markDirty(view) { this._dirty.add(view); },
+  isDirty(view) { return this._dirty.has(view); },
+  consumeDirty(view) { const was = this._dirty.has(view); this._dirty.delete(view); return was; },
+
+  async start(sessionId) {
+    if(this.sessionId === sessionId && this._subs.length) return;
+    if(this._subs.length) await this.stop();
+    this.sessionId = sessionId;
+
+    this._addSub('invites', () => makeRealtimeWs(
+      'realtime:public:session_invites',
+      [{ event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId }],
+      async (record, type) => {
+        if(type !== 'UPDATE') return;
+        if(record.joined_at && !record.left_at) { await handleWorkerPortalJoin(record); this.emit('worker:joined', record); }
+        else if(record.left_at) { await handleWorkerPortalLeave(record); this.emit('worker:left', record); }
+      },
+      () => this._onSubDrop('invites')
+    ));
+
+    this._addSub('responses', () => makeRealtimeWs(
+      'realtime:public:shift_responses',
+      [{ event: 'INSERT', schema: 'public', table: 'shift_responses' }],
+      async (record, type) => {
+        if(type !== 'INSERT') return;
+        await handleNewShiftResponse(record);
+        this.emit('response:new', record);
+      },
+      () => this._onSubDrop('responses')
+    ));
+
+    this._addSub('workers', () => makeRealtimeWs(
+      'realtime:public:session_workers',
+      [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'session_id=eq.' + sessionId }],
+      async (record, type) => {
+        if(type !== 'UPDATE') return;
+        const worker = liveSessionOps.workers.find(w => w.sessionWorkerId === record.id);
+        if(worker) {
+          if(record.departed_at) worker.departedAt = record.departed_at;
+          if(record.status) worker.status = record.status;
+          if(record.clock_in_at) worker.clockInAt = record.clock_in_at;
+          if(record.status === 'completed') {
+            try {
+              const shiftRows = await sbGet('shifts', '?session_worker_id=eq.'+worker.sessionWorkerId+'&select=total_earned,clock_out_confirmed_at');
+              if(shiftRows?.[0]) {
+                worker.totalEarned = shiftRows[0].total_earned;
+                worker.clockOutAt = shiftRows[0].clock_out_confirmed_at;
+              }
+            } catch(e) {}
+          }
+        }
+        this.emit('worker:updated', record);
+      },
+      () => this._onSubDrop('workers')
+    ));
+
+    this._addSub('requests', () => makeRealtimeWs(
+      'realtime:public:shift_requests',
+      [
+        { event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId },
+        { event: 'UPDATE', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }
+      ],
+      async (record, type) => {
+        if(type === 'INSERT') {
+          const barName = bars.find(b => b.id === record.bar_id)?.name || 'Unknown';
+          record._barName = barName;
+          liveSessionOps.requests.push(record);
+          startResponseWindow(record.id);
+          this.emit('request:new', record);
+        } else if(type === 'UPDATE') {
+          const existing = liveSessionOps.requests.find(r => r.id === record.id);
+          if(existing) {
+            if(record.status) existing.status = record.status;
+            if(record.posted_at) existing.posted_at = record.posted_at;
+          }
+          this.emit('request:updated', record);
+        }
+      },
+      () => this._onSubDrop('requests')
+    ));
+
+    this.emit('session:started', { sessionId });
+  },
+
+  async stop() {
+    for(const sub of this._subs) {
+      if(sub.retryTimer) { clearTimeout(sub.retryTimer); sub.retryTimer = null; }
+      try { sub.ws?.close(); } catch(e) {}
+    }
+    this._subs = [];
+    if(this._resyncTimer) { clearTimeout(this._resyncTimer); this._resyncTimer = null; }
+    if(typeof responseWindowTimers !== 'undefined') {
+      for(const t of responseWindowTimers.values()) clearInterval(t);
+      responseWindowTimers.clear();
+    }
+    if(typeof responseWindowInterval !== 'undefined' && responseWindowInterval) {
+      clearInterval(responseWindowInterval);
+      responseWindowInterval = null;
+    }
+    this.workers.length = 0;
+    this.requests.length = 0;
+    this._dirty.clear();
+    const wasSessionId = this.sessionId;
+    this.sessionId = null;
+    if(wasSessionId) this.emit('session:stopped', { sessionId: wasSessionId });
+  },
+
+  async resumeIfLive() {
+    const restored = await tryRestoreSession();
+    if(restored) this.emit('session:resumed', { sessionId: this.sessionId });
+    return restored;
+  },
+
+  on(event, cb) { (this._listeners[event] = this._listeners[event] || []).push(cb); },
+  off(event, cb) {
+    const arr = this._listeners[event];
+    if(arr) this._listeners[event] = arr.filter(f => f !== cb);
+  },
+  emit(event, data) {
+    const arr = this._listeners[event];
+    if(!arr) return;
+    for(const cb of arr) {
+      try { cb(data); } catch(e) { console.error('liveSessionOps listener error', event, e); }
+    }
+  },
+
+  getWorker(applicationId) {
+    return liveSessionOps.workers.find(w => Number(w.applicationId) === Number(applicationId));
+  },
+  getRequest(requestId) {
+    return liveSessionOps.requests.find(r => r.id === requestId);
+  },
+
+  _addSub(name, factory) {
+    const sub = { name, ws: null, factory, retry: 0, retryTimer: null, alive: false };
+    this._subs.push(sub);
+    sub.ws = factory();
+    sub.alive = true;
+  },
+  _onSubDrop(name) {
+    if(!this.sessionId) return;
+    const sub = this._subs.find(s => s.name === name);
+    if(!sub || !sub.alive) return;
+    sub.alive = false;
+    sub.retry = Math.min(sub.retry + 1, 6);
+    const delay = Math.min(1000 * Math.pow(2, sub.retry - 1), 30000);
+    console.warn('liveSessionOps: ' + name + ' WS dropped, reconnect in ' + delay + 'ms (attempt ' + sub.retry + ')');
+    sub.retryTimer = setTimeout(() => {
+      if(!this.sessionId) return;
+      try {
+        sub.ws = sub.factory();
+        sub.alive = true;
+        this._scheduleResync();
+      } catch(e) {
+        console.error('liveSessionOps reconnect failed', name, e);
+        sub.alive = true;
+        this._onSubDrop(name);
+      }
+    }, delay);
+  },
+  _scheduleResync() {
+    if(this._resyncTimer) return;
+    this._resyncTimer = setTimeout(async () => {
+      this._resyncTimer = null;
+      if(!this.sessionId) return;
+      await this._resync();
+    }, 500);
+  },
+  async _resync() {
+    if(!this.sessionId) return;
+    const sessionId = this.sessionId;
+    try {
+      const swData = await sbGet('session_workers',
+        '?session_id=eq.'+sessionId+'&select=id,application_id,status,clock_in_at,dispatched_at,departed_at,bar_id,shift_length_hours,shift_request_id');
+      for(const sw of swData) {
+        const worker = liveSessionOps.workers.find(w => w.sessionWorkerId === sw.id);
+        if(worker) {
+          worker.status = sw.status;
+          worker.departedAt = sw.departed_at || null;
+          worker.clockInAt = sw.clock_in_at;
+          worker.dispatchedAt = sw.dispatched_at;
+          worker.shiftRequestId = sw.shift_request_id;
+        }
+      }
+      const reqData = await sbGet('shift_requests',
+        '?session_id=eq.'+sessionId+'&order=request_time.asc&select=*,bars(name)');
+      const ids = new Set(reqData.map(r => r.id));
+      for(const r of reqData) {
+        const existing = liveSessionOps.requests.find(x => x.id === r.id);
+        const _barName = r.bars?.name || '';
+        if(existing) {
+          existing.status = r.status;
+          existing._barName = _barName;
+        } else {
+          liveSessionOps.requests.push({ ...r, _barName });
+        }
+      }
+      for(let i = liveSessionOps.requests.length - 1; i >= 0; i--) {
+        if(!ids.has(liveSessionOps.requests[i].id)) liveSessionOps.requests.splice(i, 1);
+      }
+      this.emit('state:resynced', { workers: swData.length, requests: reqData.length });
+      console.log('liveSessionOps: resync complete (' + swData.length + ' workers, ' + reqData.length + ' requests)');
+    } catch(e) {
+      console.error('liveSessionOps resync failed', e);
+    }
+  }
+};
+
+// Is the live session view currently visible?
+function isLiveViewActive() {
+  const screen = document.getElementById('screen-sessions');
+  const liveTab = document.getElementById('sessions-live-tab');
+  return !!(screen && screen.classList.contains('active') && liveTab && liveTab.style.display !== 'none');
+}
+
+// Wire default listeners that re-render the live view, or mark it dirty if the
+// view is not active. Called once at module load. Listeners persist across
+// liveSessionOps.start/stop cycles (the object is reused).
+function setupLiveViewListeners() {
+  const renderOrDirty = () => {
+    if(isLiveViewActive()) { renderRoom(); renderRequestCards(); }
+    else liveSessionOps.markDirty('live');
+  };
+  liveSessionOps.on('worker:joined', renderOrDirty);
+  liveSessionOps.on('worker:left', renderOrDirty);
+  liveSessionOps.on('worker:updated', renderOrDirty);
+  liveSessionOps.on('request:new', renderOrDirty);
+  liveSessionOps.on('request:updated', renderOrDirty);
+  liveSessionOps.on('state:resynced', renderOrDirty);
+  liveSessionOps.on('session:started', renderOrDirty);
+  liveSessionOps.on('session:resumed', renderOrDirty);
+  // session:stopped intentionally has no auto-render. Close-session and logout
+  // flows do their own UI transitions.
+}
+setupLiveViewListeners();
+
+function makeRealtimeWs(topic, pgChanges, onRecord, onClose) {
   const wsUrl = SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY + '&vsn=1.0.0';
   const ws = new WebSocket(wsUrl);
   let hb = null;
@@ -2757,7 +3012,7 @@ function makeRealtimeWs(topic, pgChanges, onRecord) {
     } catch(err) { console.error('Realtime WS error:', err); }
   };
 
-  ws.onclose = () => { if(hb) clearInterval(hb); };
+  ws.onclose = (e) => { if(hb) clearInterval(hb); if(onClose) onClose(e); };
   ws.onerror = (e) => { console.error('Realtime WS error:', e); };
   return ws;
 }
@@ -2773,75 +3028,6 @@ function startScheduleRealtime() {
       if(type === 'UPDATE' && record.attendance_confirmed === 'confirmed') {
         // Refresh sessions list to update confirmed headcount
         await loadSessionsList();
-      }
-    }
-  );
-}
-
-function startDashboardRealtime(sessionId) {
-  if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} }
-  if(dashboardRealtimeWs2) { try { dashboardRealtimeWs2.close(); } catch(e) {} }
-
-  // WS 1: session_invites -- worker joins/leaves
-  dashboardRealtimeWs = makeRealtimeWs(
-    'realtime:public:session_invites',
-    [{ event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId }],
-    async (record, type) => {
-      if(type === 'UPDATE') {
-        if(record.joined_at && !record.left_at) await handleWorkerPortalJoin(record);
-        else if(record.left_at) await handleWorkerPortalLeave(record);
-      }
-    }
-  );
-
-  // WS 2: shift_responses -- worker availability responses
-  dashboardRealtimeWs2 = makeRealtimeWs(
-    'realtime:public:shift_responses',
-    [{ event: 'INSERT', schema: 'public', table: 'shift_responses' }],
-    async (record, type) => {
-      if(type === 'INSERT') await handleNewShiftResponse(record);
-    }
-  );
-
-  // WS 3: session_workers -- status and departed_at updates
-  dashboardRealtimeWs3 = makeRealtimeWs(
-    'realtime:public:session_workers',
-    [{ event: 'UPDATE', schema: 'public', table: 'session_workers', filter: 'session_id=eq.' + sessionId }],
-    async (record, type) => {
-      if(type === 'UPDATE') {
-        const worker = sessionWorkers.find(w => w.sessionWorkerId === record.id);
-        if(worker) {
-          if(record.departed_at) worker.departedAt = record.departed_at;
-          if(record.status) worker.status = record.status;
-          if(record.clock_in_at) worker.clockInAt = record.clock_in_at;
-          if(record.status === 'completed') {
-            // Fetch total_earned from shifts for display
-            try {
-              const shiftRows = await sbGet('shifts', '?session_worker_id=eq.'+worker.sessionWorkerId+'&select=total_earned,clock_out_confirmed_at');
-              if(shiftRows?.[0]) {
-                worker.totalEarned = shiftRows[0].total_earned;
-                worker.clockOutAt = shiftRows[0].clock_out_confirmed_at;
-              }
-            } catch(e) {}
-          }
-          renderRequestCards();
-        }
-      }
-    }
-  );
-
-  // WS 4: shift_requests -- new requests from bar manager portal
-  dashboardRealtimeWs4 = makeRealtimeWs(
-    'realtime:public:shift_requests',
-    [{ event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'session_id=eq.' + sessionId }],
-    async (record, type) => {
-      if(type === 'INSERT') {
-        const barName = bars.find(b => b.id === record.bar_id)?.name || 'Unknown';
-        record._barName = barName;
-        activeShiftRequests.push(record);
-        startResponseWindow(record.id);
-        renderRequestCards();
-        renderRoom();
       }
     }
   );
@@ -2875,26 +3061,24 @@ async function handleNewShiftResponse(record) {
 }
 
 async function handleWorkerPortalLeave(record) {
-  if(!activeSessionId) return;
+  // State mutator only. Render runs via liveSessionOps listener.
+  if(!liveSessionOps.sessionId) return;
   const appId = Number(record.application_id);
-  const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
+  const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === appId);
   if(worker) {
-    // Don't overwrite if already dispatched or onshift
     if(worker.status === 'dispatched' || worker.status === 'onshift') return;
     worker.status = 'invited';
     worker.joinedAt = null;
   }
-  renderRoom();
 }
 
 async function handleWorkerPortalJoin(record) {
-  // Worker joined via portal -- update their status in sessionWorkers and re-render.
-  // The DB-side trigger sync_session_worker_status_on_join also flips
-  // session_workers.status, so this local write is the fast path; the trigger
-  // is the safety net for any client that doesn't update the row directly.
-  if(!activeSessionId) return;
+  // State mutator only. The DB-side trigger sync_session_worker_status_on_join
+  // also flips session_workers.status; this local write is the fast path, the
+  // trigger is the safety net. Render runs via liveSessionOps listener.
+  if(!liveSessionOps.sessionId) return;
   const appId = Number(record.application_id);
-  const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
+  const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === appId);
   if(worker) {
     worker.status = 'available';
     worker.joinedAt = record.joined_at;
@@ -2904,18 +3088,8 @@ async function handleWorkerPortalJoin(record) {
         { status: 'available' });
     }
   } else {
-    // Worker not in list yet -- reload all
-    await loadLiveSessionWorkers(activeSessionId);
-    return;
+    await loadLiveSessionWorkers(liveSessionOps.sessionId);
   }
-  renderRoom();
-}
-
-function stopDashboardRealtime() {
-  if(dashboardRealtimeWs) { try { dashboardRealtimeWs.close(); } catch(e) {} dashboardRealtimeWs = null; }
-  if(dashboardRealtimeWs2) { try { dashboardRealtimeWs2.close(); } catch(e) {} dashboardRealtimeWs2 = null; }
-  if(dashboardRealtimeWs3) { try { dashboardRealtimeWs3.close(); } catch(e) {} dashboardRealtimeWs3 = null; }
-  if(dashboardRealtimeWs4) { try { dashboardRealtimeWs4.close(); } catch(e) {} dashboardRealtimeWs4 = null; }
 }
 
 // ROOM
@@ -2924,8 +3098,8 @@ function renderRoom() {
   const invitedGrid = document.getElementById('invited-grid');
   const invitedSection = document.getElementById('invited-section');
 
-  const available = sessionWorkers.filter(w => w.status==='available'||w.status==='left');
-  const invited = sessionWorkers.filter(w => (w.status==='invited'||w.status==='noshow') && w.status !== 'dispatched' && w.status !== 'onshift');
+  const available = liveSessionOps.workers.filter(w => w.status==='available'||w.status==='left');
+  const invited = liveSessionOps.workers.filter(w => (w.status==='invited'||w.status==='noshow') && w.status !== 'dispatched' && w.status !== 'onshift');
 
   // Available section -- workers who joined via portal
   if(!available.length) {
@@ -2969,7 +3143,7 @@ function renderRoom() {
 }
 
 function confirmWorkerArrival(wid) {
-  const w=sessionWorkers.find(x=>x.id===wid);
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
   if(!w) return;
   w.status='available';
   if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'available'});
@@ -2978,7 +3152,7 @@ function confirmWorkerArrival(wid) {
 }
 
 function markNoShow(wid) {
-  const w=sessionWorkers.find(x=>x.id===wid);
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
   if(!w) return;
   w.status='noshow';
   if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'noshow'});
@@ -3000,17 +3174,17 @@ function selectWorker(wid) {
 }
 
 function markLeft(wid) {
-  const w=sessionWorkers.find(x=>x.id===wid);
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
   if(w) { w.status='left'; if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'left'}); renderRoom(); updateCounts(); }
 }
 
 function restoreWorker(wid) {
-  const w=sessionWorkers.find(x=>x.id===wid);
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
   if(w) { w.status='available'; if(w.sessionWorkerId) sbPatch('session_workers','?id=eq.'+w.sessionWorkerId,{status:'available'}); renderRoom(); updateCounts(); }
 }
 
 function openAddWorkerToSession() {
-  const inSession=sessionWorkers.map(w=>w.applicationId);
+  const inSession=liveSessionOps.workers.map(w=>w.applicationId);
   const zonePostcodes=activeZone?.postcodes||[];
   const eligible=allWorkers.filter(w=>{
     if(inSession.includes(w.id)) return false;
@@ -3032,7 +3206,7 @@ async function addWorkerMidSession() {
   const w=allWorkers.find(x=>x.id===wid);
   if(!w) return;
   const sw=await sbPost('session_workers',{
-    session_id:activeSessionId,
+    session_id:liveSessionOps.sessionId,
     application_id:w.id,
     worker_name:w.name,
     worker_phone:w.phone||null,
@@ -3052,7 +3226,7 @@ async function addWorkerMidSession() {
     shiftRequestId:null,shiftId:uid(),
     sessionWorkerId:sw?.[0]?.id||null
   };
-  sessionWorkers.push(newWorker);
+  liveSessionOps.workers.push(newWorker);
   closeOv('add-session-worker');
   renderRoom();
   updateCounts();
@@ -3066,9 +3240,9 @@ function openDispatch(wid) {
     return;
   }
   dispatchingWorkerId=wid;
-  const w=sessionWorkers.find(x=>x.id===wid);
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
   document.getElementById('dispatch-worker-name').textContent=w.name;
-  document.getElementById('dispatch-worker-details').textContent=`${w.phone||''} · ${w.postcode_full||''}`;
+  document.getElementById('dispatch-worker-details').textContent=`${w.phone||''} Â· ${w.postcode_full||''}`;
   // populate bar dropdown from loaded bars filtered by zone
   const zoneBars=bars.filter(b=>String(b.zone_id)===String(activeZone.dbId)&&(b.status==='active'||b.status==='trial'));
   const fallback=activeZone.bars||[];
@@ -3078,7 +3252,7 @@ function openDispatch(wid) {
     document.getElementById('dispatch-bar-select').innerHTML=fallback.map(b=>`<option value="${b}">${b}</option>`).join('');
   }
   // pre-select the bar from the active request
-  const selectedReq = activeShiftRequests.find(r => r.id === selectedRequestId);
+  const selectedReq = liveSessionOps.requests.find(r => r.id === selectedRequestId);
   if(selectedReq?.bar_id) {
     document.getElementById('dispatch-bar-select').value = selectedReq.bar_id;
   }
@@ -3087,7 +3261,7 @@ function openDispatch(wid) {
 
 async function confirmDispatchBar() {
   const barVal=document.getElementById('dispatch-bar-select').value;
-  const w=sessionWorkers.find(x=>x.id===dispatchingWorkerId);
+  const w=liveSessionOps.workers.find(x=>x.id===dispatchingWorkerId);
   if(!w||!barVal) return;
 
   // find full bar record
@@ -3101,15 +3275,15 @@ async function confirmDispatchBar() {
   w.dispatchedAt=dispatchedAt;
 
   // link to selected shift request
-  const latestRequest = activeShiftRequests.find(r => r.id === selectedRequestId) || (activeShiftRequests.length ? activeShiftRequests[activeShiftRequests.length-1] : null);
+  const latestRequest = liveSessionOps.requests.find(r => r.id === selectedRequestId) || (liveSessionOps.requests.length ? liveSessionOps.requests[liveSessionOps.requests.length-1] : null);
   if(latestRequest) {
     w.shiftRequestId = latestRequest.id;
     w.requestMessage = latestRequest.raw_message || '';
     // update request status to dispatched
     sbPatch('shift_requests', `?id=eq.${latestRequest.id}`, { status: 'dispatched' });
     // update local record
-    const idx = activeShiftRequests.findIndex(r => r.id === latestRequest.id);
-    if(idx >= 0) activeShiftRequests[idx].status = 'dispatched';
+    const idx = liveSessionOps.requests.findIndex(r => r.id === latestRequest.id);
+    if(idx >= 0) liveSessionOps.requests[idx].status = 'dispatched';
     selectedRequestId = null;
     selectedWorkerId = null;
   }
@@ -3162,7 +3336,7 @@ async function confirmDispatchBar() {
   }
   document.getElementById('dispatch-eta').value = etaValue;
 
-  // build messages — will update when ETA is typed
+  // build messages â€” will update when ETA is typed
   window._dispatchContext = { w, barRecord, contactName, shiftLength };
   buildDispatchMessages();
 
@@ -3208,7 +3382,7 @@ function copyCode() {
 }
 
 function confirmDispatch() {
-  const w = sessionWorkers.find(x => x.id === dispatchingWorkerId);
+  const w = liveSessionOps.workers.find(x => x.id === dispatchingWorkerId);
   if(!w) { closeOv('dispatch-code'); return; }
   closeOv('dispatch-code');
   renderOnShift();
@@ -3217,8 +3391,8 @@ function confirmDispatch() {
 
 // ON SHIFT
 function renderOnShift() {
-  const dispatched=sessionWorkers.filter(w=>w.status==='dispatched');
-  const onshift=sessionWorkers.filter(w=>w.status==='onshift');
+  const dispatched=liveSessionOps.workers.filter(w=>w.status==='dispatched');
+  const onshift=liveSessionOps.workers.filter(w=>w.status==='onshift');
   const allActive=[...dispatched,...onshift];
   const list=document.getElementById('onshift-list');
   if(!allActive.length) { list.innerHTML='<div class="empty">No workers on shift yet.</div>'; }
@@ -3239,7 +3413,7 @@ function renderShiftCard(w) {
   const clockOutMsg = w.barRecord ? 'Hi '+(w.barContact||'the manager')+', '+w.name+"'s shift ends in 3 minutes. Please give them this clock out code when their shift ends: "+w.clockOutCode+'. Thank you.' : '';
   const endingClass = (endingSoon||shiftEnded) ? ' ending-soon' : '';
   const cdHtml = (isOnShift&&shiftMins>0) ? '<div class="countdown-timer'+(endingSoon||shiftEnded?' warning':'')+'" id="cd-'+w.id+'">'+(shiftEnded?'Shift ended':countdownStr)+'</div>' : '';
-  const clockOutSection = (endingSoon||shiftEnded) ? '<div style="font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600;">Shift ending — send clock out code to bar manager</div><div class="clockout-msg-box" id="com-'+w.id+'">'+clockOutMsg+'</div><button class="code-confirm-btn" style="width:100%;margin-bottom:10px;" onclick="copyClockOutMsg(\''+w.id+'\', this)">Copy Message to Bar Manager</button>' : '';
+  const clockOutSection = (endingSoon||shiftEnded) ? '<div style="font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600;">Shift ending â€” send clock out code to bar manager</div><div class="clockout-msg-box" id="com-'+w.id+'">'+clockOutMsg+'</div><button class="code-confirm-btn" style="width:100%;margin-bottom:10px;" onclick="copyClockOutMsg(\''+w.id+'\', this)">Copy Message to Bar Manager</button>' : '';
 
   if(!isOnShift) {
     const isEnRoute = !!w.departedAt;
@@ -3279,7 +3453,7 @@ function renderShiftCard(w) {
 }
 
 function confirmClockInLegacy(wid) {
-  const w=sessionWorkers.find(x=>x.id===wid);
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
   const input=document.getElementById(`ci-${wid}`);
   if(!w||!input) return;
   const entered=input.value.trim();
@@ -3300,7 +3474,7 @@ function startShiftCountdown() {
   if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
   shiftCountdownInterval = setInterval(() => {
     let needsRerender = false;
-    sessionWorkers.forEach(w => {
+    liveSessionOps.workers.forEach(w => {
       if(w.status !== 'onshift' || !w.clockInAt || !w.shiftLength) return;
       const shiftMins = parseFloat(w.shiftLength) * 60;
       const elapsedMins = (Date.now() - new Date(w.clockInAt).getTime()) / 60000;
@@ -3344,7 +3518,7 @@ function copyClockOutMsg(wid, btn) {
 }
 
 function confirmClockOut(wid) {
-  const w = sessionWorkers.find(x => x.id === wid);
+  const w = liveSessionOps.workers.find(x => x.id === wid);
   const input = document.getElementById(`co-${wid}`);
   if(!w || !input) return;
   const entered = input.value.trim();
@@ -3354,10 +3528,10 @@ function confirmClockOut(wid) {
     setTimeout(() => { input.style.borderColor = ''; input.placeholder = 'Enter code'; }, 1500);
     return;
   }
-  // confirmed — trigger complete shift flow
+  // confirmed â€” trigger complete shift flow
   completingShiftId = wid;
   w.clockOutAt = new Date().toISOString();
-  document.getElementById('complete-worker-info').textContent = `${w.name} · ${w.bar}`;
+  document.getElementById('complete-worker-info').textContent = `${w.name} Â· ${w.bar}`;
   document.getElementById('co-time').value = nowT();
   document.getElementById('co-notes').value = '';
   starRating = 0;
@@ -3366,14 +3540,14 @@ function confirmClockOut(wid) {
 }
 
 function undoClockIn(wid) {
-  const w=sessionWorkers.find(x=>x.id===wid);
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
   if(w) { w.status='dispatched'; w.clockInAt=null; w.clockInCode=null; renderOnShift(); }
 }
 
 function openComplete(wid) {
   completingShiftId=wid;
-  const w=sessionWorkers.find(x=>x.id===wid);
-  document.getElementById('complete-worker-info').textContent=`${w.name} · ${w.bar}`;
+  const w=liveSessionOps.workers.find(x=>x.id===wid);
+  document.getElementById('complete-worker-info').textContent=`${w.name} Â· ${w.bar}`;
   document.getElementById('co-time').value=nowT();
   document.getElementById('co-notes').value='';
   starRating=0;
@@ -3382,7 +3556,7 @@ function openComplete(wid) {
 }
 
 async function confirmComplete() {
-  const w=sessionWorkers.find(x=>x.id===completingShiftId);
+  const w=liveSessionOps.workers.find(x=>x.id===completingShiftId);
   if(!w) { closeOv('complete'); return; }
   w.clockOutAt=toISO(document.getElementById('co-time').value);
   w.rating=starRating||null;
@@ -3399,7 +3573,7 @@ async function confirmComplete() {
   w.status='completed';
   shifts.push({
     id: w.shiftId,
-    sessionId: activeSessionId,
+    sessionId: liveSessionOps.sessionId,
     workerName: w.name,
     workerPhone: w.phone||'',
     workerPostcode: w.postcode_full||'',
@@ -3429,7 +3603,7 @@ async function saveShiftToSupabase(w) {
     const hours = parseFloat(w.shiftLength)||null;
     const total = rate && hours ? parseFloat((rate*hours).toFixed(2)) : null;
     await sbPost('shifts',{
-      session_id: activeSessionId,
+      session_id: liveSessionOps.sessionId,
       shift_request_id: w.shiftRequestId||null,
       session_worker_id: w.sessionWorkerId||null,
       bar_id: w.barRecord?.id||null,
@@ -3467,12 +3641,12 @@ function renderLog() {
     return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">'
       +'<div style="'+monoStyle+'color:var(--grey);white-space:nowrap;min-width:48px;">'+fmtT(s.clockOutAt||s.clockInAt)+'</div>'
       +'<div style="flex:1;">'
-      +'<div style="font-size:13px;font-weight:500;">'+s.workerName+' — '+s.bar+'</div>'
+      +'<div style="font-size:13px;font-weight:500;">'+s.workerName+' â€” '+s.bar+'</div>'
       +'<div style="font-size:11px;color:var(--grey);margin-top:2px;">'
       +fmtLen(hours)+' shift'
-      +(s.clockInAt ? ' · Clocked in '+fmtT(s.clockInAt) : '')
-      +(s.clockOutAt ? ' · Clocked out '+fmtT(s.clockOutAt) : '')
-      +(s.rating ? ' · '+('★'.repeat(s.rating)+'☆'.repeat(5-s.rating)) : '')
+      +(s.clockInAt ? ' Â· Clocked in '+fmtT(s.clockInAt) : '')
+      +(s.clockOutAt ? ' Â· Clocked out '+fmtT(s.clockOutAt) : '')
+      +(s.rating ? ' Â· '+('â˜…'.repeat(s.rating)+'â˜†'.repeat(5-s.rating)) : '')
       +'</div>'
       +(s.requestMessage ? '<div style="font-size:11px;color:var(--ice);margin-top:2px;font-style:italic;">"'+s.requestMessage+'"</div>' : '')
       +'</div>'
@@ -3497,14 +3671,15 @@ function showRequestDetail(index) {
   const s = shifts[index];
   if(!s) return;
   // find the linked request
-  const req = activeShiftRequests.find(r => r.raw_message === s.requestMessage) || null;
+  const req = liveSessionOps.requests.find(r => r.raw_message === s.requestMessage) || null;
   document.getElementById('rd-bar').textContent = s.bar;
   document.getElementById('rd-message').textContent = s.requestMessage || 'No message recorded';
-  document.getElementById('rd-request-time').textContent = s.requestTime ? fmtT(s.requestTime) : '—';
-  document.getElementById('rd-posted-time').textContent = req?.posted_at ? fmtT(req.posted_at) : '—';
-  document.getElementById('rd-shift-length').textContent = s.shiftLength ? fmtLen(parseFloat(s.shiftLength)) : '—';
-  document.getElementById('rd-status-badge').innerHTML = req ? '<span class="status-badge badge-'+(req.status||'pending')+'">'+(req.status||'pending')+'</span>' : '—';
+  document.getElementById('rd-request-time').textContent = s.requestTime ? fmtT(s.requestTime) : 'â€”';
+  document.getElementById('rd-posted-time').textContent = req?.posted_at ? fmtT(req.posted_at) : 'â€”';
+  document.getElementById('rd-shift-length').textContent = s.shiftLength ? fmtLen(parseFloat(s.shiftLength)) : 'â€”';
+  document.getElementById('rd-status-badge').innerHTML = req ? '<span class="status-badge badge-'+(req.status||'pending')+'">'+(req.status||'pending')+'</span>' : 'â€”';
   openOv('request-detail');
+  loadRequestCancellations(req?.id);
 }
 
 // CSV EXPORTS
@@ -3536,8 +3711,8 @@ function exportPayrollCSV() {
       fmtT(s.clockInAt),
       fmtT(s.clockOutAt),
       fmtLen(hours),
-      rate?'£'+rate.toFixed(2)+'/hr':'',
-      rate&&hours?'£'+(rate*hours).toFixed(2):''
+      rate?'Â£'+rate.toFixed(2)+'/hr':'',
+      rate&&hours?'Â£'+(rate*hours).toFixed(2):''
     ];
   });
   downloadCSV([headers,...rows].map(csvRow).join('\n'), 'glasi-payroll-'+today()+'.csv');
@@ -3556,8 +3731,8 @@ function exportFullCSV() {
       s.requestMessage||'', s.requestTime?fmtT(s.requestTime):'',
       fmtT(s.dispatchedAt), fmtT(s.clockInAt), fmtT(s.clockOutAt),
       fmtLen(hours),
-      rate?'£'+rate.toFixed(2)+'/hr':'',
-      rate&&hours?'£'+(rate*hours).toFixed(2):'',
+      rate?'Â£'+rate.toFixed(2)+'/hr':'',
+      rate&&hours?'Â£'+(rate*hours).toFixed(2):'',
       s.code||'', s.rating||'', s.notes||''
     ];
   });
@@ -3573,14 +3748,14 @@ function scorebadge(score) {
 }
 
 async function calculateReliabilityScore(applicationId) {
-  // 1. Commitment rate (35%) — sessions joined / sessions invited
+  // 1. Commitment rate (35%) â€” sessions joined / sessions invited
   const swData = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&select=status');
   const totalInvited = swData.length;
   if(!totalInvited) return null; // no data yet
   const confirmed = swData.filter(r => ['available','dispatched','completed'].includes(r.status)).length;
   const commitmentRate = confirmed / totalInvited;
 
-  // 2. Arrival reliability (30%) — based on avg delta
+  // 2. Arrival reliability (30%) â€” based on avg delta
   const swIds = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&select=id');
   let arrivalScore = 1; // default full marks if no data
   if(swIds.length) {
@@ -3600,7 +3775,7 @@ async function calculateReliabilityScore(applicationId) {
     }
   }
 
-  // 3. Response rate (20%) — shift_responded / total sessions from session_chat_log
+  // 3. Response rate (20%) â€” shift_responded / total sessions from session_chat_log
   let responseScore = 1; // default full marks if no data
   const chatLog = await sbGet('session_chat_log', '?application_id=eq.'+applicationId+'&select=shift_responded');
   if(chatLog.length) {
@@ -3608,7 +3783,7 @@ async function calculateReliabilityScore(applicationId) {
     responseScore = responded / chatLog.length;
   }
 
-  // 4. Completion rate (10%) — completed shifts / accepted shifts
+  // 4. Completion rate (10%) â€” completed shifts / accepted shifts
   let completionScore = 1;
   if(swIds.length) {
     const idList = swIds.map(r=>r.id).join(',');
@@ -3626,7 +3801,7 @@ async function calculateReliabilityScore(applicationId) {
 
 async function updateWorkerReliabilityScores() {
   // get unique application ids from this session
-  const appIds = [...new Set(sessionWorkers.map(w => w.applicationId).filter(Boolean))];
+  const appIds = [...new Set(liveSessionOps.workers.map(w => w.applicationId).filter(Boolean))];
   for(const appId of appIds) {
     const score = await calculateReliabilityScore(appId);
     if(score !== null) {
@@ -3639,7 +3814,7 @@ async function updateWorkerReliabilityScores() {
 }
 
 
-// ── POINTS SYSTEM CONSTANTS ────────────────────────────────────────────────
+// â”€â”€ POINTS SYSTEM CONSTANTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Locked spec. No further changes without Sam's explicit instruction.
 // I'm Available: +15 base, +30 total under 30s. I'll Pass: +1 base, +5 total under 30s.
 // No separate speed bonus; only the under-30-second threshold matters.
@@ -3683,7 +3858,7 @@ function pointsToNextTier(points) {
   return 0; // already at max tier
 }
 
-// ── POINTS LEDGER HELPER ───────────────────────────────────────────────────
+// â”€â”€ POINTS LEDGER HELPER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Single source of truth for any change to applications.total_points. Writes
 // one row per non-zero award to points_ledger, updates the cached
 // applications.total_points and applications.tier, and logs a tier_promoted
@@ -3827,14 +4002,14 @@ async function calculateSessionPoints(applicationId, sessionId) {
 }
 
 async function updateWorkerPoints() {
-  const appIds = [...new Set(sessionWorkers.map(w => w.applicationId).filter(Boolean))];
+  const appIds = [...new Set(liveSessionOps.workers.map(w => w.applicationId).filter(Boolean))];
   for(const appId of appIds) {
-    const { breakdown } = await calculateSessionPoints(appId, activeSessionId);
+    const { breakdown } = await calculateSessionPoints(appId, liveSessionOps.sessionId);
     if(!breakdown.length) continue;
 
     // Idempotency: skip if this session has already been ledger-recorded for this worker.
     const existing = await sbGet('points_ledger',
-      '?application_id=eq.'+appId+'&session_id=eq.'+activeSessionId+'&reason=neq.tier_promoted&select=id');
+      '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId+'&reason=neq.tier_promoted&select=id');
     if(existing.length) continue;
 
     const awards = breakdown
@@ -3845,28 +4020,28 @@ async function updateWorkerPoints() {
         notes: BREAKDOWN_REASON_MAP[b.action] ? null : 'Unmapped breakdown label: ' + b.action
       }));
 
-    await awardPoints(appId, awards, { sessionId: activeSessionId });
+    await awardPoints(appId, awards, { sessionId: liveSessionOps.sessionId });
     const earned = awards.reduce((s, a) => s + a.amount, 0);
 
     await sbPatch('session_workers',
-      '?application_id=eq.'+appId+'&session_id=eq.'+activeSessionId,
+      '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId,
       { points_earned: earned });
   }
 }
 
 async function generateSessionReports() {
-  const appIds = [...new Set(sessionWorkers.map(w => w.applicationId).filter(Boolean))];
+  const appIds = [...new Set(liveSessionOps.workers.map(w => w.applicationId).filter(Boolean))];
   const reports = [];
 
   for(const appId of appIds) {
-    const sw = sessionWorkers.find(w => w.applicationId === appId);
+    const sw = liveSessionOps.workers.find(w => w.applicationId === appId);
     if(!sw) continue;
 
     const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=name,phone,reliability_score,total_points,tier');
     const app = appRows[0];
     if(!app) continue;
 
-    const { base, breakdown } = await calculateSessionPoints(appId, activeSessionId);
+    const { base, breakdown } = await calculateSessionPoints(appId, liveSessionOps.sessionId);
     const earned = base;
     const newTotal = (parseInt(app.total_points) || 0) + earned;
     const currentTier = pointsToTier(newTotal);
@@ -3894,7 +4069,7 @@ function downloadSessionReports(reports) {
       '',
       "Thanks for joining tonight. Here's your update.",
       '',
-      'TIER ' + r.currentTier + ' — ' + r.newTotal + ' points',
+      'TIER ' + r.currentTier + ' â€” ' + r.newTotal + ' points',
       r.newTotal + ' / ' + (TIER_THRESHOLDS[r.currentTier] || r.newTotal) + ' points',
       r.toNext > 0 ? 'Next tier in ' + r.toNext + ' points' : 'Maximum tier reached',
       '',
@@ -3909,8 +4084,8 @@ function downloadSessionReports(reports) {
 
     lines = lines.concat([
       '',
-      'Current rate: £' + tierRate + '/hr',
-      nextTierRate ? ('Tier ' + (r.currentTier+1) + ' rate: £' + nextTierRate + '/hr') : '',
+      'Current rate: Â£' + tierRate + '/hr',
+      nextTierRate ? ('Tier ' + (r.currentTier+1) + ' rate: Â£' + nextTierRate + '/hr') : '',
       '',
       'Keep showing up and the shifts will come.',
       '',
@@ -3935,8 +4110,8 @@ async function confirmCloseSession() {
   // capture session data before clearing
   const sessionShifts = [...shifts];
   const sessionZone = activeZone;
-  const sessionId = activeSessionId;
-  const sessionRequests = [...activeShiftRequests];
+  const sessionId = liveSessionOps.sessionId;
+  const sessionRequests = [...liveSessionOps.requests];
 
   // write end_time and status to sessions table
   if(sessionId) await sbPatch('sessions', '?id=eq.'+sessionId, { end_time: new Date().toLocaleTimeString('en-GB', {timeZone:'Europe/London', hour12:false}), status: 'closed' });
@@ -3946,12 +4121,11 @@ async function confirmCloseSession() {
   const reports = await generateSessionReports();
   await updateWorkerPoints();
 
-  // clear session state
-  activeSessionId = null;
-  activeShiftRequests = [];
+  // clear session state (liveSessionOps clears liveSessionOps.workers, liveSessionOps.requests, liveSessionOps.sessionId)
+  await liveSessionOps.stop();
   selectedRequestId = null;
   selectedWorkerId = null;
-  setupWorkers=[]; sessionWorkers=[]; shifts=[];
+  setupWorkers=[]; shifts=[];
 
   showScreen('sessions');
   setActiveNav('sessions');
@@ -3995,7 +4169,7 @@ async function generateSessionReport(sessionShifts, zone, requests) {
   const date = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'Europe/London' });
   const barName = firstShift?.bar || zone?.name || 'Unknown venue';
 
-  document.getElementById('report-subtitle').textContent = barName + ' · ' + date;
+  document.getElementById('report-subtitle').textContent = barName + ' Â· ' + date;
 
   // calculate totals from session data
   const totalShifts = sessionShifts.length;
@@ -4004,7 +4178,7 @@ async function generateSessionReport(sessionShifts, zone, requests) {
   const filledRequests = requests.filter(r => r.status === 'dispatched').length;
   const totalRequests = requests.length;
 
-  // response time — avg from request_time to dispatched
+  // response time â€” avg from request_time to dispatched
   let avgResponseMins = null;
   const responseTimes = sessionShifts.filter(s => s.requestTime && s.dispatchedAt).map(s => {
     return Math.round((new Date(s.dispatchedAt) - new Date(s.requestTime)) / 60000);
@@ -4051,7 +4225,7 @@ async function generateSessionReport(sessionShifts, zone, requests) {
     net_value: netValueSave
   }).catch(e => console.log('Report save failed', e));
 
-  // shift breakdown — anonymous, no cost
+  // shift breakdown â€” anonymous, no cost
   const shiftRows = sessionShifts.map(s =>
     '<tr>'
     +'<td>Glasi Worker</td>'
@@ -4079,7 +4253,7 @@ async function generateSessionReport(sessionShifts, zone, requests) {
 
   const monoStyle = 'font-family:\'JetBrains Mono\',monospace;font-variant-numeric:tabular-nums;';
 
-  // request block — the evidence
+  // request block â€” the evidence
   let requestSection = '';
   if(firstRequestTime) {
     requestSection = '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;">'
@@ -4099,16 +4273,16 @@ async function generateSessionReport(sessionShifts, zone, requests) {
       +'<div style="font-size:9px;letter-spacing:3px;color:var(--ice);text-transform:uppercase;margin-bottom:14px;">The Impact</div>'
       +'<p style="margin:0 0 16px;font-size:15px;line-height:1.8;">'+onDutyName+' using Glasi at the right time meant that approximately <strong style="color:var(--white);font-size:18px;">'+customersPerHrSave+' additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at, getting the level of service you strive to deliver.</p>'
       +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">As a result, those customers are more likely to come back. That\'s another benefit of using Glasi at the right moment.</p>'
-      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">Over '+totalHours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);font-size:18px;">£'+parseFloat(revenueProtectedSave).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+glasiCostToBar.toFixed(0)+'.</p>'
+      +'<p style="margin:0 0 20px;font-size:15px;line-height:1.8;">Over '+totalHours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);font-size:18px;">Â£'+parseFloat(revenueProtectedSave).toFixed(0)+' in revenue protected</strong> against a Glasi cost of Â£'+glasiCostToBar.toFixed(0)+'.</p>'
       +'<div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">'
       +'<div style="font-size:12px;color:var(--grey);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Tonight in numbers</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">'
       +'<div style="color:var(--grey);">Request from</div><div style="'+monoStyle+'">'+onDutyName+', '+firstRequestTime+'</div>'
-      +'<div style="color:var(--grey);">Response time</div><div style="'+monoStyle+'">'+(avgResponseMins != null ? avgResponseMins+' minutes' : '—')+'</div>'
+      +'<div style="color:var(--grey);">Response time</div><div style="'+monoStyle+'">'+(avgResponseMins != null ? avgResponseMins+' minutes' : 'â€”')+'</div>'
       +'<div style="color:var(--grey);">Floor support</div><div style="'+monoStyle+'">'+totalHours+' hours</div>'
       +'<div style="color:var(--grey);">Customers per hour</div><div style="'+monoStyle+'">'+customersPerHrSave+' additional</div>'
-      +'<div style="color:var(--grey);">Revenue protected</div><div style="color:var(--green);'+monoStyle+'">£'+parseFloat(revenueProtectedSave).toFixed(0)+'</div>'
-      +'<div style="color:var(--grey);">Glasi cost</div><div style="'+monoStyle+'">£'+glasiCostToBar.toFixed(0)+'</div>'
+      +'<div style="color:var(--grey);">Revenue protected</div><div style="color:var(--green);'+monoStyle+'">Â£'+parseFloat(revenueProtectedSave).toFixed(0)+'</div>'
+      +'<div style="color:var(--grey);">Glasi cost</div><div style="'+monoStyle+'">Â£'+glasiCostToBar.toFixed(0)+'</div>'
       +'</div></div></div>';
   }
 
@@ -4155,7 +4329,7 @@ let loggingResponseForWorkerId = null;
 
 
 // REQUEST RECEIVED
-let activeShiftRequests = [];
+// liveSessionOps.requests is owned by liveSessionOps.requests.
 let currentRequestId = null;
 let selectedRequestId = null;
 let selectedWorkerId = null;
@@ -4185,7 +4359,7 @@ function buildZoomPost() {
   const length = document.getElementById('req-shift-length').value;
   const barRecord = bars.find(b => b.id === barId);
   const keyword = barRecord?.zoom_keyword || venueName.split(' ').find(w => w.length > 2)?.toUpperCase() || venueName.split(' ')[0].toUpperCase();
-  const post = venueName ? `SHIFT AVAILABLE — ${venueName}\nLength: ${length}hr\nReply ${keyword} to accept` : '';
+  const post = venueName ? `SHIFT AVAILABLE â€” ${venueName}\nLength: ${length}hr\nReply ${keyword} to accept` : '';
   document.getElementById('req-zoom-post').textContent = post;
 }
 
@@ -4216,7 +4390,7 @@ async function saveShiftRequest() {
   }
 
   const result = await sbPost('shift_requests', {
-    session_id: activeSessionId,
+    session_id: liveSessionOps.sessionId,
     bar_id: parseInt(barId),
     raw_message: null,
     request_time: toISO(requestTime),
@@ -4228,7 +4402,7 @@ async function saveShiftRequest() {
   if(result && result[0]?.id) {
     currentRequestId = result[0].id;
     result[0]._barName = venueEl.options[venueEl.selectedIndex]?.text || '';
-    activeShiftRequests.push(result[0]);
+    liveSessionOps.requests.push(result[0]);
     // Start 60 second response window
     startResponseWindow(result[0].id);
   }
@@ -4283,7 +4457,7 @@ function startResponseWindowFor(requestId, seconds) {
 }
 
 async function bootstrapPendingRequestTimers() {
-  for(const req of activeShiftRequests) {
+  for(const req of liveSessionOps.requests) {
     if(req.status !== 'pending' || !req.posted_at) continue;
     const elapsedSecs = (Date.now() - new Date(req.posted_at).getTime()) / 1000;
     if(elapsedSecs >= 60) {
@@ -4299,7 +4473,7 @@ async function bootstrapPendingRequestTimers() {
 async function buildRecommendations(requestId) {
   const feed = document.getElementById('response-feed');
 
-  const request = activeShiftRequests.find(r => r.id === requestId);
+  const request = liveSessionOps.requests.find(r => r.id === requestId);
   if(!request) {
     if(feed) {
       const el = document.createElement('div');
@@ -4327,12 +4501,12 @@ async function buildRecommendations(requestId) {
   const distances = await sbGet('worker_bar_distances', '?bar_id=eq.'+barId+'&select=application_id,walking_minutes');
 
   // Check who has already worked tonight
-  const workedTonight = sessionWorkers.filter(w => w.status === 'onshift' || w.status === 'completed').map(w => w.applicationId);
+  const workedTonight = liveSessionOps.workers.filter(w => w.status === 'onshift' || w.status === 'completed').map(w => w.applicationId);
 
   // Score each responder
   const scored = responses.map(r => {
     const appId = Number(r.application_id);
-    const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
+    const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === appId);
     if(!worker) return null;
 
     let score = 0;
@@ -4417,7 +4591,7 @@ async function buildRecommendations(requestId) {
 let cancelCtx = null; // { workerId, state: 'dispatched' | 'en_route', worker, phrase }
 
 function openCancelDispatch(workerId) {
-  const w = sessionWorkers.find(x => x.id === workerId);
+  const w = liveSessionOps.workers.find(x => x.id === workerId);
   if (!w) { alert('Worker not found.'); return; }
   const state = w.departedAt ? 'en_route' : 'dispatched';
   const firstName = (w.name || '').trim().split(/\s+/)[0] || 'WORKER';
@@ -4502,20 +4676,246 @@ function closeCancelDispatch() {
   cancelCtx = null;
 }
 
-// Stub. Real implementation lands in step 3 (write to dispatch_cancellations,
-// flip session_workers and shift_requests state, points_ledger entries, push to bar).
+// Cancellation history rendering. Read-only views into dispatch_cancellations,
+// shown in worker detail (filtered by application_id) and request detail
+// (filtered by shift_request_id). A request can be cancelled, returned to
+// pending, re-dispatched, and cancelled again, so the request-scope list can
+// have multiple rows. Both lists newest-first.
+function renderCancellationRow(r, opts) {
+  const showWho = opts && opts.showWho;
+  const showWorker = opts && opts.showWorker;
+  const ts = r.cancelled_at ? new Date(r.cancelled_at) : null;
+  const tsStr = ts ? ts.toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+  const stateLabel = r.cancellation_state === 'en_route' ? 'Emergency cancel'
+                  : r.cancellation_state === 'dispatched' ? 'Recall before leaving'
+                  : (r.cancellation_state || 'cancelled');
+  const stateColor = r.cancellation_state === 'en_route' ? 'var(--red)' : 'var(--amber)';
+  const compStr = (r.compensation_awarded && r.compensation_awarded > 0)
+    ? '<span style="color:var(--ice);margin-left:8px;">+'+r.compensation_awarded+' compensation</span>'
+    : '';
+  const workerStr = showWorker && r.applications?.name
+    ? '<div style="color:var(--white);margin-bottom:2px;">'+r.applications.name+'</div>'
+    : '';
+  const whoStr = showWho && r.cancelled_by
+    ? '<div style="color:var(--grey);margin-top:4px;font-size:11px;">Cancelled by '+r.cancelled_by+'</div>'
+    : '';
+  return '<div style="padding:10px 12px;background:var(--navy);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+    +   '<span style="font-size:11px;font-weight:700;letter-spacing:1px;color:'+stateColor+';">'+stateLabel.toUpperCase()+'</span>'
+    +   '<span style="font-size:11px;color:var(--grey);">'+tsStr+'</span>'
+    + '</div>'
+    + workerStr
+    + '<div style="color:var(--white);line-height:1.5;">"'+(r.reason || '')+'"</div>'
+    + compStr
+    + whoStr
+    + '</div>';
+}
+
+async function loadWorkerCancellations(applicationId) {
+  const el = document.getElementById('edit-worker-cancellations');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--grey);">Loading...</div>';
+  try {
+    const rows = await sbGet('dispatch_cancellations',
+      '?application_id=eq.'+applicationId
+      + '&order=cancelled_at.desc'
+      + '&select=id,shift_request_id,application_id,cancelled_at,cancelled_by,cancellation_state,reason,points_action,compensation_awarded'
+    );
+    if(!rows.length) {
+      el.innerHTML = '<div style="color:var(--grey);">No cancellations on record.</div>';
+      return;
+    }
+    el.innerHTML = rows.map(r => renderCancellationRow(r, { showWho: true })).join('');
+  } catch(e) {
+    console.error('loadWorkerCancellations failed', e);
+    el.innerHTML = '<div style="color:var(--red);">Failed to load cancellation history.</div>';
+  }
+}
+
+async function loadRequestCancellations(requestId) {
+  const el = document.getElementById('rd-cancellations');
+  if(!el) return;
+  if(!requestId) { el.innerHTML = '<div style="color:var(--grey);">No request linked.</div>'; return; }
+  el.innerHTML = '<div style="color:var(--grey);">Loading...</div>';
+  try {
+    const rows = await sbGet('dispatch_cancellations',
+      '?shift_request_id=eq.'+requestId
+      + '&order=cancelled_at.desc'
+      + '&select=id,shift_request_id,application_id,cancelled_at,cancelled_by,cancellation_state,reason,points_action,compensation_awarded,applications(name)'
+    );
+    if(!rows.length) {
+      el.innerHTML = '<div style="color:var(--grey);">No cancellations on this request.</div>';
+      return;
+    }
+    el.innerHTML = rows.map(r => renderCancellationRow(r, { showWho: true, showWorker: true })).join('');
+  } catch(e) {
+    console.error('loadRequestCancellations failed', e);
+    el.innerHTML = '<div style="color:var(--red);">Failed to load cancellation history.</div>';
+  }
+}
+
+// Cancellation logic. Writes audit row to dispatch_cancellations, awards +50
+// compensation via awardPoints if en_route, mirrors-in-reverse the
+// session_workers and shift_requests writes that dispatchWorker made. Worker
+// keeps the +20 already in the ledger from dispatch (no withdrawal). The
+// shift_requests UPDATE event is now subscribed in liveSessionOps so the
+// request card re-renders via realtime + listener. Optimistic local mutation
+// is kept for snappier UI between the patch and the realtime echo, and so
+// fields the realtime handler doesn't currently null-clear are still cleared.
 async function submitCancellation() {
-  if (!cancelCtx) return;
+  if(!cancelCtx) return;
   const reason = document.getElementById('cancel-reason').value.trim();
-  console.log('[cancel-dispatch][stub]', { workerId: cancelCtx.workerId, state: cancelCtx.state, reason });
-  alert('Stub: cancellation logic lands in step 3. State, ledger, and bar push are not yet wired.');
-  closeCancelDispatch();
+  if(reason.length < 10) return;
+
+  const submitBtn = document.getElementById('cancel-submit-btn');
+  const backBtn = document.querySelector('#ov-cancel-dispatch .cancel-stage-2 .cancel-btn');
+  if(submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Cancelling...'; }
+  if(backBtn) backBtn.disabled = true;
+
+  const worker = cancelCtx.worker;
+  const sessionWorkerId = worker.sessionWorkerId;
+  const requestId = worker.shiftRequestId;
+  const applicationId = worker.applicationId;
+  const sessionId = liveSessionOps.sessionId;
+  const isEnRoute = cancelCtx.state === 'en_route';
+  const compensation = isEnRoute ? 50 : 0;
+  const newWorkerStatus = isEnRoute ? 'cancelled' : 'available';
+  const cancelledBy = (typeof currentUser !== 'undefined' && currentUser?.email) || 'sam';
+
+  try {
+    // 1. Audit row. Schema: id, shift_request_id, application_id, cancelled_at,
+    // cancelled_by, cancellation_state, reason, points_action,
+    // compensation_awarded, notes. No session_id, no session_worker_id.
+    const cancellationRow = await sbPost('dispatch_cancellations', {
+      shift_request_id: requestId || null,
+      application_id: applicationId,
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: cancelledBy,
+      cancellation_state: cancelCtx.state,
+      reason: reason,
+      points_action: isEnRoute ? 'kept_dispatch_with_compensation' : 'kept_dispatch_no_compensation',
+      compensation_awarded: compensation
+    });
+    const cancellationId = cancellationRow?.[0]?.id || null;
+
+    // 2. Compensation award (en_route only). Routes through awardPoints so the
+    // ledger, total_points cache, and tier promotion check all stay consistent.
+    // No awardedBy passed: defaults to 'system' per existing convention
+    // (dispatchWorker, updateWorkerPoints).
+    let awardResult = null;
+    if(isEnRoute && compensation > 0) {
+      awardResult = await awardPoints(applicationId, {
+        amount: compensation,
+        reason: 'cancellation_compensation',
+        sessionId,
+        sourceType: 'dispatch_cancellation',
+        sourceId: cancellationId
+      });
+    }
+
+    // 3. session_workers: flip status, clear every dispatch-set field.
+    // Mirrors dispatchWorker's writes (status, bar_id, shift_request_id,
+    // shift_length_hours, dispatched_at, clock_in_code) plus departed_at and
+    // expected_arrival_minutes which the en-route flow sets later.
+    if(sessionWorkerId) {
+      await sbPatch('session_workers', '?id=eq.'+sessionWorkerId, {
+        status: newWorkerStatus,
+        bar_id: null,
+        shift_request_id: null,
+        shift_length_hours: null,
+        dispatched_at: null,
+        departed_at: null,
+        expected_arrival_minutes: null,
+        clock_in_code: null
+      });
+    }
+
+    // 4. shift_requests: flip status back to pending and reset posted_at so
+    // the response window starts fresh. Window length is fixed 60s; bootstrap
+    // and startResponseWindow both key off posted_at. Audit order is driven by
+    // request_time, not posted_at, so resetting is safe. The full cycle is
+    // preserved in dispatch_cancellations (cancelled_at per cycle).
+    let newPostedAt = null;
+    if(requestId) {
+      newPostedAt = new Date().toISOString();
+      await sbPatch('shift_requests', '?id=eq.'+requestId, {
+        status: 'pending',
+        posted_at: newPostedAt
+      });
+
+      // Kill any existing timer for this request, then start a fresh one.
+      // Mirrors the pair-kill in dispatchWorker.
+      if(responseWindowTimers.has(requestId)) {
+        clearInterval(responseWindowTimers.get(requestId));
+        responseWindowTimers.delete(requestId);
+      }
+      if(responseWindowRequestId === requestId && responseWindowInterval) {
+        clearInterval(responseWindowInterval);
+        responseWindowInterval = null;
+        responseWindowRequestId = null;
+      }
+      startResponseWindow(requestId);
+    }
+
+    // 5. Optimistic local mutation. Realtime will arrive shortly and emit
+    // worker:updated + request:updated again, idempotently.
+    worker.status = newWorkerStatus;
+    worker.bar = null;
+    worker.barRecord = null;
+    worker.dispatchedAt = null;
+    worker.departedAt = null;
+    worker.shiftRequestId = null;
+    worker.shiftLength = null;
+    worker.expectedArrivalMinutes = null;
+    worker.clockInCode = null;
+
+    if(awardResult) {
+      const workerApp = (typeof allWorkers !== 'undefined') ? allWorkers.find(a => a.id === applicationId) : null;
+      if(workerApp) {
+        workerApp.total_points = awardResult.newTotal;
+        if(awardResult.promoted) workerApp.tier = awardResult.newTier;
+      }
+    }
+
+    const req = liveSessionOps.requests.find(r => r.id === requestId);
+    if(req) {
+      req.status = 'pending';
+      if(newPostedAt) req.posted_at = newPostedAt;
+    }
+
+    liveSessionOps.emit('worker:updated', { id: sessionWorkerId, status: newWorkerStatus });
+    liveSessionOps.emit('request:updated', { id: requestId, status: 'pending', posted_at: newPostedAt });
+
+    // 6. Success state, then close.
+    showCancelSuccess(worker.name, isEnRoute);
+    setTimeout(closeCancelDispatch, 1500);
+
+  } catch(e) {
+    console.error('submitCancellation failed', e);
+    if(submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Cancel dispatch'; }
+    if(backBtn) backBtn.disabled = false;
+    alert('Cancellation failed: ' + (e.message || 'unknown error') + '. Nothing was written. Check the console for details.');
+  }
+}
+
+function showCancelSuccess(name, isEnRoute) {
+  const modal = document.querySelector('#ov-cancel-dispatch .modal');
+  if(!modal) return;
+  modal.setAttribute('data-stage', 'success');
+  modal.innerHTML = '<div style="text-align:center;padding:36px 24px;">'
+    + '<div style="font-size:11px;letter-spacing:3px;color:var(--green);font-weight:700;margin-bottom:14px;">CANCELLED</div>'
+    + '<div style="font-size:17px;font-weight:600;color:var(--white);margin-bottom:10px;">'+(name || 'Worker')+' returned to the pool</div>'
+    + '<div style="font-size:13px;color:var(--grey);line-height:1.6;">'
+    + 'Request returned to pending. You can re-dispatch when ready.'
+    + (isEnRoute ? '<br><span style="color:var(--ice);">+50 compensation awarded.</span>' : '')
+    + '</div>'
+    + '</div>';
 }
 
 async function dispatchWorker(applicationId, requestId) {
   const appId = Number(applicationId);
-  const worker = sessionWorkers.find(w => Number(w.applicationId) === appId);
-  const request = activeShiftRequests.find(r => r.id === requestId);
+  const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === appId);
+  const request = liveSessionOps.requests.find(r => r.id === requestId);
   if(!worker || !request) { alert('Worker or request not found.'); return; }
   if(!confirm('Dispatch ' + worker.name + ' to ' + (request._barName || 'the venue') + '?')) return;
 
@@ -4555,7 +4955,7 @@ async function dispatchWorker(applicationId, requestId) {
   const result = await awardPoints(worker.applicationId, {
     amount: POINTS.selectedForShift,
     reason: 'selected_for_shift',
-    sessionId: activeSessionId,
+    sessionId: liveSessionOps.sessionId,
     sourceType: 'shift_request',
     sourceId: requestId
   });
@@ -4574,7 +4974,7 @@ async function dispatchWorker(applicationId, requestId) {
   worker.gsRef = gsRef;
   worker.clockInCode = clockInCode;
 
-  const req = activeShiftRequests.find(r => r.id === requestId);
+  const req = liveSessionOps.requests.find(r => r.id === requestId);
   if(req) req.status = 'dispatched';
 
   // 4. Re-render request cards only -- don't wipe the response feed
@@ -4589,7 +4989,7 @@ async function dispatchWorker(applicationId, requestId) {
   const feedSection = document.getElementById('response-feed-section');
   if(feedSection) feedSection.style.display = 'none';
 
-  // Remove worker from sessionWorkers visible lists by re-rendering room without them
+  // Remove worker from liveSessionOps.workers visible lists by re-rendering room without them
   renderRoom();
 
 }
@@ -4604,11 +5004,11 @@ async function confirmClockIn(requestId, applicationId) {
     return;
   }
 
-  const worker = sessionWorkers.find(w => Number(w.applicationId) === Number(applicationId));
-  const request = activeShiftRequests.find(r => Number(r.id) === Number(requestId));
+  const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === Number(applicationId));
+  const request = liveSessionOps.requests.find(r => Number(r.id) === Number(requestId));
 
-  if(!worker) { alert('Worker not found. Session may need refreshing.'); console.error('Worker not found, appId:', applicationId, 'sessionWorkers:', sessionWorkers); return; }
-  if(!request) { alert('Request not found. Session may need refreshing.'); console.error('Request not found, requestId:', requestId, 'activeShiftRequests:', activeShiftRequests); return; }
+  if(!worker) { alert('Worker not found. Session may need refreshing.'); console.error('Worker not found, appId:', applicationId, 'liveSessionOps.workers:', liveSessionOps.workers); return; }
+  if(!request) { alert('Request not found. Session may need refreshing.'); console.error('Request not found, requestId:', requestId, 'liveSessionOps.requests:', liveSessionOps.requests); return; }
 
   const now = new Date().toISOString();
   const shiftRef = worker.gsRef || ('GS' + String(Date.now()).slice(-6));
@@ -4622,7 +5022,7 @@ async function confirmClockIn(requestId, applicationId) {
 
   // Create shift record
   const shiftResult = await sbPost('shifts', {
-    session_id: activeSessionId,
+    session_id: liveSessionOps.sessionId,
     session_worker_id: worker.sessionWorkerId,
     bar_id: request.bar_id,
     shift_request_id: request.id,
@@ -4643,7 +5043,7 @@ async function confirmClockIn(requestId, applicationId) {
   // Update the clock-in section in the card
   const clockInDiv = document.getElementById('clockin-'+requestId)?.parentElement?.parentElement;
   if(clockInDiv) {
-    clockInDiv.innerHTML = '<div style="font-size:11px;color:var(--green);">Clocked in &nbsp;·&nbsp; Ref: '+shiftRef+'</div>';
+    clockInDiv.innerHTML = '<div style="font-size:11px;color:var(--green);">Clocked in &nbsp;Â·&nbsp; Ref: '+shiftRef+'</div>';
   }
 }
 
@@ -4665,8 +5065,8 @@ async function confirmClockOut(requestId) {
   const code = document.getElementById('clockout-input-'+requestId)?.value.trim();
   if(!code) { alert('Please enter the clock-out code.'); return; }
 
-  const request = activeShiftRequests.find(r => r.id === requestId);
-  const worker = sessionWorkers.find(w => (w.status === 'onshift') && w.shiftLength);
+  const request = liveSessionOps.requests.find(r => r.id === requestId);
+  const worker = liveSessionOps.workers.find(w => (w.status === 'onshift') && w.shiftLength);
   if(!worker) { alert('Worker not found.'); return; }
 
   if(worker.clockOutCode && code !== worker.clockOutCode) {
@@ -4703,14 +5103,14 @@ function removeRequest(requestId) {
   // Update status to cancelled in DB
   sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'cancelled' });
   // Remove from active requests
-  activeShiftRequests = activeShiftRequests.filter(r => r.id !== requestId);
+  liveSessionOps.requests = liveSessionOps.requests.filter(r => r.id !== requestId);
   if(selectedRequestId === requestId) selectedRequestId = null;
   renderRequestCards();
   renderRoom();
 }
 
 function openAddNotes(requestId) {
-  const r = activeShiftRequests.find(x => x.id === requestId);
+  const r = liveSessionOps.requests.find(x => x.id === requestId);
   if(!r) return;
   const notes = prompt('Add notes for this request (bar manager message, context etc):', r.raw_message || '');
   if(notes === null) return; // cancelled
@@ -4725,7 +5125,7 @@ function renderRequestCards() {
   const cardsEl = document.getElementById('request-cards');
   const workersLabel = document.getElementById('workers-label');
 
-  if(!activeShiftRequests.length) {
+  if(!liveSessionOps.requests.length) {
     empty.style.display = 'block';
     container.style.display = 'none';
     workersLabel.style.display = 'none';
@@ -4736,7 +5136,7 @@ function renderRequestCards() {
   container.style.display = 'block';
   workersLabel.style.display = 'block';
 
-  cardsEl.innerHTML = activeShiftRequests.map(r => {
+  cardsEl.innerHTML = liveSessionOps.requests.map(r => {
     const barName = r._barName || bars.find(b => b.id === r.bar_id)?.name || 'Unknown';
     const reqTime = r.request_time ? new Date(r.request_time) : new Date(r.created_at);
     const totalSecs = Math.floor((Date.now() - reqTime.getTime()) / 1000);
@@ -4756,10 +5156,10 @@ function renderRequestCards() {
 
     if(isDispatched) {
       // Find the dispatched worker for this request
-      const dispWorker = sessionWorkers.find(w => 
+      const dispWorker = liveSessionOps.workers.find(w => 
         (w.status === 'dispatched' || w.status === 'onshift') && 
         (w.shiftRequestId === r.id || Number(w.shiftRequestId) === Number(r.id))
-      ) || sessionWorkers.find(w => w.status === 'dispatched' || w.status === 'onshift');
+      ) || liveSessionOps.workers.find(w => w.status === 'dispatched' || w.status === 'onshift');
       const distData = dispWorker ? workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id) : null;
       const walkMins = distData ? distData.walking_minutes : null;
       const dispatchedAt = dispWorker?.dispatchedAt ? new Date(dispWorker.dispatchedAt) : null;
@@ -4782,10 +5182,10 @@ function renderRequestCards() {
         +'<div style="background:var(--navy-mid);border:1px solid rgba(74,222,128,0.2);border-left:none;border-radius:0 10px 10px 0;padding:16px;">'
         +(dispWorker?
           '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
-          +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
+          +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;Â·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
           +'<div style="font-size:11px;color:var(--grey);margin-top:4px;">'+(dispWorker.gsRef||'')+'</div>'
           +(dispWorker.status === 'completed'
-            ? '<div style="font-size:12px;color:var(--grey);font-weight:600;margin-top:4px;">Shift complete'+(dispWorker.totalEarned ? ' · £'+parseFloat(dispWorker.totalEarned).toFixed(2)+' earned' : '')+'</div>'
+            ? '<div style="font-size:12px;color:var(--grey);font-weight:600;margin-top:4px;">Shift complete'+(dispWorker.totalEarned ? ' Â· Â£'+parseFloat(dispWorker.totalEarned).toFixed(2)+' earned' : '')+'</div>'
             : dispWorker.status === 'onshift'
               ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">On shift</div>'
               : dispWorker.departedAt
@@ -4804,7 +5204,7 @@ function renderRequestCards() {
             +'</div>'
             +'</div>'
           : '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">'
-            +'<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:6px;">Clocked in · '+(dispWorker.clockInAt ? new Date(dispWorker.clockInAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : '')+'</div>'
+            +'<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:6px;">Clocked in Â· '+(dispWorker.clockInAt ? new Date(dispWorker.clockInAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : '')+'</div>'
             +'<div style="font-size:13px;color:var(--amber);font-weight:600;margin-bottom:10px;" id="shift-countdown-'+r.id+'">Calculating...</div>'
             +'<div id="clockout-section-'+r.id+'">'
             +'<button onclick="event.stopPropagation();revealClockOutCode('+r.id+',\''+dispWorker.clockOutCode+'\')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">Reveal clock-out code</button>'
@@ -4838,7 +5238,7 @@ function renderRequestCards() {
   // update timer every second without full re-render
   if(requestTimerInterval) clearInterval(requestTimerInterval);
   requestTimerInterval = setInterval(() => {
-    activeShiftRequests.forEach(r => {
+    liveSessionOps.requests.forEach(r => {
       const el = document.getElementById('rtimer-'+r.id);
 
       // 30 minute request timeout countdown -- only for non-dispatched requests with a timer element
@@ -4861,10 +5261,10 @@ function renderRequestCards() {
 
       // Shift countdown for onshift workers
       if(r.status === 'dispatched' || r.status === 'onshift') {
-        const dispWorker = sessionWorkers.find(w =>
+        const dispWorker = liveSessionOps.workers.find(w =>
           (w.status === 'dispatched' || w.status === 'onshift' || w.status === 'completed') &&
           (Number(w.shiftRequestId) === Number(r.id))
-        ) || sessionWorkers.find(w => w.status === 'dispatched' || w.status === 'onshift');
+        ) || liveSessionOps.workers.find(w => w.status === 'dispatched' || w.status === 'onshift');
         if(dispWorker) { /* found */ }
         const countdownEl = document.getElementById('shift-countdown-'+r.id);
         if(countdownEl) {
@@ -4885,7 +5285,7 @@ function renderRequestCards() {
                 countdownEl.textContent = 'Shift complete';
                 countdownEl.style.color = 'var(--grey)';
                 // Auto-reveal clock-out code -- only once
-                const dispWorker2 = sessionWorkers.find(w => Number(w.shiftRequestId) === Number(r.id)) || sessionWorkers.find(w => w.status === 'onshift');
+                const dispWorker2 = liveSessionOps.workers.find(w => Number(w.shiftRequestId) === Number(r.id)) || liveSessionOps.workers.find(w => w.status === 'onshift');
                 if(dispWorker2?.clockOutCode) revealClockOutCode(r.id, dispWorker2.clockOutCode);
               }
             }
@@ -4904,7 +5304,7 @@ function renderRequestCards() {
       if(r.status === 'dispatched' || r.status === 'onshift') {
         const etaEl = document.getElementById('eta-'+r.id);
         if(etaEl) {
-          const dispWorker = sessionWorkers.find(w => (w.status === 'dispatched' || w.status === 'onshift') && w.shiftLength == r.shift_length_hours);
+          const dispWorker = liveSessionOps.workers.find(w => (w.status === 'dispatched' || w.status === 'onshift') && w.shiftLength == r.shift_length_hours);
           if(dispWorker?.dispatchedAt) {
             const distData = workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id);
             const walkMins = distData ? distData.walking_minutes : null;
@@ -4936,7 +5336,7 @@ function renderRequestCards() {
 }
 
 function selectRequest(id) {
-  const r = activeShiftRequests.find(x => x.id === id);
+  const r = liveSessionOps.requests.find(x => x.id === id);
   if(!r || r.status === 'dispatched') return;
   selectedRequestId = selectedRequestId === id ? null : id;
   if(!selectedRequestId) selectedWorkerId = null;
@@ -5019,11 +5419,11 @@ function renderShiftsList() {
     +filtered.map(s => {
       const rate = s.hourly_rate||0;
       const hours = parseFloat(s.shift_length_hours)||0;
-      const workerTotal = rate && hours ? '£'+(rate*hours).toFixed(2) : '';
-      const barTotal = hours ? '£'+(hours*30).toFixed(2) : '';
+      const workerTotal = rate && hours ? 'Â£'+(rate*hours).toFixed(2) : '';
+      const barTotal = hours ? 'Â£'+(hours*30).toFixed(2) : '';
       const fin = s._fin;
       const fs = getFinancialStatus(fin, s.created_at);
-      const ref = fin?.shift_reference || '—';
+      const ref = fin?.shift_reference || 'â€”';
       const date = s.created_at ? s.created_at.split('T')[0] : '';
 
       // TS checkbox
@@ -5033,7 +5433,7 @@ function renderShiftsList() {
           +'<input type="checkbox" '+tsChecked+' onchange="toggleTsSent('+s.id+', this.checked)">'
           +'<span style="font-size:10px;color:var(--grey);">'+(fin.ts_sent_at ? fmtT(fin.ts_sent_at) : 'Not sent')+'</span>'
           +'</label>'
-        : '—';
+        : 'â€”';
 
       // BI checkbox
       const biChecked = fin?.bi_sent_at ? 'checked' : '';
@@ -5042,7 +5442,7 @@ function renderShiftsList() {
           +'<input type="checkbox" '+biChecked+' onchange="toggleBiSent('+s.id+', this.checked, \''+ref+'\')">'
           +'<span style="font-size:10px;color:var(--grey);">'+(fin.bi_sent_at ? fmtT(fin.bi_sent_at) : 'Not sent')+'</span>'
           +'</label>'
-        : '—';
+        : 'â€”';
 
       // action button
       let actionBtn = '';
@@ -5050,7 +5450,7 @@ function renderShiftsList() {
         actionBtn = '<button class="ghost-btn" style="font-size:10px;" onclick="logParasolInvoice('+s.id+')">Log PI</button>';
       }
       if(fin?.parasol_invoice_ref && !fin.parasol_paid_at) {
-        actionBtn = '<button class="ghost-btn" style="font-size:10px;" onclick="markParasolPaid('+s.id+')">Pay P (£'+(fin.parasol_invoice_amount||'?')+')</button>';
+        actionBtn = '<button class="ghost-btn" style="font-size:10px;" onclick="markParasolPaid('+s.id+')">Pay P (Â£'+(fin.parasol_invoice_amount||'?')+')</button>';
       }
       if(fs.code === 'CHASE B') {
         actionBtn = '<button class="ghost-btn" style="font-size:10px;color:var(--red);" onclick="alert(\'Chase '+s.bars?.name+' for payment of '+ref+'\')">Chase</button>';
@@ -5080,14 +5480,14 @@ async function openShiftDetail(shiftId) {
   const ref = fin?.shift_reference || 'No reference';
   const hours = parseFloat(s.shift_length_hours)||0;
   const workerRate = s.hourly_rate||0;
-  const workerTotal = workerRate && hours ? (workerRate*hours).toFixed(2) : '—';
-  const barTotal = hours ? (hours*30).toFixed(2) : '—';
+  const workerTotal = workerRate && hours ? (workerRate*hours).toFixed(2) : 'â€”';
+  const barTotal = hours ? (hours*30).toFixed(2) : 'â€”';
   const date = s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
   const fs = getFinancialStatus(fin, s.created_at);
   const monoStyle = 'font-family:\'JetBrains Mono\',monospace;';
 
   document.getElementById('shift-detail-ref').textContent = ref;
-  document.getElementById('shift-detail-sub').textContent = (s.bars?.name||'Unknown bar') + ' · ' + date;
+  document.getElementById('shift-detail-sub').textContent = (s.bars?.name||'Unknown bar') + ' Â· ' + date;
 
   showScreen('shift-detail');
   setActiveNav('shifts');
@@ -5167,16 +5567,16 @@ async function openShiftDetail(shiftId) {
   const shiftSection = section('Shift Details',
     row('Reference', ref)
     +row('Bar', s.bars?.name||'Unknown')
-    +row('Zone', sessionZone||'—')
+    +row('Zone', sessionZone||'â€”')
     +row('Date', date)
     +row('Worker', s.session_workers?.worker_name||'Unknown')
     +row('Clock In', fmtT(s.clock_in_confirmed_at))
     +row('Clock Out', fmtT(s.clock_out_confirmed_at))
     +row('Duration', fmtLen(hours))
-    +row('Worker Rate', workerRate ? '£'+workerRate.toFixed(2)+'/hr' : '—')
-    +row('Worker Total', '£'+workerTotal)
-    +row('Bar Total', '<span style="color:var(--green);">£'+barTotal+' @ £30/hr</span>')
-    +(s.bar_rating ? row('Bar Rating', '★'.repeat(s.bar_rating)+'☆'.repeat(5-s.bar_rating)) : '')
+    +row('Worker Rate', workerRate ? 'Â£'+workerRate.toFixed(2)+'/hr' : 'â€”')
+    +row('Worker Total', 'Â£'+workerTotal)
+    +row('Bar Total', '<span style="color:var(--green);">Â£'+barTotal+' @ Â£30/hr</span>')
+    +(s.bar_rating ? row('Bar Rating', 'â˜…'.repeat(s.bar_rating)+'â˜†'.repeat(5-s.bar_rating)) : '')
   );
 
   // SECTION 2: Report (The Request + The Impact)
@@ -5193,22 +5593,22 @@ async function openShiftDetail(shiftId) {
   const impactHtml = customersPerHr
     ? '<div style="background:linear-gradient(135deg,var(--navy-light) 0%,var(--navy) 100%);border-radius:8px;padding:16px;margin-top:4px;">'
       +'<p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.8;color:rgba(230,237,243,0.85);margin:0 0 12px;">'+onDutyName+' using Glasi at the right time meant that approximately <strong style="color:var(--white);">'+customersPerHr+' additional customers per hour</strong> had a better experience in your venue. Instead of waiting, they were served quicker and had clear tables to sit at.</p>'
-      +'<p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.8;color:rgba(230,237,243,0.85);margin:0 0 12px;">Over '+hours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);">£'+parseFloat(revenueProtected).toFixed(0)+' in revenue protected</strong> against a Glasi cost of £'+barTotal+'.</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:14px;line-height:1.8;color:rgba(230,237,243,0.85);margin:0 0 12px;">Over '+hours+' hours of floor support, this translated to an estimated <strong style="color:var(--green);">Â£'+parseFloat(revenueProtected).toFixed(0)+' in revenue protected</strong> against a Glasi cost of Â£'+barTotal+'.</p>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">'
       +'<div style="color:var(--grey);">Customers per hour</div><div style="'+monoStyle+'">'+customersPerHr+' additional</div>'
-      +'<div style="color:var(--grey);">Revenue protected</div><div style="color:var(--green);'+monoStyle+'">£'+parseFloat(revenueProtected).toFixed(0)+'</div>'
-      +'<div style="color:var(--grey);">Glasi cost to bar</div><div style="'+monoStyle+'">£'+barTotal+'</div>'
+      +'<div style="color:var(--grey);">Revenue protected</div><div style="color:var(--green);'+monoStyle+'">Â£'+parseFloat(revenueProtected).toFixed(0)+'</div>'
+      +'<div style="color:var(--grey);">Glasi cost to bar</div><div style="'+monoStyle+'">Â£'+barTotal+'</div>'
       +'</div>'
       +'</div>'
     : '';
 
-  const reportSection = section('Report — '+ref, requestHtml + impactHtml, 'var(--ice)');
+  const reportSection = section('Report â€” '+ref, requestHtml + impactHtml, 'var(--ice)');
 
   // SECTION 3: Financial / Timesheet
   const tsChecked = fin?.ts_sent_at ? 'checked' : '';
   const biChecked = fin?.bi_sent_at ? 'checked' : '';
 
-  const financialSection = section('Timesheet & Invoice — '+ref,
+  const financialSection = section('Timesheet & Invoice â€” '+ref,
     '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
     +'<span style="font-size:11px;font-family:\'JetBrains Mono\',monospace;color:'+fs.colour+';">'+fs.code+'</span>'
     +'</div>'
@@ -5216,7 +5616,7 @@ async function openShiftDetail(shiftId) {
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
     +'<div>'
     +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Timesheet to Parasol (TS)</div>'
-    +'<div style="font-size:11px;color:var(--grey);">'+ref+' · '+(s.session_workers?.worker_name||'Unknown')+' · '+fmtLen(hours)+' · £'+workerRate.toFixed(2)+'/hr · Total £'+workerTotal+'</div>'
+    +'<div style="font-size:11px;color:var(--grey);">'+ref+' Â· '+(s.session_workers?.worker_name||'Unknown')+' Â· '+fmtLen(hours)+' Â· Â£'+workerRate.toFixed(2)+'/hr Â· Total Â£'+workerTotal+'</div>'
     +(fin?.ts_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.ts_sent_at)+'</div>' : '<div style="font-size:10px;color:var(--amber);margin-top:2px;">Not sent yet</div>')
     +'</div>'
     +'<div style="display:flex;align-items:center;gap:10px;">'
@@ -5230,7 +5630,7 @@ async function openShiftDetail(shiftId) {
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
     +'<div>'
     +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Bar Invoice (BI)</div>'
-    +'<div style="font-size:11px;color:var(--grey);">'+ref+' · '+fmtLen(hours)+' @ £30/hr · Total £'+barTotal+'</div>'
+    +'<div style="font-size:11px;color:var(--grey);">'+ref+' Â· '+fmtLen(hours)+' @ Â£30/hr Â· Total Â£'+barTotal+'</div>'
     +(fin?.bi_sent_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Sent '+fmtT(fin.bi_sent_at)+'</div>' : '<div style="font-size:10px;color:var(--amber);margin-top:2px;">Not sent yet</div>')
     +'</div>'
     +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">'
@@ -5241,13 +5641,13 @@ async function openShiftDetail(shiftId) {
     +'</label>'
     +'</div>'
     +'</div>'
-    // Parasol invoice row — shows after TS sent
+    // Parasol invoice row â€” shows after TS sent
     +(fin?.ts_sent_at
       ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
         +'<div>'
         +'<div style="font-size:13px;font-weight:500;margin-bottom:4px;">Parasol Invoice (PAY P)</div>'
         +(fin.parasol_invoice_ref
-          ? '<div style="font-size:11px;color:var(--grey);">Ref: '+fin.parasol_invoice_ref+' · £'+(fin.parasol_invoice_amount||'?')+'</div>'
+          ? '<div style="font-size:11px;color:var(--grey);">Ref: '+fin.parasol_invoice_ref+' Â· Â£'+(fin.parasol_invoice_amount||'?')+'</div>'
           : '<div style="font-size:11px;color:var(--amber);">Awaiting invoice from Parasol</div>'
         )
         +(fin?.parasol_paid_at ? '<div style="font-size:10px;color:var(--green);margin-top:2px;">Paid '+fmtT(fin.parasol_paid_at)+'</div>' : '')
@@ -5259,7 +5659,7 @@ async function openShiftDetail(shiftId) {
         +'</div>'
       : ''
     )
-    // Bar payment row — shows after BI sent
+    // Bar payment row â€” shows after BI sent
     +(fin?.bi_sent_at
       ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;">'
         +'<div>'
@@ -5273,7 +5673,7 @@ async function openShiftDetail(shiftId) {
         +'</div>'
       : ''
     )
-    // Shift Pack — only when fully settled
+    // Shift Pack â€” only when fully settled
     +(fs.code === 'DONE'
       ? '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">'
         +'<div>'
@@ -5335,7 +5735,7 @@ async function downloadBiForShift(shiftId, ref) {
     revenueProtected = (extraDrinksTotal * parseFloat(barData.avg_drink_value)).toFixed(0);
   }
 
-  const invoiceNum = ref || 'GS—';
+  const invoiceNum = ref || 'GSâ€”';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -5379,7 +5779,7 @@ async function downloadBiForShift(shiftId, ref) {
 <div class="header">
   <div>
     <div class="wordmark">GLASI</div>
-    <div style="font-size:12px;color:#888;margin-top:8px;">Glasi Ltd · hello@glasi.co.uk · glasi.co.uk</div>
+    <div style="font-size:12px;color:#888;margin-top:8px;">Glasi Ltd Â· hello@glasi.co.uk Â· glasi.co.uk</div>
   </div>
   <div class="invoice-meta">
     <div class="ref">${invoiceNum}</div>
@@ -5404,16 +5804,16 @@ ${customersPerHr ? `
     <div class="impact-text">${onDutyName} calling it early made a real difference. Approximately <strong>${customersPerHr} additional customers per hour</strong> didn't have to wait at a dirty table, didn't have to chase someone for a drink, and didn't leave with a bad impression of ${barName}. They had a good time. Those are the customers who come back.</div>
     <div class="two-col">
       <div class="stat-box"><div class="stat-val">${customersPerHr}</div><div class="stat-label">extra customers per hour looked after</div></div>
-      <div class="stat-box"><div class="stat-val" style="color:#2a7a4a;">£${revenueProtected}</div><div class="stat-label">estimated revenue protected</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:#2a7a4a;">Â£${revenueProtected}</div><div class="stat-label">estimated revenue protected</div></div>
     </div>
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid #dde;font-size:12px;color:#666;display:flex;justify-content:space-between;">
-      <span>Revenue protected</span><span style="font-family:monospace;color:#2a7a4a;">£${revenueProtected}</span>
+      <span>Revenue protected</span><span style="font-family:monospace;color:#2a7a4a;">Â£${revenueProtected}</span>
     </div>
     <div style="font-size:12px;color:#666;display:flex;justify-content:space-between;">
-      <span>Glasi cost (ex. VAT)</span><span style="font-family:monospace;">£${barNet}</span>
+      <span>Glasi cost (ex. VAT)</span><span style="font-family:monospace;">Â£${barNet}</span>
     </div>
     <div style="font-size:13px;font-weight:600;color:#2a7a4a;display:flex;justify-content:space-between;margin-top:4px;padding-top:8px;border-top:1px solid #dde;">
-      <span>Net benefit</span><span style="font-family:monospace;">£${(parseFloat(revenueProtected)-parseFloat(barNet)).toFixed(0)}</span>
+      <span>Net benefit</span><span style="font-family:monospace;">Â£${(parseFloat(revenueProtected)-parseFloat(barNet)).toFixed(0)}</span>
     </div>
   </div>
 </div>
@@ -5425,23 +5825,23 @@ ${customersPerHr ? `
     <thead><tr><th>Description</th><th>Date</th><th>Hours</th><th>Rate</th><th>Net</th></tr></thead>
     <tbody>
       <tr>
-        <td>Glasi floor support — glass collecting and table clearing</td>
+        <td>Glasi floor support â€” glass collecting and table clearing</td>
         <td class="mono">${shortDate}</td>
         <td class="mono">${hours.toFixed(1)}</td>
-        <td class="mono">£30.00/hr</td>
-        <td class="mono">£${barNet}</td>
+        <td class="mono">Â£30.00/hr</td>
+        <td class="mono">Â£${barNet}</td>
       </tr>
       <tr style="font-size:12px;color:#888;">
         <td colspan="4" style="text-align:right;">Subtotal</td>
-        <td class="mono">£${barNet}</td>
+        <td class="mono">Â£${barNet}</td>
       </tr>
       <tr style="font-size:12px;color:#888;">
         <td colspan="4" style="text-align:right;">VAT @ 20%</td>
-        <td class="mono">£${barVat}</td>
+        <td class="mono">Â£${barVat}</td>
       </tr>
       <tr class="total-row">
         <td colspan="4" style="text-align:right;">Total due (inc. VAT)</td>
-        <td class="mono">£${barTotal}</td>
+        <td class="mono">Â£${barTotal}</td>
       </tr>
     </tbody>
   </table>
@@ -5458,7 +5858,7 @@ ${customersPerHr ? `
 </div>
 
 <div class="footer">
-  Glasi Ltd · Registered in England and Wales · hello@glasi.co.uk · glasi.co.uk<br>
+  Glasi Ltd Â· Registered in England and Wales Â· hello@glasi.co.uk Â· glasi.co.uk<br>
   Figures are estimates based on bar data provided at onboarding.
 </div>
 
@@ -5561,7 +5961,7 @@ async function downloadShiftPack(shiftId, ref) {
 <div class="header">
   <div>
     <div class="wordmark">GLASI</div>
-    <div style="font-size:11px;color:#888;margin-top:6px;">Internal Shift Record — Confidential</div>
+    <div style="font-size:11px;color:#888;margin-top:6px;">Internal Shift Record â€” Confidential</div>
   </div>
   <div style="text-align:right;">
     <div class="ref">${ref}</div>
@@ -5571,23 +5971,23 @@ async function downloadShiftPack(shiftId, ref) {
 </div>
 
 <div class="settled">
-  <span style="color:#2a7a4a;font-weight:600;font-size:13px;">✓ Shift fully settled — all payments sent and received</span>
+  <span style="color:#2a7a4a;font-weight:600;font-size:13px;">âœ“ Shift fully settled â€” all payments sent and received</span>
 </div>
 
 <h2>Shift Details</h2>
 <div class="section section-internal">
   ${stamp('Reference', ref)}
   ${stamp('Bar', barName)}
-  ${stamp('Zone', sessionZone||'—')}
+  ${stamp('Zone', sessionZone||'â€”')}
   ${stamp('Date', date)}
   ${stamp('Worker', workerName)}
-  ${stamp('Tier rate', workerRate ? '£'+parseFloat(workerRate).toFixed(2)+'/hr' : '—')}
+  ${stamp('Tier rate', workerRate ? 'Â£'+parseFloat(workerRate).toFixed(2)+'/hr' : 'â€”')}
   ${stamp('Clock in', fmtT(s.clock_in_confirmed_at))}
   ${stamp('Clock out', fmtT(s.clock_out_confirmed_at))}
   ${stamp('Duration', fmtLen(hours))}
-  ${stamp('Worker total', '£'+workerTotal)}
-  ${stamp('Bar charge', '£'+barTotal+' @ £30/hr')}
-  ${s.bar_rating ? stamp('Bar rating', '★'.repeat(s.bar_rating)+'☆'.repeat(5-s.bar_rating)) : ''}
+  ${stamp('Worker total', 'Â£'+workerTotal)}
+  ${stamp('Bar charge', 'Â£'+barTotal+' @ Â£30/hr')}
+  ${s.bar_rating ? stamp('Bar rating', 'â˜…'.repeat(s.bar_rating)+'â˜†'.repeat(5-s.bar_rating)) : ''}
 </div>
 
 <h2>Request & Impact</h2>
@@ -5597,25 +5997,25 @@ async function downloadShiftPack(shiftId, ref) {
   ${customersPerHr ? `
   <div style="margin-top:12px;font-size:12px;color:#555;line-height:1.7;">
     ${onDutyName} using Glasi at the right time meant approximately <strong>${customersPerHr} additional customers per hour</strong> had a better experience.
-    Over ${hours} hours, an estimated <strong class="green">£${revenueProtected} in revenue was protected</strong> against a Glasi cost of £${barTotal}.
+    Over ${hours} hours, an estimated <strong class="green">Â£${revenueProtected} in revenue was protected</strong> against a Glasi cost of Â£${barTotal}.
   </div>` : ''}
 </div>
 
 <h2>Financial Record</h2>
 <div class="section section-financial">
   ${stamp('GS Reference', ref)}
-  ${stamp('Timesheet sent to Parasol', fin?.ts_sent_at ? fmtT(fin.ts_sent_at) : '—')}
-  ${stamp('Parasol invoice ref', fin?.parasol_invoice_ref || '—')}
-  ${stamp('Parasol invoice amount', fin?.parasol_invoice_amount ? '£'+fin.parasol_invoice_amount : '—')}
-  ${stamp('Parasol paid', fin?.parasol_paid_at ? fmtT(fin.parasol_paid_at) : '—')}
-  ${stamp('Bar invoice sent', fin?.bi_sent_at ? fmtT(fin.bi_sent_at) : '—')}
-  ${stamp('Bar invoice amount', '£'+barTotal)}
-  ${stamp('Bar payment received', fin?.bar_paid_at ? fmtT(fin.bar_paid_at) : '—')}
+  ${stamp('Timesheet sent to Parasol', fin?.ts_sent_at ? fmtT(fin.ts_sent_at) : 'â€”')}
+  ${stamp('Parasol invoice ref', fin?.parasol_invoice_ref || 'â€”')}
+  ${stamp('Parasol invoice amount', fin?.parasol_invoice_amount ? 'Â£'+fin.parasol_invoice_amount : 'â€”')}
+  ${stamp('Parasol paid', fin?.parasol_paid_at ? fmtT(fin.parasol_paid_at) : 'â€”')}
+  ${stamp('Bar invoice sent', fin?.bi_sent_at ? fmtT(fin.bi_sent_at) : 'â€”')}
+  ${stamp('Bar invoice amount', 'Â£'+barTotal)}
+  ${stamp('Bar payment received', fin?.bar_paid_at ? fmtT(fin.bar_paid_at) : 'â€”')}
 </div>
 
 <div class="footer">
-  Glasi Ltd · Registered in England and Wales · hello@glasi.co.uk · glasi.co.uk<br>
-  Internal document — not for distribution
+  Glasi Ltd Â· Registered in England and Wales Â· hello@glasi.co.uk Â· glasi.co.uk<br>
+  Internal document â€” not for distribution
 </div>
 
 </body>
@@ -5639,7 +6039,7 @@ function downloadTsForShift(shiftId) {
   const total = rate && hours ? (rate*hours).toFixed(2) : '';
   const date = s.created_at ? s.created_at.split('T')[0] : '';
   const headers = ['Reference','Worker Name','Bar','Date','Clock In','Clock Out','Total Hours','Pay Rate','Total Pay'];
-  const row = [ref, workerName, barName, date, fmtT(s.clock_in_confirmed_at), fmtT(s.clock_out_confirmed_at), fmtLen(hours), rate?'£'+rate.toFixed(2)+'/hr':'', total?'£'+total:''];
+  const row = [ref, workerName, barName, date, fmtT(s.clock_in_confirmed_at), fmtT(s.clock_out_confirmed_at), fmtLen(hours), rate?'Â£'+rate.toFixed(2)+'/hr':'', total?'Â£'+total:''];
   downloadCSV([headers,row].map(csvRow).join('\n'), 'glasi-ts-'+ref+'-'+date+'.csv');
 }
 
@@ -5652,13 +6052,13 @@ function openBiEmail(shiftId, ref) {
   const barVat = (parseFloat(barNet)*VAT_RATE).toFixed(2);
   const barTotal = (parseFloat(barNet)+parseFloat(barVat)).toFixed(2);
   const date = s.created_at ? s.created_at.split('T')[0] : '';
-  const subject = encodeURIComponent('Glasi Invoice '+ref+' — '+barName+' — '+date);
+  const subject = encodeURIComponent('Glasi Invoice '+ref+' â€” '+barName+' â€” '+date);
   const body = encodeURIComponent(
     'Hi,\n\nPlease find attached your Glasi invoice '+ref+' for floor support on '+date+'.\n\n'
-    +hours+' hours floor support @ £30/hr\n'
-    +'Subtotal: £'+barNet+'\n'
-    +'VAT (20%): £'+barVat+'\n'
-    +'Total due: £'+barTotal+'\n\n'
+    +hours+' hours floor support @ Â£30/hr\n'
+    +'Subtotal: Â£'+barNet+'\n'
+    +'VAT (20%): Â£'+barVat+'\n'
+    +'Total due: Â£'+barTotal+'\n\n'
     +'Reference: '+ref+'\n'
     +'VAT Number: '+VAT_NUMBER+'\n\n'
     +'Payment due within 7 days.\n\n'
@@ -5689,13 +6089,13 @@ async function toggleBiSent(shiftId, checked, ref) {
     const barVat = (parseFloat(barNet)*VAT_RATE).toFixed(2);
     const barTotal = (parseFloat(barNet)+parseFloat(barVat)).toFixed(2);
     const date = s?.created_at ? s.created_at.split('T')[0] : '';
-    const subject = encodeURIComponent('Glasi Invoice '+ref+' — '+barName+' — '+date);
+    const subject = encodeURIComponent('Glasi Invoice '+ref+' â€” '+barName+' â€” '+date);
     const body = encodeURIComponent(
       'Hi,\n\nPlease find attached your Glasi invoice '+ref+' for floor support on '+date+'.\n\n'
-      +hours+' hours floor support @ £30/hr\n'
-      +'Subtotal: £'+barNet+'\n'
-      +'VAT (20%): £'+barVat+'\n'
-      +'Total due: £'+barTotal+'\n\n'
+      +hours+' hours floor support @ Â£30/hr\n'
+      +'Subtotal: Â£'+barNet+'\n'
+      +'VAT (20%): Â£'+barVat+'\n'
+      +'Total due: Â£'+barTotal+'\n\n'
       +'Reference: '+ref+'\n'
       +'VAT Number: '+VAT_NUMBER+'\n\n'
       +'Payment due within 7 days.\n\n'
@@ -5710,7 +6110,7 @@ async function toggleBiSent(shiftId, checked, ref) {
 async function logParasolInvoice(shiftId) {
   const ref = prompt('Parasol invoice reference:');
   if(!ref) return;
-  const amount = prompt('Invoice amount (£):');
+  const amount = prompt('Invoice amount (Â£):');
   await sbPatch('shift_financials','?shift_id=eq.'+shiftId,{
     parasol_invoice_ref: ref,
     parasol_invoice_amount: amount ? parseFloat(amount) : null
@@ -5769,8 +6169,8 @@ function exportShiftsCSV() {
       fmtT(s.clock_in_confirmed_at),
       fmtT(s.clock_out_confirmed_at),
       hours,
-      rate?'£'+parseFloat(rate).toFixed(2):'',
-      total?'£'+total:'',
+      rate?'Â£'+parseFloat(rate).toFixed(2):'',
+      total?'Â£'+total:'',
       s.clock_in_code||'',
       s.bar_rating||'',
       s.notes||'',
@@ -5865,13 +6265,13 @@ async function loadSessionsHistory() {
     return '<div onclick="loadSessionDetail('+s.id+')" style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:10px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor=\'var(--ice)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
       + '<div>'
-      + '<div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:2px;">'+zoneName+' &nbsp;·&nbsp; <span style="color:var(--grey);font-weight:400;">Session #'+s.id+'</span></div>'
+      + '<div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:2px;">'+zoneName+' &nbsp;Â·&nbsp; <span style="color:var(--grey);font-weight:400;">Session #'+s.id+'</span></div>'
       + '<div style="font-size:12px;color:var(--grey);">'+date+(time?' at '+time:'')+'</div>'
       + '</div>'
       + '<div style="display:flex;gap:20px;text-align:right;">'
       + '<div><div style="font-size:14px;font-weight:700;color:var(--white);">'+sessionReqs.length+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Requests</div></div>'
       + '<div><div style="font-size:14px;font-weight:700;color:var(--green);">'+completed+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Shifts</div></div>'
-      + (totalEarned > 0 ? '<div><div style="font-size:14px;font-weight:700;color:var(--amber);">£'+totalEarned.toFixed(2)+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Paid out</div></div>' : '')
+      + (totalEarned > 0 ? '<div><div style="font-size:14px;font-weight:700;color:var(--amber);">Â£'+totalEarned.toFixed(2)+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Paid out</div></div>' : '')
       + '</div>'
       + '</div>'
       + '</div>';
@@ -5899,11 +6299,11 @@ async function loadSessionDetail(sessionId) {
   const totalEarned = sessionShifts.reduce((sum, s) => sum + (parseFloat(s.total_earned) || 0), 0);
 
   listEl.innerHTML = '<div style="margin-bottom:20px;">'
-    + '<button onclick="loadSessionsHistory()" style="background:none;border:none;color:var(--ice);font-size:13px;cursor:pointer;padding:0;font-family:Inter,sans-serif;">← Back to Sessions</button>'
+    + '<button onclick="loadSessionsHistory()" style="background:none;border:none;color:var(--ice);font-size:13px;cursor:pointer;padding:0;font-family:Inter,sans-serif;">â† Back to Sessions</button>'
     + '</div>'
     + '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px;">'
-    + '<div style="font-size:18px;font-weight:700;color:var(--white);margin-bottom:4px;">'+session.zones?.name+' &nbsp;·&nbsp; <span style="color:var(--grey);font-weight:400;font-size:14px;">Session #'+sessionId+'</span></div>'
-    + '<div style="font-size:13px;color:var(--grey);margin-bottom:20px;">'+date+(session.start_time ? ' · Started '+session.start_time.slice(0,5) : '')+(session.end_time ? ' · Ended '+session.end_time.slice(0,5) : '')+'</div>'
+    + '<div style="font-size:18px;font-weight:700;color:var(--white);margin-bottom:4px;">'+session.zones?.name+' &nbsp;Â·&nbsp; <span style="color:var(--grey);font-weight:400;font-size:14px;">Session #'+sessionId+'</span></div>'
+    + '<div style="font-size:13px;color:var(--grey);margin-bottom:20px;">'+date+(session.start_time ? ' Â· Started '+session.start_time.slice(0,5) : '')+(session.end_time ? ' Â· Ended '+session.end_time.slice(0,5) : '')+'</div>'
     + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">'
     + '<div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--white);">'+invites.length+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Invited</div></div>'
     + '<div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:var(--white);">'+confirmed+'</div><div style="font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1px;">Confirmed</div></div>'
@@ -5934,15 +6334,15 @@ async function loadSessionDetail(sessionId) {
           return '<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:10px;">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'
             + '<div>'
-            + '<div style="font-size:15px;font-weight:700;color:var(--white);">'+workerName+' &nbsp;·&nbsp; '+barName+'</div>'
+            + '<div style="font-size:15px;font-weight:700;color:var(--white);">'+workerName+' &nbsp;Â·&nbsp; '+barName+'</div>'
             + '<div style="display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;">'
             + '<div style="font-size:11px;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'+s.glasi_ref+'</div>'
-            + '<button onclick="downloadTimesheet('+s.id+')" style="background:none;border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">↓ Timesheet</button>'
-            + '<button onclick="downloadBI('+s.id+')" style="background:none;border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">↓ BI Report</button>'
+            + '<button onclick="downloadTimesheet('+s.id+')" style="background:none;border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">â†“ Timesheet</button>'
+            + '<button onclick="downloadBI('+s.id+')" style="background:none;border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">â†“ BI Report</button>'
             + '</div>'
             + '</div>'
             + '<div style="text-align:right;">'
-            + (s.total_earned ? '<div style="font-size:16px;font-weight:700;color:var(--amber);">£'+parseFloat(s.total_earned).toFixed(2)+'</div>' : '')
+            + (s.total_earned ? '<div style="font-size:16px;font-weight:700;color:var(--amber);">Â£'+parseFloat(s.total_earned).toFixed(2)+'</div>' : '')
             + '<div style="font-size:11px;color:'+(s.clock_out_confirmed_at?'var(--green)':'var(--amber)')+';">'+( s.clock_out_confirmed_at?'Completed':'On shift')+'</div>'
             + '</div>'
             + '</div>'
@@ -5994,8 +6394,8 @@ async function downloadTimesheet(shiftId) {
     ['Clock In', fmtDT(s.clock_in_confirmed_at)],
     ['Clock Out', fmtDT(s.clock_out_confirmed_at)],
     ['Hours Worked', hours],
-    ['Hourly Rate', '£'+rate.toFixed(2)],
-    ['Total Earned', '£'+earned],
+    ['Hourly Rate', 'Â£'+rate.toFixed(2)],
+    ['Total Earned', 'Â£'+earned],
     [''],
     ['Status', s.status || ''],
     ['Session ID', s.session_id || ''],
@@ -6121,9 +6521,9 @@ async function downloadBI(shiftId) {
     </p>
     <div class="impact-box">
       <p>During ${workerName}'s <strong>${hours}hr shift</strong>, your team reclaimed approximately <strong>${Math.round(recoveredMinsPerHour * hours)} minutes</strong> of bartending time that would otherwise have been spent on glass collection.</p>
-      <p style="margin-top:8px;">At your venue's pace, we estimate your team served an additional <strong>${totalExtraDrinks} drinks</strong> -- protecting an estimated <strong>£${revenueProtected.toLocaleString()}</strong> in revenue.</p>
+      <p style="margin-top:8px;">At your venue's pace, we estimate your team served an additional <strong>${totalExtraDrinks} drinks</strong> -- protecting an estimated <strong>Â£${revenueProtected.toLocaleString()}</strong> in revenue.</p>
       <p style="margin-top:8px;">More importantly, <strong>${totalExtraDrinks} customers</strong> got a faster, better experience.</p>
-      <div class="impact-note">Calculated using your venue data: ${bartenders} bartenders, ${lostMinsPerBartender} mins/hr recovered per bartender, ${drinksPerMin} drinks/min, £${drinkValue.toFixed(2)} average drink value.</div>
+      <div class="impact-note">Calculated using your venue data: ${bartenders} bartenders, ${lostMinsPerBartender} mins/hr recovered per bartender, ${drinksPerMin} drinks/min, Â£${drinkValue.toFixed(2)} average drink value.</div>
     </div>
     <p class="tagline">"Keeping trained staff where they are most valuable."</p>
   </div>
@@ -6142,11 +6542,11 @@ async function downloadBI(shiftId) {
   <div class="section">
     <div class="section-title">Invoice</div>
     <div class="total-section">
-      <div class="total-row"><span>Glasi rate</span><span>£${rate.toFixed(2)}/hr</span></div>
+      <div class="total-row"><span>Glasi rate</span><span>Â£${rate.toFixed(2)}/hr</span></div>
       <div class="total-row"><span>Shift length</span><span>${hours}hr</span></div>
-      <div class="total-row"><span>Subtotal</span><span>£${subtotal.toFixed(2)}</span></div>
-      <div class="total-row"><span>VAT (20%)</span><span>£${vat.toFixed(2)}</span></div>
-      <div class="total-final"><span>Total</span><span>£${total.toFixed(2)}</span></div>
+      <div class="total-row"><span>Subtotal</span><span>Â£${subtotal.toFixed(2)}</span></div>
+      <div class="total-row"><span>VAT (20%)</span><span>Â£${vat.toFixed(2)}</span></div>
+      <div class="total-final"><span>Total</span><span>Â£${total.toFixed(2)}</span></div>
       <div class="vat-note">VAT will be applied once Glasi Ltd VAT registration is confirmed. A revised invoice will be issued at that time.</div>
     </div>
   </div>
@@ -6167,8 +6567,8 @@ async function downloadBI(shiftId) {
   </div>
 
   <div class="footer">
-    Glasi Ltd &nbsp;·&nbsp; hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk<br>
-    ${invoiceNum} &nbsp;·&nbsp; ${workerName} at ${barName}
+    Glasi Ltd &nbsp;Â·&nbsp; hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk<br>
+    ${invoiceNum} &nbsp;Â·&nbsp; ${workerName} at ${barName}
   </div>
 
   </body></html>`;
@@ -6187,7 +6587,7 @@ async function loadShiftDetail(shiftId) {
 function openOv(name) { document.getElementById(`ov-${name}`).classList.add('open'); }
 function closeOv(name) { document.getElementById(`ov-${name}`).classList.remove('open'); }
 
-// ── SESSIONS ───────────────────────────────────────────────────────────────
+// â”€â”€ SESSIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function switchSessionsTab(tab) {
   const isLive = tab === 'live';
   const isHistory = tab === 'history';
@@ -6209,10 +6609,13 @@ function switchSessionsTab(tab) {
 
   if(isHistory) loadSessionsHistory();
 
-  if(isLive && activeSessionId) {
+  if(isLive && liveSessionOps.sessionId) {
     document.getElementById('sessions-live-empty').style.display = 'none';
     document.getElementById('sessions-live-room').style.display = 'block';
     renderLiveRoom();
+    // Visible-while-away: clear the dirty flag, the renderLiveRoom call above
+    // already painted the latest state.
+    liveSessionOps.consumeDirty('live');
   } else if(isLive) {
     document.getElementById('sessions-live-empty').style.display = 'block';
     document.getElementById('sessions-live-room').style.display = 'none';
@@ -6249,7 +6652,7 @@ function renderLiveRoom() {
           <div style="width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;"></div>
           <div>
             <div style="font-size:15px;font-weight:700;color:var(--white);" data-zone-name>${zoneName}</div>
-            <div style="font-size:11px;color:var(--grey);margin-top:2px;">${sessionDate} &nbsp;·&nbsp; Session #${activeSessionId}</div>
+            <div style="font-size:11px;color:var(--grey);margin-top:2px;">${sessionDate} &nbsp;Â·&nbsp; Session #${liveSessionOps.sessionId}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -6431,9 +6834,9 @@ async function goLiveSession(sessionId) {
     start_time: new Date().toLocaleTimeString('en-GB', {hour12:false})
   });
 
-  activeSessionId = sessionId;
+  liveSessionOps.sessionId = sessionId;
   liveSessionStart = Date.now();
-  startDashboardRealtime(sessionId);
+  liveSessionOps.start(sessionId);
 
   // 3. Load session details
   const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=*,zones(id,name,postcodes)');
@@ -6461,7 +6864,7 @@ async function loadLiveSessionWorkers(sessionId) {
   try {
     const invites = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&attendance_confirmed=eq.confirmed&select=application_id,joined_at,applications(id,name,phone,postcode_full,tier,hourly_rate,reliability_score)');
 
-    sessionWorkers = [];
+    liveSessionOps.workers = [];
     // Batch create session_workers rows
     const existingSW = await sbGet('session_workers', '?session_id=eq.'+sessionId+'&select=id,application_id,status');
 
@@ -6486,7 +6889,7 @@ async function loadLiveSessionWorkers(sessionId) {
         swRow.status = 'available';
       }
 
-      sessionWorkers.push({
+      liveSessionOps.workers.push({
         id: uid(),
         sessionWorkerId: swRow?.id || null,
         applicationId: app.id,
@@ -6509,7 +6912,7 @@ async function loadLiveSessionWorkers(sessionId) {
     }
 
     // Fetch all worker-bar distances for this session's workers and bars
-    const appIds = sessionWorkers.map(w => w.applicationId).join(',');
+    const appIds = liveSessionOps.workers.map(w => w.applicationId).join(',');
     if(appIds) {
       try {
         const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&select=application_id,bar_id,walking_minutes');
@@ -6609,7 +7012,7 @@ async function sendSessionCodes(sessionId) {
 <a href="https://www.glasi.co.uk/portal.html" style="display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:16px;">Log in to Glasi Portal</a>
 </div>
 <div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
-<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
+<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk</p>
 </div>
 </div>
 
@@ -6760,12 +7163,12 @@ ${lines.length
         ? '<p style="font-size:14px;color:#374151;margin:0 0 16px;">Every session you join moves you closer to a higher tier. Accepting shifts moves you further. And your performance on the night, how fast you respond and how promptly you arrive, has the biggest impact of all. Higher tiers mean higher pay. Keep performing like tonight and you will move through them quickly.</p>'
         : '<p style="font-size:14px;color:#374151;margin:0 0 16px;">We know you were ready and wanted to work tonight. We cannot dispatch everyone, but we do notice. Making yourself available still earns you points toward your next tier. The more you show up, the higher your tier climbs. And a higher tier means higher pay when you do get a shift. Keep showing up.</p>')
   : '<p style="font-size:14px;color:#374151;margin:0 0 16px;">We know you were ready and wanted to work tonight. We cannot dispatch everyone, but we do notice. Making yourself available still earns you points toward your next tier. The more you show up, the higher your tier climbs. And a higher tier means higher pay when you do get a shift. Keep showing up.</p>'}
-<p style="font-size:14px;color:#374151;margin:0 0 4px;">Current rate: <strong>£${tierRate}/hr</strong></p>
-${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Tier '+(tier+1)+' pays £'+nextTierRate+'/hr.</p>' : ''}
+<p style="font-size:14px;color:#374151;margin:0 0 4px;">Current rate: <strong>Â£${tierRate}/hr</strong></p>
+${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Tier '+(tier+1)+' pays Â£'+nextTierRate+'/hr.</p>' : ''}
 <p style="font-size:14px;color:#374151;margin:16px 0 0;">Glasi<br><span style="color:#9ca3af;font-size:12px;">glasi.co.uk</span></p>
 </div>
 <div style="background:#0d1117;border-radius:0 0 16px 16px;padding:16px;text-align:center;">
-<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
+<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk</p>
 </div>
 </div>`;
 
@@ -6778,7 +7181,7 @@ ${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Tier '
         </div>
         <div style="text-align:right;">
           <span style="font-size:11px;font-weight:600;letter-spacing:1px;color:${statusColour};">${statusLabel}</span>
-          <div style="color:var(--grey);font-size:11px;margin-top:2px;">Tier ${tier} &nbsp;·&nbsp; ${reliability ? reliability.toFixed(1)+'% reliability' : 'No score yet'}</div>
+          <div style="color:var(--grey);font-size:11px;margin-top:2px;">Tier ${tier} &nbsp;Â·&nbsp; ${reliability ? reliability.toFixed(1)+'% reliability' : 'No score yet'}</div>
         </div>
       </div>
       <div style="display:flex;gap:24px;margin-bottom:12px;flex-wrap:wrap;">
@@ -6791,7 +7194,7 @@ ${nextTierRate ? '<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Tier '
           <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">TOTAL PTS</div>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:22px;font-weight:700;color:var(--green);">${toNext > 0 ? toNext : '—'}</div>
+          <div style="font-size:22px;font-weight:700;color:var(--green);">${toNext > 0 ? toNext : 'â€”'}</div>
           <div style="font-size:10px;color:var(--grey);letter-spacing:1px;">TO NEXT TIER</div>
         </div>
       </div>
@@ -6862,7 +7265,7 @@ async function loadInviteWorkers(sessionId) {
       <input type="checkbox" name="invite-worker" value="${w.id}" ${alreadyInvited ? 'checked disabled' : ''} style="accent-color:var(--ice);width:16px;height:16px;flex-shrink:0;">
       <div style="flex:1;">
         <div style="font-size:14px;color:var(--white);font-weight:500;">${w.name}</div>
-        <div style="font-size:11px;color:var(--grey);margin-top:2px;">${w.postcode_full || ''} &nbsp;·&nbsp; Tier ${w.tier || 1} &nbsp;·&nbsp; ${w.has_transport ? 'Has transport' : 'No transport'}</div>
+        <div style="font-size:11px;color:var(--grey);margin-top:2px;">${w.postcode_full || ''} &nbsp;Â·&nbsp; Tier ${w.tier || 1} &nbsp;Â·&nbsp; ${w.has_transport ? 'Has transport' : 'No transport'}</div>
       </div>
       ${alreadyInvited ? '<span style="font-size:10px;color:var(--ice);letter-spacing:1px;">INVITED</span>' : ''}
     </label>`;
@@ -6962,7 +7365,7 @@ async function generateInvites() {
 <p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at www.glasi.co.uk/portal.html at the session start time.</p>
 </div>
 <div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
-<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p>
+<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk</p>
 </div>
 </div>`;
 
@@ -6988,7 +7391,7 @@ async function generateInvites() {
   window._inviteEmails = messages.map(m => ({
     name: m.name,
     email: m.email,
-    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body><div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;"><div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;"><div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;"><span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span></div></div><div style="background:#ffffff;padding:28px 32px;"><p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p><p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p><p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p><div style="display:flex;gap:12px;margin-bottom:24px;"><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a></div><p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at www.glasi.co.uk/portal.html at the session start time.</p></div><div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;"><p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;·&nbsp; glasi.co.uk</p></div></div></body></html>`
+    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body><div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;"><div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;"><div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;"><span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span></div></div><div style="background:#ffffff;padding:28px 32px;"><p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p><p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p><p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p><div style="display:flex;gap:12px;margin-bottom:24px;"><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a></div><p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at www.glasi.co.uk/portal.html at the session start time.</p></div><div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;"><p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk</p></div></div></body></html>`
   }));
 
   openOv('invite-messages');
