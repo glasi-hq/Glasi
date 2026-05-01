@@ -404,6 +404,31 @@
     .past-date { font-size: 13px; color: var(--white); }
     .past-meta { font-size: 11px; color: var(--grey); margin-top: 2px; }
     .past-status { font-size: 12px; color: var(--green); font-weight: 600; }
+
+    /* Sonar pulse on pending Recent Requests rows (silent, visual only). */
+    .sonar-dot {
+      position: relative;
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--amber);
+      flex-shrink: 0;
+    }
+    .sonar-dot::before, .sonar-dot::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: sonar-pulse 2s ease-out infinite;
+      pointer-events: none;
+    }
+    .sonar-dot::after { animation-delay: 1s; }
+    @keyframes sonar-pulse {
+      0%   { transform: scale(1); opacity: 0.55; }
+      100% { transform: scale(3); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -445,7 +470,24 @@
         <div style="background:rgba(245,158,11,0.08);border:2px solid rgba(245,158,11,0.3);border-radius:20px;padding:32px 24px;text-align:center;">
           <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--amber);text-transform:uppercase;margin-bottom:8px;">Finding Glasi</div>
           <div style="font-size:15px;color:var(--white);font-weight:600;margin-bottom:8px;">Your request has been received.</div>
-          <div style="font-size:13px;color:var(--grey);line-height:1.7;">We are finding someone for you right now. If we dispatch a Glasi within 30 minutes, your shift agreement is binding and payment will apply. If we cannot fulfil your request within 30 minutes, no charge applies.</div>
+          <div style="font-size:13px;color:var(--grey);line-height:1.7;margin-bottom:14px;">We are finding someone for you right now. If we dispatch a Glasi within 30 minutes, your shift agreement is binding and payment will apply. If we cannot fulfil your request within 30 minutes, no charge applies.</div>
+          <div id="status-finding-countdown" style="font-size:14px;font-weight:700;color:var(--amber);"></div>
+        </div>
+      </div>
+
+      <div id="status-cancelled" style="display:none;">
+        <div style="background:rgba(239,68,68,0.08);border:2px solid rgba(239,68,68,0.3);border-radius:20px;padding:32px 24px;text-align:center;">
+          <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:8px;">Glasi Cancelled</div>
+          <div style="font-size:15px;color:var(--white);line-height:1.7;margin-bottom:18px;">Glasi has been cancelled. We will be in touch shortly with more information. No charge applies.</div>
+          <button onclick="dismissCancelled()" style="background:var(--ice);color:var(--navy);border:none;border-radius:10px;padding:12px 24px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Submit a new request</button>
+        </div>
+      </div>
+
+      <div id="status-expired" style="display:none;">
+        <div style="background:rgba(107,114,128,0.08);border:2px solid rgba(107,114,128,0.25);border-radius:20px;padding:32px 24px;text-align:center;">
+          <div style="font-size:13px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:8px;">Request Expired</div>
+          <div style="font-size:15px;color:var(--white);line-height:1.7;margin-bottom:18px;">Request unfulfilled. No charge applies. Submit a new request if you'd like to try again.</div>
+          <button onclick="dismissExpired()" style="background:var(--ice);color:var(--navy);border:none;border-radius:10px;padding:12px 24px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Submit a new request</button>
         </div>
       </div>
 
@@ -478,6 +520,14 @@
           <div style="font-size:18px;color:var(--amber);font-weight:600;margin-bottom:20px;" id="status-shift-countdown"></div>
           <div id="status-clockout-section">
             <button onclick="revealStatusClockOut()" id="status-reveal-btn" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:10px;padding:12px 24px;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;">Reveal clock-out code</button>
+            <div id="status-early-clockout" style="display:none;margin-top:16px;text-align:left;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:18px 20px;">
+              <div style="font-size:14px;font-weight:700;color:var(--amber);margin-bottom:8px;">Need to end the shift early?</div>
+              <div style="font-size:13px;color:var(--white);line-height:1.6;margin-bottom:12px;">
+                Call Glasi on <a href="tel:07803856078" style="color:var(--ice);font-weight:600;text-decoration:none;">07803856078</a> to discuss.
+                By proceeding with an early clock-out, you remain bound to the full shift fee regardless of the actual clock-out time.
+                The clock-out code unlocks at <strong id="status-early-clockout-time" style="color:var(--white);">--:--</strong>.
+              </div>
+            </div>
             <div id="status-clockout-code" style="display:none;margin-top:16px;">
               <div style="font-size:11px;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:8px;">Give this to your Glasi when their shift ends</div>
               <div style="font-size:32px;font-weight:800;letter-spacing:10px;color:var(--white);font-family:'Inter',sans-serif;" id="status-clockout-display"></div>
@@ -652,6 +702,9 @@
 
   function handleSignOut() {
     stopWorkerWatch();
+    if(sessionsWatchWs) { try { sessionsWatchWs.close(); } catch(e) {} sessionsWatchWs = null; }
+    if(shiftRequestsWs) { try { shiftRequestsWs.close(); } catch(e) {} shiftRequestsWs = null; }
+    stopPendingRequestExpiry();
     currentBar = null;
     selectedShiftLength = null;
     document.getElementById('login-email').value = '';
@@ -693,6 +746,11 @@
 
     // Subscribe to new dispatches to this bar in real time
     startBarRealtime();
+    // Subscribe to sessions UPDATE so go-live and close propagate without a refresh.
+    startSessionsWatch();
+    // Subscribe to shift_requests INSERT/UPDATE for this bar (sonar refresh,
+    // expiry, recall surfacing).
+    subscribeToShiftRequestsForManager();
   }
 
   function startBarRealtime() {
@@ -737,6 +795,11 @@
               currentShiftWorkerIdForRating = record.id;
               showStatus('complete');
               loadPastRequests();
+            } else if(record.status === 'cancelled') {
+              // En-route emergency cancellation. Persist until manager dismisses.
+              if(managerShiftInterval) clearInterval(managerShiftInterval);
+              showStatus('cancelled');
+              loadPastRequests();
             }
           }
         }
@@ -744,6 +807,159 @@
     };
 
     dispatchedWorkerWs.onclose = () => { if(hb) clearInterval(hb); };
+  }
+
+  let sessionsWatchWs = null;
+
+  function startSessionsWatch() {
+    if(!currentBar || sessionsWatchWs) return;
+    const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+    sessionsWatchWs = new WebSocket(wsUrl);
+    let hb = null;
+
+    sessionsWatchWs.onopen = () => {
+      sessionsWatchWs.send(JSON.stringify({
+        topic: 'realtime:public:sessions',
+        event: 'phx_join',
+        payload: { config: { postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'sessions', filter: 'zone_id=eq.' + currentBar.zone_id }] } },
+        ref: 'sw1'
+      }));
+      hb = setInterval(() => {
+        if(sessionsWatchWs?.readyState === WebSocket.OPEN) {
+          sessionsWatchWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+        }
+      }, 30000);
+    };
+
+    sessionsWatchWs.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.event !== 'postgres_changes') return;
+        const record = msg.payload?.data?.record;
+        if(!record) return;
+        if(record.status === 'live') {
+          // Session in this bar's zone just went live: surface the request form.
+          document.getElementById('no-session-card').style.display = 'none';
+          document.getElementById('request-form').style.display = 'block';
+        } else if(record.status === 'closed') {
+          // Active card stays put if a shift is still in progress; only the
+          // request form gets hidden behind the no-session card.
+          const onActive = document.getElementById('active-status-card').style.display === 'block';
+          if(!onActive) {
+            document.getElementById('request-form').style.display = 'none';
+            document.getElementById('no-session-card').style.display = 'block';
+          }
+        }
+      } catch(e) {}
+    };
+
+    sessionsWatchWs.onclose = () => { if(hb) clearInterval(hb); sessionsWatchWs = null; };
+  }
+
+  let shiftRequestsWs = null;
+  let pendingRequestExpiryInterval = null;
+  let pendingRequestId = null;
+
+  function subscribeToShiftRequestsForManager() {
+    if(!currentBar || shiftRequestsWs) return;
+    const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+    shiftRequestsWs = new WebSocket(wsUrl);
+    let hb = null;
+
+    shiftRequestsWs.onopen = () => {
+      shiftRequestsWs.send(JSON.stringify({
+        topic: 'realtime:public:shift_requests',
+        event: 'phx_join',
+        payload: { config: { postgres_changes: [
+          { event: 'INSERT', schema: 'public', table: 'shift_requests', filter: 'bar_id=eq.' + currentBar.id },
+          { event: 'UPDATE', schema: 'public', table: 'shift_requests', filter: 'bar_id=eq.' + currentBar.id }
+        ] } },
+        ref: 'sr1'
+      }));
+      hb = setInterval(() => {
+        if(shiftRequestsWs?.readyState === WebSocket.OPEN) {
+          shiftRequestsWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+        }
+      }, 30000);
+    };
+
+    shiftRequestsWs.onmessage = async (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.event !== 'postgres_changes') return;
+        const record = msg.payload?.data?.record;
+        const type = msg.payload?.data?.type;
+        if(!record) return;
+
+        // Always refresh Recent Requests so the sonar pulse and status text
+        // reflect the latest state.
+        loadPastRequests();
+
+        if(type === 'INSERT' && record.status === 'pending' && record.posted_at) {
+          // New pending request from this bar (most likely from another tab).
+          // Surface finding state if no other active card is up.
+          const card = document.getElementById('active-status-card');
+          const onActive = card && card.style.display === 'block';
+          if(!onActive) showFindingState(record);
+        } else if(type === 'UPDATE') {
+          if(record.status === 'expired' && record.id === pendingRequestId) {
+            stopPendingRequestExpiry();
+            showStatus('expired');
+          } else if(record.status === 'pending' && record.posted_at) {
+            // Recall (cancellation reset) returned a request to pending. Restart
+            // the 30-minute window from the new posted_at.
+            stopPendingRequestExpiry();
+            showFindingState(record);
+          } else if(record.status === 'dispatched' || record.status === 'completed' || record.status === 'cancelled') {
+            if(record.id === pendingRequestId) stopPendingRequestExpiry();
+          }
+        }
+      } catch(err) { console.error('shift_requests realtime error:', err); }
+    };
+
+    shiftRequestsWs.onclose = () => { if(hb) clearInterval(hb); shiftRequestsWs = null; };
+  }
+
+  function startPendingRequestExpiry(requestId, postedAt) {
+    pendingRequestId = requestId;
+    if(pendingRequestExpiryInterval) clearInterval(pendingRequestExpiryInterval);
+    const expiryMs = new Date(postedAt).getTime() + 30 * 60 * 1000;
+
+    function update() {
+      const el = document.getElementById('status-finding-countdown');
+      const remaining = expiryMs - Date.now();
+      if(remaining > 0) {
+        const m = Math.floor(remaining / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        if(el) el.textContent = 'Expires in ' + m + ':' + String(s).padStart(2, '0');
+      } else {
+        if(el) el.textContent = '';
+        clearInterval(pendingRequestExpiryInterval);
+        pendingRequestExpiryInterval = null;
+        expirePendingRequest(requestId);
+      }
+    }
+    update();
+    pendingRequestExpiryInterval = setInterval(update, 1000);
+  }
+
+  function stopPendingRequestExpiry() {
+    if(pendingRequestExpiryInterval) clearInterval(pendingRequestExpiryInterval);
+    pendingRequestExpiryInterval = null;
+    pendingRequestId = null;
+  }
+
+  async function expirePendingRequest(requestId) {
+    // status=eq.pending guards against races (dispatch / cancel happened
+    // concurrently). Realtime UPDATE will swap the UI to 'expired' for all
+    // open tabs.
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/shift_requests?id=eq.' + requestId + '&status=eq.pending', {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: 'expired' })
+      });
+    } catch(e) {}
   }
 
   async function checkForDispatchedWorker() {
@@ -754,9 +970,9 @@
 
     if(!active) {
       // Check for pending requests
-      const pendingReqs = await fetch(SUPABASE_URL + '/rest/v1/shift_requests?bar_id=eq.' + currentBar.id + '&status=eq.pending&order=created_at.desc&limit=1&select=id', { headers: H }).then(r => r.json());
+      const pendingReqs = await fetch(SUPABASE_URL + '/rest/v1/shift_requests?bar_id=eq.' + currentBar.id + '&status=eq.pending&order=created_at.desc&limit=1&select=id,posted_at', { headers: H }).then(r => r.json());
       if(pendingReqs?.length) {
-        showStatus('finding');
+        showFindingState(pendingReqs[0]);
       }
       return;
     }
@@ -776,8 +992,9 @@
 
   function showStatus(state, sw) {
     document.getElementById('active-status-card').style.display = 'block';
-    ['finding','selected','onway','onshift','complete'].forEach(s => {
-      document.getElementById('status-'+s).style.display = s === state ? 'block' : 'none';
+    ['finding','selected','onway','onshift','complete','cancelled','expired'].forEach(s => {
+      const el = document.getElementById('status-'+s);
+      if(el) el.style.display = s === state ? 'block' : 'none';
     });
 
     if(state === 'onway' && sw) {
@@ -793,9 +1010,31 @@
       document.getElementById('request-form').style.display = 'none';
     }
 
-    if(state === 'finding') {
-      // Keep request form visible but small
+    if(state !== 'finding') stopPendingRequestExpiry();
+    if(state === 'cancelled' || state === 'expired') {
+      document.getElementById('request-form').style.display = 'none';
+      if(managerShiftInterval) clearInterval(managerShiftInterval);
     }
+  }
+
+  // Wraps showStatus('finding') and starts the 30-minute expiry timer for the
+  // bound request. Used by submitRequest, checkForDispatchedWorker, and the
+  // shift_requests realtime handler when a recall reopens a request.
+  function showFindingState(request) {
+    showStatus('finding');
+    if(request?.id && request?.posted_at) startPendingRequestExpiry(request.id, request.posted_at);
+  }
+
+  function dismissCancelled() {
+    document.getElementById('active-status-card').style.display = 'none';
+    document.getElementById('status-cancelled').style.display = 'none';
+    showRequestForm();
+  }
+
+  function dismissExpired() {
+    document.getElementById('active-status-card').style.display = 'none';
+    document.getElementById('status-expired').style.display = 'none';
+    showRequestForm();
   }
 
   function showRequestForm() {
@@ -805,9 +1044,15 @@
 
   let managerShiftInterval = null;
   let managerClockOutCode = null;
+  // Module-scoped so revealStatusClockOut can compute the unlock time and
+  // gate early reveals.
+  let managerShiftEndTime = null;
 
   function startManagerShiftCountdown(clockOutCode, shiftLengthHours, clockInAt) {
     managerClockOutCode = clockOutCode;
+    managerShiftEndTime = (clockInAt && shiftLengthHours)
+      ? new Date(new Date(clockInAt).getTime() + parseFloat(shiftLengthHours) * 3600000)
+      : null;
     if(managerShiftInterval) clearInterval(managerShiftInterval);
 
     function update() {
@@ -827,7 +1072,7 @@
         el.textContent = 'Shift complete';
         el.style.color = 'var(--grey)';
         clearInterval(managerShiftInterval);
-        revealStatusClockOut();
+        revealClockOutCode(); // bypass the early-clockout guard on natural shift end
         const subText2 = document.getElementById('status-shift-countdown'); if(subText2) { subText2.textContent = 'Shift is complete. Please give your Glasi the clock-out code.'; subText2.style.color = 'var(--grey)'; subText2.style.fontSize = '13px'; subText2.style.fontWeight = '400'; }
       }
     }
@@ -886,11 +1131,31 @@
     document.getElementById('manager-rating-done').style.display = 'block';
   }
 
-  function revealStatusClockOut() {
+  function revealClockOutCode() {
+    // Internal: reveals the code unconditionally. Used by the natural-end auto
+    // reveal at the bottom of startManagerShiftCountdown.
     if(!managerClockOutCode) return;
     document.getElementById('status-clockout-display').textContent = managerClockOutCode;
     document.getElementById('status-clockout-code').style.display = 'block';
     document.getElementById('status-reveal-btn').style.display = 'none';
+    const guard = document.getElementById('status-early-clockout');
+    if(guard) guard.style.display = 'none';
+  }
+
+  function revealStatusClockOut() {
+    // Manager click handler. Gates early reveals behind the warning panel.
+    if(!managerClockOutCode) return;
+    if(managerShiftEndTime && new Date() < managerShiftEndTime) {
+      const timeStr = managerShiftEndTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/London' });
+      const timeEl = document.getElementById('status-early-clockout-time');
+      if(timeEl) timeEl.textContent = timeStr;
+      const guard = document.getElementById('status-early-clockout');
+      if(guard) guard.style.display = 'block';
+      const btn = document.getElementById('status-reveal-btn');
+      if(btn) btn.style.display = 'none';
+      return;
+    }
+    revealClockOutCode();
   }
 
   // Keep old functions for compatibility
@@ -1067,8 +1332,9 @@
       })
     }).then(r => r.json());
 
+    const newRequest = Array.isArray(result) ? result[0] : result;
     document.getElementById('request-form').style.display = 'none';
-    showStatus('finding');
+    showFindingState(newRequest);
     loadPastRequests();
   }
 
@@ -1101,13 +1367,16 @@
       const d = new Date(r.created_at);
       const dateStr = d.toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
       const timeStr = d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
-      const statusMap = { pending: 'Requested', dispatched: 'Dispatched', onshift: 'On shift', completed: 'Completed', expired: 'Expired' };
-      const statusColor = { pending: 'var(--amber)', dispatched: 'var(--ice)', onshift: 'var(--green)', completed: 'var(--grey)', expired: 'var(--red)' };
+      const statusMap = { pending: 'Requested', dispatched: 'Dispatched', onshift: 'On shift', completed: 'Completed', expired: 'Expired', cancelled: 'Cancelled' };
+      const statusColor = { pending: 'var(--amber)', dispatched: 'var(--ice)', onshift: 'var(--green)', completed: 'var(--grey)', expired: 'var(--red)', cancelled: 'var(--red)' };
       const s = r.status || 'pending';
+      const statusContent = (s === 'pending')
+        ? '<span style="display:inline-flex;align-items:center;gap:10px;"><span class="sonar-dot"></span><span style="font-size:12px;font-weight:600;color:' + statusColor[s] + ';">' + statusMap[s] + '</span></span>'
+        : '<span style="font-size:12px;font-weight:600;color:' + (statusColor[s] || 'var(--grey)') + ';">' + (statusMap[s] || s) + '</span>';
       return '<div class="past-row">'
         + '<div><div class="past-date">' + dateStr + ' at ' + timeStr + '</div>'
         + '<div class="past-meta">' + (r.shift_length_hours || '') + 'hr shift</div></div>'
-        + '<div style="font-size:12px;font-weight:600;color:' + (statusColor[s] || 'var(--grey)') + ';">' + (statusMap[s] || s) + '</div>'
+        + statusContent
         + '</div>';
     }).join('');
   }
