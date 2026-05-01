@@ -153,17 +153,17 @@
     }
 
     /* PORTAL SHELL */
-    .portal-header {
+    .portal-topbar {
       background: var(--navy-mid);
       border-bottom: 1px solid var(--border);
-      padding: 0 20px;
+      padding: 0 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       height: 56px;
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 20;
     }
 
     .portal-wordmark {
@@ -177,26 +177,49 @@
       padding: 5px 12px;
     }
 
-    .portal-nav {
+    .burger-btn {
+      background: none;
+      border: none;
+      color: var(--white);
+      font-size: 22px;
+      line-height: 1;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .portal-nav-strip {
+      background: var(--navy-mid);
+      border-bottom: 1px solid var(--border);
       display: flex;
-      gap: 4px;
+      justify-content: stretch;
+      gap: 0;
+      padding: 0 8px;
+      position: sticky;
+      top: 56px;
+      z-index: 19;
     }
 
     .portal-nav-btn {
+      flex: 1;
       background: none;
       border: none;
       color: var(--grey);
       font-size: 13px;
+      font-weight: 600;
       font-family: 'Inter', sans-serif;
-      padding: 6px 14px;
-      border-radius: 6px;
+      padding: 14px 8px 12px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: color 0.15s;
+      border-bottom: 2px solid transparent;
+      letter-spacing: 0.3px;
     }
 
+    .portal-nav-btn:hover { color: var(--white); }
+
     .portal-nav-btn.active {
-      color: var(--white);
-      background: var(--ice-dim);
+      color: var(--ice);
+      border-bottom-color: var(--ice);
     }
 
     .sign-out-btn {
@@ -208,6 +231,190 @@
       padding: 5px 12px;
       border-radius: 6px;
       cursor: pointer;
+    }
+
+    /* BURGER DRAWER */
+    .burger-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,31,61,0.7);
+      z-index: 100;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .burger-overlay.open { display: block; opacity: 1; }
+
+    .burger-drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 84%;
+      max-width: 320px;
+      background: var(--navy-mid);
+      border-right: 1px solid var(--border);
+      z-index: 101;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .burger-drawer.open { transform: translateX(0); }
+
+    .burger-drawer-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .burger-close {
+      background: none;
+      border: none;
+      color: var(--grey);
+      font-size: 26px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 4px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .burger-items { padding: 8px 0; flex: 1; overflow-y: auto; }
+
+    .burger-item {
+      display: block;
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--white);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      text-align: left;
+      padding: 14px 20px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .burger-item:hover { background: rgba(168,216,234,0.04); border-left-color: var(--ice); }
+    .burger-item.danger { color: var(--red); border-top: 1px solid var(--border); margin-top: 8px; }
+
+    /* PROFILE — IDENTITY CARD */
+    .profile-avatar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .profile-avatar {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: var(--ice-dim);
+      border: 2px solid var(--ice);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--ice);
+      letter-spacing: 1px;
+      font-family: 'Inter', sans-serif;
+      margin-bottom: 12px;
+    }
+    .profile-avatar-upload-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--grey);
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+    }
+    .profile-avatar-upload-btn:hover { border-color: var(--ice); color: var(--ice); }
+
+    /* BARS IN ZONE */
+    .bars-zone-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .bars-zone-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .bar-row:hover { border-color: var(--ice); }
+    .bar-row-name { font-size: 14px; font-weight: 600; color: var(--white); }
+    .bar-row-status {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.3px;
+    }
+    .bar-row-status.signed { color: var(--green); background: rgba(34,197,94,0.1); }
+    .bar-row-status.unsigned { color: var(--amber); background: rgba(245,158,11,0.1); }
+
+    /* PER-BAR H&S DETAIL */
+    .bar-detail-back {
+      background: none;
+      border: none;
+      color: var(--ice);
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      padding: 0 0 14px;
+      cursor: pointer;
+    }
+    .bar-detail-pdf-frame {
+      width: 100%;
+      height: 60vh;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--navy);
+      margin-bottom: 16px;
+    }
+    .bar-detail-sign-btn {
+      width: 100%;
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+    .bar-detail-sign-btn:disabled { opacity: 0.5; cursor: default; }
+    .bar-detail-signed-banner {
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 13px;
+      color: var(--green);
+      text-align: center;
     }
 
     .portal-content {
@@ -794,13 +1001,35 @@
 <!-- PORTAL SCREEN -->
 <div id="screen-portal" class="screen">
 
-  <div class="portal-header">
-    <span class="portal-wordmark">GLASI</span>
-    <div class="portal-nav">
-      <button class="portal-nav-btn active" id="nav-profile" onclick="showTab('profile')">Profile</button>
-      <button class="portal-nav-btn" id="nav-sessions" onclick="showTab('sessions')">Sessions</button>
+  <!-- Burger drawer overlay + slide-in. Phase 1 wires open/close + Log out;
+       other items navigate to a "Coming soon" placeholder. -->
+  <div id="burger-overlay" class="burger-overlay" onclick="closeBurgerMenu()"></div>
+  <div id="burger-drawer" class="burger-drawer" role="dialog" aria-label="Menu">
+    <div class="burger-drawer-header">
+      <span class="portal-wordmark">GLASI</span>
+      <button class="burger-close" onclick="closeBurgerMenu()" aria-label="Close menu">×</button>
     </div>
+    <div class="burger-items">
+      <button class="burger-item" onclick="showBurgerPlaceholder('How Glasi works')">How Glasi works</button>
+      <button class="burger-item" onclick="showBurgerPlaceholder('How selection works')">How selection works</button>
+      <button class="burger-item" onclick="showBurgerPlaceholder('Bars in my zone')">Bars in my zone</button>
+      <button class="burger-item" onclick="showBurgerPlaceholder('Shift history')">Shift history</button>
+      <button class="burger-item" onclick="showBurgerPlaceholder('Earnings summary')">Earnings summary</button>
+      <button class="burger-item" onclick="showBurgerPlaceholder('Support')">Support</button>
+      <button class="burger-item danger" onclick="closeBurgerMenu(); handleSignOut();">Log out</button>
+    </div>
+  </div>
+
+  <div class="portal-topbar">
+    <button class="burger-btn" onclick="openBurgerMenu()" aria-label="Menu">☰</button>
+    <span class="portal-wordmark">GLASI</span>
     <button class="sign-out-btn" onclick="handleSignOut()">Sign out</button>
+  </div>
+  <div class="portal-nav-strip">
+    <button class="portal-nav-btn active" id="nav-profile" onclick="showTab('profile')">Profile</button>
+    <button class="portal-nav-btn" id="nav-tiers" onclick="showTab('tiers')">Tiers</button>
+    <button class="portal-nav-btn" id="nav-sessions" onclick="showTab('sessions')">Sessions</button>
+    <button class="portal-nav-btn" id="nav-activity" onclick="showTab('activity')">Activity</button>
   </div>
 
   <div class="portal-content">
@@ -808,112 +1037,89 @@
     <!-- PROFILE TAB -->
     <div id="tab-profile">
 
-      <!-- Hero points display -->
-      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;padding:28px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:12px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;" id="profile-tier-label">TIER 1 &nbsp;·&nbsp; £12.71/hr</div>
-        <div id="profile-name" style="font-size:24px;font-weight:700;color:var(--white);margin-bottom:20px;">Fran Leach</div>
+      <!-- Profile main view: identity card + bars-in-zone list -->
+      <div id="profile-main">
 
-        <!-- Points -->
-        <div style="margin-bottom:24px;">
-          <div id="profile-points" style="font-size:64px;font-weight:800;color:var(--ice);line-height:1;letter-spacing:-2px;">110</div>
-          <div style="font-size:11px;font-weight:600;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-top:6px;">TOTAL POINTS</div>
-        </div>
+        <!-- Identity card -->
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:20px;padding:28px;margin-bottom:16px;text-align:center;">
 
-        <!-- Stats row -->
-        <div style="display:flex;gap:10px;">
-          <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-            <div id="profile-shifts" style="font-size:20px;font-weight:700;color:var(--white);">0</div>
-            <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Shifts</div>
+          <div class="profile-avatar-wrap">
+            <div id="profile-avatar" class="profile-avatar">--</div>
+            <button class="profile-avatar-upload-btn" onclick="handleProfileAvatarUpload()">Upload profile picture</button>
           </div>
-          <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-            <div id="profile-reliability" style="font-size:20px;font-weight:700;color:var(--white);">N/A</div>
-            <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Reliability</div>
-          </div>
-          <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-            <div id="profile-sessions-count" style="font-size:20px;font-weight:700;color:var(--white);">0</div>
-            <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Sessions</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Progress to next tier -->
-      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <div>
-            <div style="font-size:15px;font-weight:700;color:var(--white);" id="progress-heading">Progress to Tier 2</div>
-            <div style="font-size:12px;color:var(--grey);margin-top:2px;" id="progress-subheading">Unlocks £13.71/hr</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:20px;font-weight:800;color:var(--ice);" id="progress-pts-to-next">90</div>
-            <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;">pts to go</div>
-          </div>
-        </div>
-        <div style="background:var(--navy);border-radius:999px;height:12px;width:100%;overflow:hidden;">
-          <div id="progress-bar" style="background:linear-gradient(90deg,var(--ice),#c8e6f0);border-radius:999px;height:12px;width:0%;transition:width 1s ease;box-shadow:0 0 8px rgba(168,198,232,0.4);"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--grey);margin-top:8px;">
-          <span id="progress-tier-current">Tier 1</span>
-          <span id="progress-tier-next">Tier 2</span>
-        </div>
-      </div>
+          <div id="profile-name" style="font-size:22px;font-weight:700;color:var(--white);margin-bottom:6px;">Worker name</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:22px;" id="profile-tier-label">TIER 1 &nbsp;·&nbsp; £12.71/hr</div>
 
-      <!-- How to earn points -->
-      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:16px;">How to Earn Points</div>
-        <p style="font-size:13px;color:var(--grey);line-height:1.7;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);">We see every session you join and every shift post you respond to. We know you show up ready to work, and we wish we could dispatch everyone. We cannot, but we decide who goes and we notice the ones who keep showing up consistently.</p>
-        <p style="font-size:13px;color:var(--grey);line-height:1.7;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);">Every time you join a session, respond to a shift post, or complete a shift, you earn points. These points build your tier and your tier determines your hourly rate. So even on the nights you do not get a shift, you are still progressing. When your turn comes, you will already be earning more because of the sessions where you showed up and waited.</p>
-        <p style="font-size:13px;color:var(--white);font-weight:600;margin-bottom:16px;">Here is exactly how points work.</p>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--navy);border-radius:8px;">
-            <div style="font-size:13px;color:var(--white);">Join a session</div>
-            <div style="font-size:14px;font-weight:700;color:var(--ice);">+5 pts</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--navy);border-radius:8px;">
-            <div style="font-size:13px;color:var(--white);">Respond to a shift post</div>
-            <div style="font-size:14px;font-weight:700;color:var(--ice);">+10 pts</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--navy);border-radius:8px;">
-            <div style="font-size:13px;color:var(--white);">Selected for a shift</div>
-            <div style="font-size:14px;font-weight:700;color:var(--ice);">+20 pts</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--navy);border-radius:8px;">
-            <div>
-              <div style="font-size:13px;color:var(--white);">Fast response bonus</div>
-              <div style="font-size:11px;color:var(--grey);margin-top:2px;">Under 30s / 60s / 120s</div>
+          <!-- Stats row: points, reliability, shifts completed -->
+          <div style="display:flex;gap:10px;">
+            <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;">
+              <div id="profile-points" style="font-size:22px;font-weight:700;color:var(--white);line-height:1.1;">0</div>
+              <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:4px;">Points</div>
             </div>
-            <div style="font-size:14px;font-weight:700;color:var(--ice);">+10-20 pts</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(168,198,232,0.06);border:1px solid rgba(168,198,232,0.15);border-radius:8px;">
-            <div style="font-size:13px;color:var(--white);">Complete a shift</div>
-            <div style="font-size:16px;font-weight:800;color:var(--ice);">+60 pts</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(168,198,232,0.06);border:1px solid rgba(168,198,232,0.15);border-radius:8px;">
-            <div>
-              <div style="font-size:13px;color:var(--white);">Arrive on time or early</div>
-              <div style="font-size:11px;color:var(--grey);margin-top:2px;">Biggest single bonus</div>
+            <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;">
+              <div id="profile-reliability" style="font-size:22px;font-weight:700;color:var(--white);line-height:1.1;">—</div>
+              <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:4px;">Reliability</div>
             </div>
-            <div style="font-size:16px;font-weight:800;color:var(--ice);">+25-40 pts</div>
+            <div style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;">
+              <div id="profile-shifts" style="font-size:22px;font-weight:700;color:var(--white);line-height:1.1;">0</div>
+              <div style="font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-top:4px;">Shifts</div>
+            </div>
           </div>
         </div>
-        <div style="margin-top:14px;padding:12px;background:rgba(200,162,74,0.08);border:1px solid rgba(200,162,74,0.2);border-radius:8px;">
-          <div style="font-size:12px;color:var(--amber);line-height:1.6;">Your reliability score acts as a multiplier. The more consistent you are, the faster you progress. Workers with 85%+ reliability earn points 20% faster.</div>
+
+        <!-- Bars in zone -->
+        <div class="bars-zone-card">
+          <div class="bars-zone-title">Bars in zone</div>
+          <div id="bars-zone-list">
+            <div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Profile bar detail sub-view: shown when worker taps a bar in the list -->
+      <div id="profile-bar-detail" style="display:none;">
+        <button class="bar-detail-back" onclick="closeBarDetail()">← Back to Profile</button>
+        <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:20px;">
+          <div id="bar-detail-name" style="font-size:18px;font-weight:700;color:var(--white);margin-bottom:6px;">Bar name</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:16px;">Health &amp; Safety document</div>
+
+          <iframe id="bar-detail-pdf" class="bar-detail-pdf-frame" title="Health and Safety document"></iframe>
+          <div id="bar-detail-pdf-fallback" style="display:none;margin-bottom:16px;">
+            <div style="font-size:13px;color:var(--grey);line-height:1.6;margin-bottom:10px;">If the document is not displaying above, open it directly:</div>
+            <a id="bar-detail-pdf-link" href="#" target="_blank" rel="noopener" style="color:var(--ice);font-size:13px;text-decoration:underline;">Open document</a>
+          </div>
+
+          <div id="bar-detail-sign-area">
+            <button id="bar-detail-sign-btn" class="bar-detail-sign-btn" onclick="signHsForCurrentBar()">Mark as read and signed</button>
+            <div id="bar-detail-sign-error" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px;text-align:center;"></div>
+          </div>
+
+          <div id="bar-detail-signed-banner" class="bar-detail-signed-banner" style="display:none;">
+            Read and signed on <span id="bar-detail-signed-date"></span>
+          </div>
         </div>
       </div>
 
-      <!-- Tier ladder -->
-      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:16px;">All Tiers</div>
-        <div id="tier-ladder-rows"></div>
-      </div>
+    </div>
 
-      <!-- Session history -->
-      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin-bottom:16px;">Session History</div>
-        <div id="profile-history">
-          <div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading...</div>
-        </div>
+    <!-- TIERS TAB (Phase 2 placeholder) -->
+    <div id="tab-tiers" style="display:none;">
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:48px 24px;text-align:center;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Tiers</div>
+        <div style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:6px;">Coming in Phase 2</div>
+        <div style="font-size:12px;color:var(--grey);line-height:1.6;">Tier ladder, progression, and how to earn points will live here.</div>
       </div>
+    </div>
 
+    <!-- ACTIVITY TAB (Phase 2 placeholder) -->
+    <div id="tab-activity" style="display:none;">
+      <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:48px 24px;text-align:center;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:8px;">Activity</div>
+        <div style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:6px;">Coming in Phase 2</div>
+        <div style="font-size:12px;color:var(--grey);line-height:1.6;">Recent points, session attendance, and shift activity will live here.</div>
+      </div>
     </div>
 
     <!-- SESSIONS TAB -->
@@ -1119,10 +1325,51 @@
   }
 
   function showTab(tab) {
-    document.getElementById('tab-profile').style.display = tab === 'profile' ? 'block' : 'none';
-    document.getElementById('tab-sessions').style.display = tab === 'sessions' ? 'block' : 'none';
-    document.getElementById('nav-profile').classList.toggle('active', tab === 'profile');
-    document.getElementById('nav-sessions').classList.toggle('active', tab === 'sessions');
+    const tabs = ['profile','tiers','sessions','activity'];
+    if(!tabs.includes(tab)) tab = 'profile';
+    tabs.forEach(t => {
+      const el = document.getElementById('tab-' + t);
+      if(el) el.style.display = t === tab ? 'block' : 'none';
+      const navBtn = document.getElementById('nav-' + t);
+      if(navBtn) navBtn.classList.toggle('active', t === tab);
+    });
+    // Always reset Profile sub-views to the main identity page on tab switch.
+    if(tab === 'profile') {
+      const main = document.getElementById('profile-main');
+      const detail = document.getElementById('profile-bar-detail');
+      if(main) main.style.display = 'block';
+      if(detail) detail.style.display = 'none';
+    } else {
+      // Leaving Profile tab also collapses any open bar detail so a return trip
+      // lands on the bars list, not the last-viewed PDF.
+      const detail = document.getElementById('profile-bar-detail');
+      if(detail) detail.style.display = 'none';
+      const main = document.getElementById('profile-main');
+      if(main) main.style.display = 'block';
+    }
+  }
+
+  // ── Burger drawer ─────────────────────────────────────────────────
+  function openBurgerMenu() {
+    const drawer = document.getElementById('burger-drawer');
+    const overlay = document.getElementById('burger-overlay');
+    if(drawer) drawer.classList.add('open');
+    if(overlay) overlay.classList.add('open');
+  }
+  function closeBurgerMenu() {
+    const drawer = document.getElementById('burger-drawer');
+    const overlay = document.getElementById('burger-overlay');
+    if(drawer) drawer.classList.remove('open');
+    if(overlay) overlay.classList.remove('open');
+  }
+  function showBurgerPlaceholder(label) {
+    closeBurgerMenu();
+    alert(label + '\n\nComing soon. This page lands in a later phase.');
+  }
+
+  // ── Profile picture upload — Phase 1 placeholder, no Storage work yet ──
+  function handleProfileAvatarUpload() {
+    alert('Profile picture upload\n\nComing soon. The avatar will be uploaded to Supabase Storage in a later phase.');
   }
 
   async function handleLogin() {
@@ -1135,7 +1382,7 @@
 
     // For now -- check applications table directly
     // Later this will use Supabase Auth
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,portal_password', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,portal_password,postcode_full', { headers: H }).then(r => r.json());
 
     if(!rows || !rows.length) {
       errorEl.textContent = 'No account found. Please check your email or contact hello@glasi.co.uk.';
@@ -1181,61 +1428,41 @@
     if(!currentWorker) return;
     const w = currentWorker;
 
-    const TIER_THRESHOLDS = [0, 250, 650, 1500, 3500];
     const TIER_RATES = [12.71, 13.71, 14.71, 15.71, 16.71];
-    const TIER_NAMES = ['New', 'Reliable', 'Trusted', 'Elite', 'Elite+'];
 
     const pts = parseInt(w.total_points) || 0;
     const tier = w.tier || 1;
     const rate = TIER_RATES[tier - 1];
 
-    document.getElementById('profile-name').textContent = w.name;
+    document.getElementById('profile-name').textContent = w.name || 'Worker';
     document.getElementById('profile-tier-label').textContent = 'TIER ' + tier + ' · £' + rate.toFixed(2) + '/hr';
     document.getElementById('profile-points').textContent = pts.toLocaleString();
-    document.getElementById('profile-reliability').textContent = w.reliability_score ? Math.round(w.reliability_score) + '%' : 'N/A';
+    document.getElementById('profile-reliability').textContent = (w.reliability_score != null && w.reliability_score !== '')
+      ? Math.round(w.reliability_score) + '%'
+      : '—';
+
+    // Avatar initials. Up to two letters, first of first name + first of last
+    // name; fall back to first letter only.
+    const avatarEl = document.getElementById('profile-avatar');
+    if(avatarEl) {
+      const parts = (w.name || '').trim().split(/\s+/).filter(Boolean);
+      const initials = parts.length >= 2
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : (parts[0] ? parts[0][0].toUpperCase() : '—');
+      avatarEl.textContent = initials;
+    }
+
     const prejoinName = document.getElementById('prejoin-worker-name');
     if(prejoinName) prejoinName.textContent = w.name;
 
-    // Progress bar
-    const prevThreshold = TIER_THRESHOLDS[tier - 1] || 0;
-    const nextThreshold = TIER_THRESHOLDS[tier] || null;
-    if(nextThreshold) {
-      const progress = Math.min(100, Math.round(((pts - prevThreshold) / (nextThreshold - prevThreshold)) * 100));
-      setTimeout(() => { document.getElementById('progress-bar').style.width = progress + '%'; }, 300);
-      document.getElementById('progress-tier-current').textContent = 'Tier ' + tier;
-      document.getElementById('progress-tier-next').textContent = 'Tier ' + (tier + 1);
-      document.getElementById('progress-pts-to-next').textContent = (nextThreshold - pts).toLocaleString();
-      document.getElementById('progress-heading').textContent = 'Progress to Tier ' + (tier + 1);
-      document.getElementById('progress-subheading').textContent = 'Unlocks £' + TIER_RATES[tier].toFixed(2) + '/hr';
-    } else {
-      setTimeout(() => { document.getElementById('progress-bar').style.width = '100%'; }, 300);
-      document.getElementById('progress-pts-to-next').textContent = '0';
-      document.getElementById('progress-heading').textContent = 'Maximum Tier Reached';
-      document.getElementById('progress-subheading').textContent = 'You are at the top';
-    }
+    // Total shifts completed — count of shifts rows for this worker where
+    // status is completed. Best read via a HEAD count request to avoid
+    // pulling rows; fall back to a 0 if it fails.
+    loadProfileShiftsCount();
 
-    // Build tier ladder
-    const tierData = [
-      { name: 'Tier 1', pts: 0, rate: 12.71 },
-      { name: 'Tier 2', pts: 250, rate: 13.71 },
-      { name: 'Tier 3', pts: 650, rate: 14.71 },
-      { name: 'Tier 4', pts: 1500, rate: 15.71 },
-      { name: 'Tier 5', pts: 3500, rate: 16.71 },
-    ];
-    document.getElementById('tier-ladder-rows').innerHTML = tierData.map((t, i) => {
-      const isCurrent = i + 1 === tier;
-      const isAchieved = pts >= t.pts;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;margin-bottom:8px;background:${isCurrent ? 'var(--ice-dim)' : isAchieved ? 'rgba(74,222,128,0.04)' : 'rgba(255,255,255,0.02)'};border:1px solid ${isCurrent ? 'rgba(168,198,232,0.25)' : isAchieved ? 'rgba(74,222,128,0.15)' : 'transparent'};">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:${isCurrent ? 'var(--white)' : isAchieved ? 'var(--white)' : 'var(--grey)'};">${t.name} ${isCurrent ? '<span style="font-size:9px;letter-spacing:1px;color:var(--ice);background:rgba(168,198,232,0.15);padding:2px 8px;border-radius:4px;text-transform:uppercase;margin-left:6px;">YOU ARE HERE</span>' : ''}</div>
-          <div style="font-size:11px;color:var(--grey);margin-top:2px;">${t.pts.toLocaleString()} points</div>
-        </div>
-        <div style="font-size:16px;font-weight:800;color:${isCurrent ? 'var(--ice)' : isAchieved ? 'var(--green)' : 'var(--grey)'};">£${t.rate.toFixed(2)}/hr</div>
-      </div>`;
-    }).join('');
-
-    // Load session history
-    loadSessionHistory();
+    // Bars in zone — kicks off the lookup chain (worker postcode → zone →
+    // bars → hs_acknowledgements). Renders the list when complete.
+    loadBarsInZone();
 
     // Restore unsubmitted post-shift feedback first; if found, that's the screen
     // they land on. Otherwise check for live session as before.
@@ -1245,24 +1472,233 @@
     })();
   }
 
-  async function loadSessionHistory() {
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=points_earned,sessions(session_date,zones(name))&order=id.desc&limit=10', { headers: H }).then(r => r.json());
-    const historyEl = document.getElementById('profile-history');
-    if(!rows || !rows.length) {
-      historyEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No sessions yet.</div>';
+  async function loadProfileShiftsCount() {
+    const el = document.getElementById('profile-shifts');
+    if(!el || !currentWorker) return;
+    try {
+      // PostgREST count via Prefer: count=exact returns total in Content-Range.
+      const resp = await fetch(SUPABASE_URL + '/rest/v1/shifts?select=id&status=eq.completed&session_workers.application_id=eq.' + currentWorker.id, {
+        headers: { ...H, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }
+      });
+      // The above filter on a joined table needs the embed syntax; simplest
+      // approach is a two-step: get session_worker_ids for this worker, then
+      // count shifts with status=completed in that set.
+      const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=id', { headers: H }).then(r => r.json());
+      const swIds = (swRows || []).map(r => r.id);
+      if(!swIds.length) { el.textContent = '0'; return; }
+      const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=in.(' + swIds.join(',') + ')&status=eq.completed&select=id', { headers: H }).then(r => r.json());
+      el.textContent = String((shiftRows || []).length);
+    } catch(e) {
+      console.error('loadProfileShiftsCount failed', e);
+      el.textContent = '0';
+    }
+  }
+
+  // ── Bars in zone ──────────────────────────────────────────────────
+  // Loaded once on profile entry. Each bar row links to its H&S document
+  // detail view; status reflects whether an hs_acknowledgements row exists
+  // for (application_id, bar_id).
+  let barsInZoneCache = []; // [{ id, name, hs_document_path, signed_at }]
+
+  async function loadBarsInZone() {
+    const listEl = document.getElementById('bars-zone-list');
+    if(!listEl || !currentWorker) return;
+
+    try {
+      // 1. Resolve worker's zone via postcode prefix. zones.postcodes is a
+      // text[] of district prefixes (e.g. ['SO14','SO15']).
+      const pc = (currentWorker.postcode_full || '').trim().toUpperCase();
+      if(!pc) {
+        listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">Postcode not on file. Contact hello@glasi.co.uk to set your zone.</div>';
+        return;
+      }
+      const zoneRows = await fetch(SUPABASE_URL + '/rest/v1/zones?select=id,name,postcodes', { headers: H }).then(r => r.json());
+      const zone = (zoneRows || []).find(z => Array.isArray(z.postcodes) && z.postcodes.some(p => pc.startsWith(String(p).toUpperCase())));
+      if(!zone) {
+        listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No matching zone for your postcode.</div>';
+        return;
+      }
+
+      // 2. Bars in zone + the worker's H&S acknowledgements, fetched in parallel.
+      const [barRows, ackRows] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/bars?zone_id=eq.' + zone.id + '&order=name.asc&select=id,name,address,hs_document_path', { headers: H }).then(r => r.json()),
+        fetch(SUPABASE_URL + '/rest/v1/hs_acknowledgements?application_id=eq.' + currentWorker.id + '&select=bar_id,acknowledged_at', { headers: H }).then(r => r.json())
+      ]);
+
+      const ackByBar = {};
+      (ackRows || []).forEach(a => { ackByBar[a.bar_id] = a.acknowledged_at; });
+
+      barsInZoneCache = (barRows || []).map(b => ({
+        id: b.id,
+        name: b.name,
+        address: b.address,
+        hs_document_path: b.hs_document_path,
+        signed_at: ackByBar[b.id] || null
+      }));
+
+      renderBarsInZone();
+    } catch(e) {
+      console.error('loadBarsInZone failed', e);
+      listEl.innerHTML = '<div style="font-size:13px;color:var(--red);padding:12px 0;">Could not load bars. Try again later.</div>';
+    }
+  }
+
+  function renderBarsInZone() {
+    const listEl = document.getElementById('bars-zone-list');
+    if(!listEl) return;
+    if(!barsInZoneCache.length) {
+      listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No bars in your zone yet.</div>';
       return;
     }
-    historyEl.innerHTML = rows.map(r => {
-      const date = r.sessions?.session_date ? new Date(r.sessions.session_date).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Unknown';
-      const zone = r.sessions?.zones?.name || '';
-      return `<div class="history-row">
-        <div>
-          <div class="history-date">${date}</div>
-          <div class="history-zone">${zone}</div>
-        </div>
-        <div class="history-pts">+${r.points_earned || 0} pts</div>
-      </div>`;
+    listEl.innerHTML = barsInZoneCache.map(b => {
+      const signed = !!b.signed_at;
+      const statusClass = signed ? 'signed' : 'unsigned';
+      const statusLabel = signed ? 'Read and signed' : 'Not yet read';
+      return '<div class="bar-row" onclick="openBarDetail(' + b.id + ')">'
+        + '<div class="bar-row-name">' + escapeHtml(b.name || 'Unknown bar') + '</div>'
+        + '<div class="bar-row-status ' + statusClass + '">' + statusLabel + '</div>'
+        + '</div>';
     }).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ── Per-bar H&S document detail view ──────────────────────────────
+  let currentBarDetailId = null;
+
+  async function openBarDetail(barId) {
+    const bar = barsInZoneCache.find(b => Number(b.id) === Number(barId));
+    if(!bar) return;
+    currentBarDetailId = bar.id;
+
+    document.getElementById('profile-main').style.display = 'none';
+    const detail = document.getElementById('profile-bar-detail');
+    if(detail) detail.style.display = 'block';
+
+    document.getElementById('bar-detail-name').textContent = bar.name || 'Bar';
+
+    // Resolve the document URL via Supabase Storage signed URL endpoint.
+    // bar_hs_documents is a private bucket; signed URLs are short-lived and
+    // safe to embed in an iframe without auth headers. If the bar has no
+    // hs_document_path on file, surface a friendly message and skip the iframe.
+    const iframe = document.getElementById('bar-detail-pdf');
+    const fallback = document.getElementById('bar-detail-pdf-fallback');
+    const fallbackLink = document.getElementById('bar-detail-pdf-link');
+    if(iframe) iframe.src = '';
+    if(fallback) fallback.style.display = 'none';
+
+    if(!bar.hs_document_path) {
+      if(iframe) iframe.style.display = 'none';
+      if(fallback) {
+        fallback.style.display = 'block';
+        if(fallbackLink) {
+          fallbackLink.textContent = 'Document not available yet — contact Glasi.';
+          fallbackLink.removeAttribute('href');
+        }
+      }
+    } else {
+      if(iframe) iframe.style.display = 'block';
+      try {
+        const signResp = await fetch(SUPABASE_URL + '/storage/v1/object/sign/bar_hs_documents/' + encodeURIComponent(bar.hs_document_path), {
+          method: 'POST',
+          headers: { ...H, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expiresIn: 600 })
+        });
+        const signData = await signResp.json();
+        // Supabase storage returns the signed path as either signedURL (legacy)
+        // or signedUrl (current). Handle both. The full URL is
+        // SUPABASE_URL + /storage/v1 + path.
+        const signedPath = signData?.signedURL || signData?.signedUrl || null;
+        const signedUrl = signedPath ? (SUPABASE_URL + '/storage/v1' + signedPath) : null;
+        if(signedUrl) {
+          if(iframe) iframe.src = signedUrl;
+          if(fallbackLink) { fallbackLink.href = signedUrl; fallbackLink.textContent = 'Open document'; }
+          if(fallback) fallback.style.display = 'block';
+        } else {
+          throw new Error('No signed URL returned');
+        }
+      } catch(e) {
+        console.error('openBarDetail signed URL failed', e);
+        if(iframe) iframe.style.display = 'none';
+        if(fallback) {
+          fallback.style.display = 'block';
+          if(fallbackLink) {
+            fallbackLink.textContent = 'Could not load document. Try again or contact Glasi.';
+            fallbackLink.removeAttribute('href');
+          }
+        }
+      }
+    }
+
+    // Sign / signed-banner toggle.
+    const signBtn = document.getElementById('bar-detail-sign-btn');
+    const signArea = document.getElementById('bar-detail-sign-area');
+    const banner = document.getElementById('bar-detail-signed-banner');
+    const signedDate = document.getElementById('bar-detail-signed-date');
+    const signError = document.getElementById('bar-detail-sign-error');
+    if(signError) signError.textContent = '';
+    if(bar.signed_at) {
+      if(signArea) signArea.style.display = 'none';
+      if(banner) banner.style.display = 'block';
+      if(signedDate) signedDate.textContent = new Date(bar.signed_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    } else {
+      if(signArea) signArea.style.display = 'block';
+      if(banner) banner.style.display = 'none';
+      if(signBtn) { signBtn.disabled = false; signBtn.textContent = 'Mark as read and signed'; }
+    }
+  }
+
+  function closeBarDetail() {
+    currentBarDetailId = null;
+    const iframe = document.getElementById('bar-detail-pdf');
+    if(iframe) iframe.src = '';
+    document.getElementById('profile-bar-detail').style.display = 'none';
+    document.getElementById('profile-main').style.display = 'block';
+  }
+
+  async function signHsForCurrentBar() {
+    if(!currentBarDetailId || !currentWorker) return;
+    const bar = barsInZoneCache.find(b => Number(b.id) === Number(currentBarDetailId));
+    if(!bar) return;
+
+    const btn = document.getElementById('bar-detail-sign-btn');
+    const errEl = document.getElementById('bar-detail-sign-error');
+    if(btn) { btn.disabled = true; btn.textContent = 'Signing…'; }
+    if(errEl) errEl.textContent = '';
+
+    const acknowledgedAt = new Date().toISOString();
+    try {
+      const resp = await fetch(SUPABASE_URL + '/rest/v1/hs_acknowledgements', {
+        method: 'POST',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          application_id: currentWorker.id,
+          bar_id: bar.id,
+          acknowledged_at: acknowledgedAt
+        })
+      });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    } catch(e) {
+      console.error('signHsForCurrentBar failed', e);
+      if(btn) { btn.disabled = false; btn.textContent = 'Mark as read and signed'; }
+      if(errEl) errEl.textContent = 'Could not record. Try again or contact hello@glasi.co.uk.';
+      return;
+    }
+
+    // Update cache + UI optimistically.
+    bar.signed_at = acknowledgedAt;
+    const banner = document.getElementById('bar-detail-signed-banner');
+    const signArea = document.getElementById('bar-detail-sign-area');
+    const signedDate = document.getElementById('bar-detail-signed-date');
+    if(signArea) signArea.style.display = 'none';
+    if(banner) banner.style.display = 'block';
+    if(signedDate) signedDate.textContent = new Date(acknowledgedAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    // Re-render the bars list so the row's status badge flips on the way back.
+    renderBarsInZone();
   }
 
   async function checkForLiveSession() {
