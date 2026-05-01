@@ -1536,11 +1536,38 @@
     ws.onclose = () => { if(hb) clearInterval(hb); };
   }
 
+  // Module-scoped reference to the active session_workers subscription. Used
+  // by subscribeToSessionWorkers to stay idempotent across the multiple paths
+  // that may call it during one session (startLiveSession + the P3 restore
+  // branch in checkForLiveSession + every re-entry triggered by sessionsWatchWs
+  // when dashboard writes to the sessions table). Without this, each call
+  // stacked another WS, so each UPDATE fired the handler N times — the
+  // dispatch/leaving flicker.
+  let sessionWorkersWs = null;
+  let sessionWorkersWsSessionId = null;
+
   function subscribeToSessionWorkers(sessionId) {
     if(!currentWorker) return;
+
+    // Idempotent guard: a live subscription on the same session is enough.
+    if(sessionWorkersWs && sessionWorkersWsSessionId === sessionId) {
+      const rs = sessionWorkersWs.readyState;
+      if(rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
+    }
+
+    // Stale or different-session reference: close it before opening a fresh one.
+    if(sessionWorkersWs) {
+      try { sessionWorkersWs.close(); } catch(e) {}
+      realtimeChannels = realtimeChannels.filter(w => w !== sessionWorkersWs);
+      sessionWorkersWs = null;
+      sessionWorkersWsSessionId = null;
+    }
+
     const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
     const ws = new WebSocket(wsUrl);
     realtimeChannels.push(ws);
+    sessionWorkersWs = ws;
+    sessionWorkersWsSessionId = sessionId;
     let hb = null;
 
     ws.onopen = () => {
@@ -1592,7 +1619,17 @@
       } catch(err) { console.error('session_workers realtime error:', err); }
     };
 
-    ws.onclose = () => { if(hb) clearInterval(hb); console.log('[session_workers ws] closed'); };
+    ws.onclose = () => {
+      if(hb) clearInterval(hb);
+      // Drop the module-level reference if the closing socket is still ours.
+      // A close triggered by the idempotent guard above would have already
+      // cleared these to null and reassigned to the new WS — don't stomp it.
+      if(sessionWorkersWs === ws) {
+        sessionWorkersWs = null;
+        sessionWorkersWsSessionId = null;
+      }
+      console.log('[session_workers ws] closed');
+    };
     ws.onerror = (err) => { console.error('[session_workers ws] error', err); };
   }
 
@@ -1650,6 +1687,8 @@
     if(tickerTimeout) clearTimeout(tickerTimeout);
     realtimeChannels.forEach(ws => { try { ws.close(); } catch(e) {} });
     realtimeChannels = [];
+    sessionWorkersWs = null;
+    sessionWorkersWsSessionId = null;
     currentSessionInvite = null;
     currentSessionWorkerId = null;
     document.getElementById('sessions-live').style.display = 'none';
@@ -2531,6 +2570,11 @@
   function stopRealtime() {
     realtimeChannels.forEach(ws => { try { ws.close(); } catch(e) {} });
     realtimeChannels = [];
+    // Also drop the idempotent reference so the next subscribeToSessionWorkers
+    // call after a sign-in opens a fresh subscription instead of short-circuiting
+    // on a closed-but-still-referenced WS.
+    sessionWorkersWs = null;
+    sessionWorkersWsSessionId = null;
     stopWaitingTimers();
   }
 
