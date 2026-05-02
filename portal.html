@@ -2963,7 +2963,7 @@
       const stat7 = document.getElementById('activity-stat-7d');
       if(stat7) stat7.textContent = (last7d >= 0 ? '+' : '') + last7d.toLocaleString();
 
-      const sessionsCount = swList.filter(sw => ['available','dispatched','onshift','completed'].includes(sw.status)).length;
+      const sessionsCount = swList.filter(sw => ['in_session','dispatched','onshift','completed'].includes(sw.status)).length;
       const stat2 = document.getElementById('activity-stat-sessions');
       if(stat2) stat2.textContent = String(sessionsCount);
 
@@ -4003,8 +4003,13 @@
         } else if(record.status === 'completed') {
           console.log('[session_workers ws] completed → showPostShiftScreen', record);
           await showPostShiftScreen(record);
-        } else if(record.status === 'cancelled' || record.status === 'available') {
-          // Recall (status='available') or en-route emergency cancel
+        } else if(record.status === 'left') {
+          // CORE v3 cancellation terminal state. Sam pulled this worker; they are
+          // out of the session entirely (no more rounds, no more requests this
+          // session). Clean exit, not a return to the waiting room.
+          exitSessionAfterCancellation();
+        } else if(record.status === 'cancelled' || record.status === 'in_session') {
+          // Recall (status='in_session') or en-route emergency cancel
           // (status='cancelled') — drop the worker back into the waiting room.
           // returnToWaitingRoom resets the dispatch-flow state flags so a
           // subsequent dispatch starts clean.
@@ -4072,6 +4077,41 @@
     };
 
     sessionsWatchWs.onclose = () => { if(hb) clearInterval(hb); sessionsWatchWs = null; };
+  }
+
+  function exitSessionAfterCancellation() {
+    // CORE v3 dispatched-to-left transition. Sam cancelled this worker's dispatch;
+    // they are out of the session entirely. Same teardown as session-close, but
+    // a different empty-state copy so the worker knows what happened.
+    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+    if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
+    if(elapsedInterval) clearInterval(elapsedInterval);
+    if(tickerTimeout) clearTimeout(tickerTimeout);
+    realtimeChannels.forEach(ws => { try { ws.close(); } catch(e) {} });
+    realtimeChannels = [];
+    sessionWorkersWs = null;
+    sessionWorkersWsSessionId = null;
+    sessionInviteLeftAtMarked = false;
+    lastRenderedDispatchBarId = null;
+    pendingInvite = null;
+    currentSessionInvite = null;
+    currentSessionWorkerId = null;
+    document.getElementById('sessions-live').style.display = 'none';
+    document.getElementById('sessions-code-entry').style.display = 'none';
+    document.getElementById('sessions-prejoin').style.display = 'none';
+    const pendingEl = document.getElementById('sessions-pending-response');
+    if(pendingEl) pendingEl.style.display = 'none';
+    const confirmedEl = document.getElementById('sessions-confirmed-waiting');
+    if(confirmedEl) confirmedEl.style.display = 'none';
+    const liveConfirmedEl = document.getElementById('sessions-live-confirmed-join');
+    if(liveConfirmedEl) liveConfirmedEl.style.display = 'none';
+    const empty = document.getElementById('sessions-empty');
+    if(empty) {
+      empty.style.display = 'block';
+      empty.innerHTML = '<div class="sessions-empty-icon">👋</div>'
+        + '<div class="sessions-empty-title">Dispatch cancelled</div>'
+        + '<div class="sessions-empty-sub">Sam has cancelled this dispatch. You have left tonight\'s session. We\'ll see you at the next one.</div>';
+    }
   }
 
   function tearDownSessionAfterClose() {
