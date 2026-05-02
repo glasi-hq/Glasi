@@ -450,6 +450,7 @@
       100% { transform: scale(3); opacity: 0; }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -695,6 +696,19 @@
     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
   };
 
+  // Supabase Auth client. Named sbAuth (not supabase) to avoid colliding
+  // with the global that the UMD CDN registers, which would throw
+  // "Identifier 'supabase' has already been declared" at parse time. The
+  // factory call on the right is the library entry point.
+  const sbAuth = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Keep H.Authorization in sync with Supabase JS's automatic token
+  // refresh. Without this, an in-the-background token rotation would leave
+  // REST fetches sending an expired JWT.
+  sbAuth.auth.onAuthStateChange((_event, session) => {
+    H.Authorization = 'Bearer ' + (session?.access_token || SUPABASE_ANON_KEY);
+  });
+
   let currentBar = null;
   let selectedShiftLength = null;
   let dispatchedWorkerWs = null;
@@ -712,15 +726,20 @@
 
     if(!email || !password) { errorEl.textContent = 'Please enter your email and password.'; return; }
 
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_password,manager_pin,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
-
-    if(!rows || !rows.length) {
-      errorEl.textContent = 'No account found. Please contact hello@glasi.co.uk.';
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
+    if(error || !data?.session) {
+      errorEl.textContent = /invalid/i.test(error?.message || '') ? 'Incorrect email or password.' : 'Sign-in failed. Try again.';
       return;
     }
 
-    if(rows[0].manager_password !== password) {
-      errorEl.textContent = 'Incorrect password.';
+    // Auth succeeded. Verify a bar row exists for this manager email
+    // before letting them into the portal. A valid Supabase Auth session
+    // is not enough on its own, the bars row still gates access.
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_pin,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
+    if(!rows || !rows.length) {
+      await sbAuth.auth.signOut();
+      H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
+      errorEl.textContent = 'No account found. Please contact hello@glasi.co.uk.';
       return;
     }
 
@@ -729,7 +748,9 @@
     showScreen('portal');
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    await sbAuth.auth.signOut();
+    H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
     stopWorkerWatch();
     if(sessionsWatchWs) { try { sessionsWatchWs.close(); } catch(e) {} sessionsWatchWs = null; }
     if(shiftRequestsWs) { try { shiftRequestsWs.close(); } catch(e) {} shiftRequestsWs = null; }
@@ -741,6 +762,26 @@
     document.getElementById('login-error').textContent = '';
     showScreen('login');
   }
+
+  // Restore session on page reload. If a valid Supabase Auth session
+  // exists AND a bar row still exists for this manager email, skip the
+  // login screen and load the portal straight away. If the session is
+  // valid but no bar row matches, sign out and stay on login.
+  window.addEventListener('DOMContentLoaded', async () => {
+    const { data } = await sbAuth.auth.getSession();
+    if(!data?.session) return;
+    H.Authorization = 'Bearer ' + data.session.access_token;
+    const email = data.session.user.email;
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_pin,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
+    if(!rows || !rows.length) {
+      await sbAuth.auth.signOut();
+      H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
+      return;
+    }
+    currentBar = rows[0];
+    loadPortal();
+    showScreen('portal');
+  });
 
   async function loadPortal() {
     const bar = currentBar;
