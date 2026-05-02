@@ -3811,22 +3811,34 @@
 
   async function handleJoinSession() {
     if(!currentSessionInvite) return;
-    // Write joined_at to session_invites
-    await fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
+    // Write joined_at to session_invites. Failure here means the DB trigger
+    // sync_session_worker_status_on_join couldn't run; abort before the
+    // optimistic render so the worker isn't shown a "joined" state while the
+    // DB is unchanged. Surfaces silent PostgREST 4xx that would otherwise be
+    // invisible (await fetch does not throw on non-2xx).
+    const inviteResp = await fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + currentSessionInvite.id, {
       method: 'PATCH',
       headers: { ...H, 'Prefer': 'return=representation' },
       body: JSON.stringify({ joined_at: new Date().toISOString() })
     });
+    if(!inviteResp.ok) {
+      const body = await inviteResp.text().catch(() => '');
+      console.error('[handleJoinSession] session_invites PATCH failed', inviteResp.status, body);
+      alert('Could not join the session. Please try again or call 07803856078.');
+      return;
+    }
 
-    // Award +5 points for joining session
+    // Award +5 points for joining session. Logged on failure but not fatal,
+    // the join itself has already landed by this point.
     if(currentWorker) {
       const newPoints = (currentWorker.total_points || 0) + 5;
-      await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
+      const ptsResp = await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
         method: 'PATCH',
         headers: { ...H, 'Prefer': 'return=minimal' },
         body: JSON.stringify({ total_points: newPoints })
       });
-      currentWorker.total_points = newPoints;
+      if(ptsResp.ok) currentWorker.total_points = newPoints;
+      else console.warn('[handleJoinSession] points PATCH failed', ptsResp.status);
     }
     document.getElementById('sessions-prejoin').style.display = 'none';
     document.getElementById('sessions-live').style.display = 'block';
