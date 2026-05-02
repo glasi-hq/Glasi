@@ -269,6 +269,7 @@
     .badge-completed { background: var(--green-dim); color: var(--green); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -1160,10 +1161,17 @@ const SB = "https://hweytbyrqvjsviydmacv.supabase.co";
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3ZXl0YnlycXZqc3ZpeWRtYWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4Njg1MTUsImV4cCI6MjA4OTQ0NDUxNX0.lVT4oSC10l6fX6l89lop3UseGclQmBThWPBqkAlQaSo";
 const H = { 'Content-Type':'application/json', 'apikey':KEY, 'Authorization':`Bearer ${KEY}` };
 
-const USERS = [
-  { email:'sam@glasi.co.uk', pass:'Sponger64112!', name:'Sam' },
-  { email:'lewis@glasi.co.uk', pass:'', name:'Lewis' },
-];
+// Supabase Auth client. signInWithPassword establishes a session, the JWT
+// is mirrored onto H.Authorization so REST fetches go out as the
+// authenticated user. apikey stays as the anon key always.
+const supabase = window.supabase.createClient(SB, KEY);
+
+// Keep H.Authorization in sync with Supabase JS's automatic token
+// refresh. Without this, an in-the-background token rotation would leave
+// REST fetches sending an expired JWT.
+supabase.auth.onAuthStateChange((_event, session) => {
+  H.Authorization = 'Bearer ' + (session?.access_token || KEY);
+});
 
 let ZONES = []; // loaded from Supabase on login
 
@@ -1206,38 +1214,63 @@ async function sbDelete(t,q) { try { await fetch(`${SB}/rest/v1/${t}${q}`,{metho
 async function doLogin() {
   const e=document.getElementById('l-email').value.trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
-  const user=USERS.find(u=>u.email===e && u.pass===p);
-  if(user) {
-    currentUser=user;
-    document.getElementById('screen-login').style.display='none';
-    document.getElementById('header').style.display='flex';
-    document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-    document.getElementById('hdr-user').textContent=user.name;
-    await Promise.all([loadZones(), loadAllWorkers()]);
-    loadWorkerFunnel();
+  const errEl=document.getElementById('l-err');
+  errEl.textContent='';
+  const { data, error } = await supabase.auth.signInWithPassword({ email:e, password:p });
+  if(error || !data?.session) {
+    errEl.textContent = /invalid/i.test(error?.message||'') ? 'Incorrect email or password.' : 'Sign-in failed. Try again.';
+    return;
+  }
+  currentUser = { email: data.session.user.email, name: 'Sam' };
+  await postLoginSetup();
+}
 
-    // check for open session today (resume into liveSessionOps if one is live)
-    const restored = await liveSessionOps.resumeIfLive();
-    if(!restored) {
-      showScreen('home');
-      setActiveNav(null);
-      document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-      renderZones();
-    }
-  } else {
-    document.getElementById('l-err').textContent='Incorrect email or password.';
+async function postLoginSetup() {
+  document.getElementById('screen-login').style.display='none';
+  document.getElementById('header').style.display='flex';
+  document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('hdr-user').textContent=currentUser.name;
+  await Promise.all([loadZones(), loadAllWorkers()]);
+  loadWorkerFunnel();
+
+  // check for open session today (resume into liveSessionOps if one is live)
+  const restored = await liveSessionOps.resumeIfLive();
+  if(!restored) {
+    showScreen('home');
+    setActiveNav(null);
+    document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    renderZones();
   }
 }
+
 document.getElementById('l-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-function doLogout() {
+
+async function doLogout() {
+  await supabase.auth.signOut();
+  H.Authorization = 'Bearer ' + KEY;
   document.getElementById('screen-login').style.display='flex';
   document.getElementById('header').style.display='none';
+  document.getElementById('l-email').value='';
+  document.getElementById('l-pass').value='';
+  document.getElementById('l-err').textContent='';
   clearInterval(sessionTimerInterval);
   showScreen(null);
   setActiveNav(null);
   liveSessionOps.stop();
+  currentUser=null;
   activeZone=null; setupWorkers=[]; shifts=[];
 }
+
+// Restore session on page reload. If a valid Supabase session exists, skip
+// the login screen and go straight into postLoginSetup.
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data } = await supabase.auth.getSession();
+  if(data?.session) {
+    H.Authorization = 'Bearer ' + data.session.access_token;
+    currentUser = { email: data.session.user.email, name: 'Sam' };
+    await postLoginSetup();
+  }
+});
 
 // SCREENS
 function showScreen(name) {
