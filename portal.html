@@ -576,6 +576,425 @@
       color: var(--grey);
     }
 
+    /* BURGER DESTINATION PAGES (Phase 3) */
+    .burger-page-back {
+      background: none;
+      border: none;
+      color: var(--ice);
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      padding: 0 0 16px;
+      cursor: pointer;
+    }
+    .burger-page-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .burger-page-sub {
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .burger-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 14px;
+    }
+    .burger-card h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--white);
+      margin: 0 0 8px;
+      letter-spacing: 0.3px;
+    }
+    .burger-card p {
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.65;
+      margin: 0 0 12px;
+    }
+    .burger-card p:last-child { margin-bottom: 0; }
+    .burger-card .lead { color: var(--white); font-weight: 600; }
+    .burger-disclaimer {
+      background: rgba(245,158,11,0.06);
+      border: 1px solid rgba(245,158,11,0.18);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--amber);
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+
+    /* ACTIVITY FEED — multi-source variants + dismiss control */
+    .activity-row { position: relative; }
+    .activity-row-icon {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+    }
+    .activity-row-icon.pts { background: rgba(168,198,232,0.12); color: var(--ice); }
+    .activity-row-icon.pts.negative { background: rgba(239,68,68,0.1); color: var(--red); }
+    .activity-row-icon.pts.zero { background: rgba(245,158,11,0.1); color: var(--amber); }
+    .activity-row-icon.shift { background: rgba(34,197,94,0.1); color: var(--green); }
+    .activity-row-icon.session { background: rgba(168,216,234,0.08); color: var(--ice); }
+    .activity-row-icon.dispatched { background: rgba(168,198,232,0.16); color: var(--ice); }
+    .activity-row-icon.hs { background: rgba(168,198,232,0.08); color: var(--white); }
+
+    .activity-row.clickable { cursor: pointer; transition: border-color 0.15s; }
+    .activity-row.clickable:hover { border-color: var(--ice); }
+
+    .activity-dismiss-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--grey);
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px 6px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.15s, color 0.15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .activity-dismiss-btn:hover { opacity: 1; color: var(--red); }
+
+    /* ACTIVITY — H&S compliance counter */
+    .activity-hs-counter {
+      background: rgba(245,158,11,0.06);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--amber);
+      letter-spacing: 0.3px;
+      margin-bottom: 14px;
+    }
+
+    /* ACTIVITY — H&S-needs-signing row variant */
+    .activity-row.hs-needs {
+      border-color: rgba(245,158,11,0.35);
+      background: rgba(245,158,11,0.04);
+    }
+    .activity-row-icon.hs-needs {
+      background: rgba(245,158,11,0.15);
+      color: var(--amber);
+      font-weight: 800;
+    }
+    .activity-row-icon.tier-up {
+      background: rgba(168,198,232,0.15);
+      color: var(--ice);
+      font-weight: 800;
+    }
+
+    /* SESSIONS TAB — scheduled-invite cards (Phase 3.5 / 4) */
+    .session-invite-card {
+      background: var(--navy-mid);
+      border: 2px solid var(--ice);
+      border-radius: 16px;
+      padding: 28px 24px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .session-invite-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .session-invite-headline {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .session-invite-when {
+      font-size: 14px;
+      color: var(--grey);
+      margin-bottom: 24px;
+    }
+    .session-invite-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .session-invite-yes {
+      flex: 1;
+      background: var(--green);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .session-invite-yes:hover { opacity: 0.92; }
+    .session-invite-yes:disabled { opacity: 0.55; cursor: default; }
+    .session-invite-no {
+      flex: 1;
+      background: none;
+      color: var(--grey);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .session-invite-no:hover { color: var(--white); border-color: var(--white); }
+    .session-invite-no:disabled { opacity: 0.55; cursor: default; }
+    .session-invite-error {
+      font-size: 12px;
+      color: var(--red);
+      margin-top: 12px;
+      min-height: 16px;
+      text-align: center;
+    }
+
+    .session-confirmed-card {
+      background: rgba(34,197,94,0.06);
+      border: 2px solid rgba(34,197,94,0.3);
+      border-radius: 16px;
+      padding: 28px 24px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    /* SESSIONS TAB — live + confirmed worker, not yet joined */
+    .session-live-confirmed-card {
+      background: var(--navy-mid);
+      border: 2px solid var(--ice);
+      border-radius: 16px;
+      padding: 28px 24px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .session-live-confirmed-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--green);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .session-live-confirmed-headline {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.3px;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .session-live-confirmed-zone {
+      font-size: 14px;
+      color: var(--grey);
+      margin-bottom: 24px;
+    }
+    .session-live-confirmed-btn {
+      display: block;
+      width: 100%;
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.15s;
+    }
+    .session-live-confirmed-btn:hover { opacity: 0.92; }
+    .session-live-confirmed-btn:disabled { opacity: 0.55; cursor: default; }
+    .session-confirmed-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--green);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .session-confirmed-headline {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .session-confirmed-when {
+      font-size: 14px;
+      color: var(--grey);
+    }
+
+    /* ACTIVITY — pinned upcoming session */
+    .upcoming-session-card {
+      background: rgba(168,198,232,0.06);
+      border: 1px solid rgba(168,198,232,0.25);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    .upcoming-session-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .upcoming-session-when {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+    .upcoming-session-zone {
+      font-size: 12px;
+      color: var(--grey);
+    }
+
+    /* SHIFT HISTORY */
+    .shift-row {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .shift-row.expanded { border-color: var(--ice); }
+    .shift-row-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .shift-row-venue {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+    .shift-row-meta {
+      font-size: 11px;
+      color: var(--grey);
+    }
+    .shift-row-money {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .shift-row-earned {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ice);
+    }
+    .shift-row-points {
+      font-size: 11px;
+      color: var(--amber);
+      margin-top: 2px;
+    }
+    .shift-row-breakdown {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+    .shift-row.expanded .shift-row-breakdown { display: block; }
+    .shift-row-breakdown-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 12px;
+      color: var(--grey);
+    }
+    .shift-row-breakdown-line strong { color: var(--white); font-weight: 500; }
+    .shift-row-breakdown-line .pts { color: var(--ice); font-weight: 700; }
+    .shift-row-breakdown-line .pts.negative { color: var(--red); }
+
+    /* EARNINGS SUMMARY */
+    .earnings-hero {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 20px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .earnings-hero-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .earnings-hero-amount {
+      font-size: 38px;
+      font-weight: 800;
+      color: var(--ice);
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .earnings-hero-sub {
+      font-size: 12px;
+      color: var(--grey);
+    }
+    .earnings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .earnings-stat {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 12px;
+    }
+    .earnings-stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .earnings-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--white);
+    }
+    .earnings-stat-meta {
+      font-size: 11px;
+      color: var(--grey);
+      margin-top: 2px;
+    }
+
     /* PER-BAR H&S DETAIL */
     .bar-detail-back {
       background: none;
@@ -1178,6 +1597,7 @@
     .history-zone { font-size: 11px; color: var(--grey); margin-top: 2px; }
     .history-pts { font-size: 13px; color: var(--ice); font-weight: 600; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -1201,8 +1621,8 @@
 <!-- PORTAL SCREEN -->
 <div id="screen-portal" class="screen">
 
-  <!-- Burger drawer overlay + slide-in. Phase 1 wires open/close + Log out;
-       other items navigate to a "Coming soon" placeholder. -->
+  <!-- Burger drawer overlay + slide-in. Open/close + each item routes to a
+       dedicated burger destination page (Phase 3). Log out calls handleSignOut. -->
   <div id="burger-overlay" class="burger-overlay" onclick="closeBurgerMenu()"></div>
   <div id="burger-drawer" class="burger-drawer" role="dialog" aria-label="Menu">
     <div class="burger-drawer-header">
@@ -1210,12 +1630,12 @@
       <button class="burger-close" onclick="closeBurgerMenu()" aria-label="Close menu">×</button>
     </div>
     <div class="burger-items">
-      <button class="burger-item" onclick="showBurgerPlaceholder('How Glasi works')">How Glasi works</button>
-      <button class="burger-item" onclick="showBurgerPlaceholder('How selection works')">How selection works</button>
-      <button class="burger-item" onclick="showBurgerPlaceholder('Bars in my zone')">Bars in my zone</button>
-      <button class="burger-item" onclick="showBurgerPlaceholder('Shift history')">Shift history</button>
-      <button class="burger-item" onclick="showBurgerPlaceholder('Earnings summary')">Earnings summary</button>
-      <button class="burger-item" onclick="showBurgerPlaceholder('Support')">Support</button>
+      <button class="burger-item" onclick="closeBurgerMenu(); showBurgerPage('how-glasi-works');">How Glasi works</button>
+      <button class="burger-item" onclick="closeBurgerMenu(); showBurgerPage('how-selection-works');">How selection works</button>
+      <button class="burger-item" onclick="closeBurgerMenu(); showBurgerPage('bars-zone');">Bars in my zone</button>
+      <button class="burger-item" onclick="closeBurgerMenu(); showBurgerPage('shift-history');">Shift history</button>
+      <button class="burger-item" onclick="closeBurgerMenu(); showBurgerPage('earnings');">Earnings summary</button>
+      <button class="burger-item" onclick="closeBurgerMenu(); showBurgerPage('support');">Support</button>
       <button class="burger-item danger" onclick="closeBurgerMenu(); handleSignOut();">Log out</button>
     </div>
   </div>
@@ -1381,6 +1801,14 @@
     <!-- ACTIVITY TAB -->
     <div id="tab-activity" style="display:none;">
 
+      <!-- Pinned: upcoming session. Forward-looking, NOT in the feed list,
+           NOT dismissable. Hidden when there is no upcoming session. -->
+      <div id="upcoming-session-card" class="upcoming-session-card" style="display:none;">
+        <div class="upcoming-session-label">Your next session</div>
+        <div class="upcoming-session-when" id="upcoming-session-when">—</div>
+        <div class="upcoming-session-zone" id="upcoming-session-zone">—</div>
+      </div>
+
       <!-- Stats summary -->
       <div class="activity-stats-card">
         <div class="activity-stats-row">
@@ -1399,9 +1827,10 @@
         </div>
       </div>
 
-      <!-- Recent activity feed (points_ledger entries for this worker) -->
+      <!-- Recent activity feed: 5 high-level event types merged. -->
       <div class="activity-feed-card">
         <div class="activity-feed-title">Recent activity</div>
+        <div id="activity-hs-counter" class="activity-hs-counter" style="display:none;"></div>
         <div id="activity-feed-list">
           <div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>
         </div>
@@ -1409,10 +1838,204 @@
 
     </div>
 
+    <!-- ─── BURGER DESTINATION PAGES (Phase 3) ─────────────────────
+         Sub-pages reachable from the burger menu. Hidden by default; one
+         is shown at a time via showBurgerPage. Each has its own back
+         button that returns the worker to the previously-active top-nav tab. -->
+
+    <!-- Shift history -->
+    <div id="burger-page-shift-history" class="burger-page" style="display:none;">
+      <button class="burger-page-back" onclick="closeBurgerPage()">← Back</button>
+      <div class="burger-page-title">Shift History</div>
+      <div class="burger-page-sub">Every shift you've completed, newest first.</div>
+      <div class="burger-disclaimer">These figures are estimates based on completed shift data. They are not a payslip.</div>
+      <div id="shift-history-list">
+        <div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Earnings summary -->
+    <div id="burger-page-earnings" class="burger-page" style="display:none;">
+      <button class="burger-page-back" onclick="closeBurgerPage()">← Back</button>
+      <div class="burger-page-title">Earnings Summary</div>
+      <div class="burger-page-sub">Estimated lifetime earnings from completed shifts.</div>
+      <div class="burger-disclaimer">This is an estimate based on completed shifts. Actual payment is processed by Parasol and may differ. This is not a payslip.</div>
+
+      <div class="earnings-hero">
+        <div class="earnings-hero-label">Lifetime estimated</div>
+        <div class="earnings-hero-amount" id="earnings-total">£0.00</div>
+        <div class="earnings-hero-sub" id="earnings-total-meta">across 0 shifts</div>
+      </div>
+
+      <div class="earnings-grid">
+        <div class="earnings-stat">
+          <div class="earnings-stat-label">Total hours</div>
+          <div class="earnings-stat-value" id="earnings-hours">0h</div>
+        </div>
+        <div class="earnings-stat">
+          <div class="earnings-stat-label">Average per shift</div>
+          <div class="earnings-stat-value" id="earnings-avg">£0.00</div>
+        </div>
+        <div class="earnings-stat">
+          <div class="earnings-stat-label">Best shift</div>
+          <div class="earnings-stat-value" id="earnings-best">£0.00</div>
+          <div class="earnings-stat-meta" id="earnings-best-meta">—</div>
+        </div>
+        <div class="earnings-stat">
+          <div class="earnings-stat-label">Most worked at</div>
+          <div class="earnings-stat-value" id="earnings-most-bar">—</div>
+          <div class="earnings-stat-meta" id="earnings-most-bar-meta">—</div>
+        </div>
+        <div class="earnings-stat">
+          <div class="earnings-stat-label">Last 7 days</div>
+          <div class="earnings-stat-value" id="earnings-7d">£0.00</div>
+        </div>
+        <div class="earnings-stat">
+          <div class="earnings-stat-label">Last 30 days</div>
+          <div class="earnings-stat-value" id="earnings-30d">£0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How Glasi works -->
+    <div id="burger-page-how-glasi-works" class="burger-page" style="display:none;">
+      <button class="burger-page-back" onclick="closeBurgerPage()">← Back</button>
+      <div class="burger-page-title">How Glasi works</div>
+      <div class="burger-page-sub">A short read.</div>
+
+      <div class="burger-card">
+        <h3>What Glasi is</h3>
+        <p>Glasi is an on-demand staffing platform for bars. When a venue gets slammed, they request a Glasi from us and we dispatch a vetted local worker within 30 minutes.</p>
+        <p>You're the local worker. You sign up, get vetted, get assigned a zone, and join sessions on Friday and Saturday evenings (plus the occasional weekday). When a shift comes in during a session, the workers in that session get the chance to respond. We pick one and dispatch.</p>
+      </div>
+
+      <div class="burger-card">
+        <h3>How shifts work</h3>
+        <p>You join a session from home. You're not paid for waiting. You're only paid when you're selected for and complete a shift.</p>
+        <p>If a shift comes in, you'll see it on this app with a 60-second response window. Tap "I'm available" if you're ready to go. We pick a worker and dispatch them. If it's you, you'll see venue details, get a clock-in code, head to the bar, and clock in.</p>
+        <p>You work the shift, get a clock-out code from the manager, clock out, and you're done.</p>
+      </div>
+
+      <div class="burger-card">
+        <h3>How pay works</h3>
+        <p>You're paid via <strong style="color:var(--white);">Parasol Group</strong>, our umbrella payroll partner. Glasi sends them your timesheet, settles the invoice, and they pay you directly.</p>
+        <p>Parasol runs five payrolls a day. We aim to settle by their 3pm cutoff so you get paid the same evening.</p>
+      </div>
+
+      <div class="burger-card">
+        <h3>How to be successful</h3>
+        <p>Show up to sessions, even when it's quiet. We notice consistency. Respond fast when shifts come in. Arrive on time or early. Leave a good impression at every venue.</p>
+        <p>Your tier (and your hourly rate) goes up with points. Points come from showing up, responding, completing shifts, and arriving on time. The Tiers tab has the full breakdown.</p>
+      </div>
+    </div>
+
+    <!-- How selection works -->
+    <div id="burger-page-how-selection-works" class="burger-page" style="display:none;">
+      <button class="burger-page-back" onclick="closeBurgerPage()">← Back</button>
+      <div class="burger-page-title">How selection works</div>
+      <div class="burger-page-sub">When a shift comes in, here's what affects your chances.</div>
+
+      <div class="burger-card">
+        <h3>The 60-second window</h3>
+        <p>When a bar requests a Glasi, every worker in the live session sees the shift post for 60 seconds. Tap "I'm available" if you can take it. Tap "I'll pass" if you can't. After 60 seconds the window closes and we pick.</p>
+        <p>You can only respond once. Speed matters — fast responses earn more points and signal to us that you're ready.</p>
+      </div>
+
+      <div class="burger-card">
+        <h3>What gets you picked</h3>
+        <p>We pick based on a mix of:</p>
+        <p><strong style="color:var(--white);">Tier.</strong> Higher-tier workers get a small edge. Tier reflects your track record.</p>
+        <p><strong style="color:var(--white);">Reliability.</strong> Your attendance percentage on shifts you were selected for. Show up consistently and this stays high.</p>
+        <p><strong style="color:var(--white);">Response speed.</strong> Replied in under 30 seconds? That counts.</p>
+        <p><strong style="color:var(--white);">Distance.</strong> Closer to the venue means you'll arrive faster. We prefer workers within walking distance.</p>
+        <p><strong style="color:var(--white);">Transport.</strong> Workers with a bike, e-bike, or e-scooter cover ground faster. Mention it in your profile if you have one.</p>
+        <p><strong style="color:var(--white);">Fairness.</strong> If you've been responding all night and not getting picked, your odds tick up to balance things out.</p>
+      </div>
+
+      <div class="burger-card">
+        <h3>Tips</h3>
+        <p>Stay near a charger so your phone doesn't die mid-session.</p>
+        <p>Keep notifications on.</p>
+        <p>If you can't take a shift, tap "I'll pass" rather than not responding. It still earns you a small point bump and lets us know.</p>
+      </div>
+    </div>
+
+    <!-- Support -->
+    <div id="burger-page-support" class="burger-page" style="display:none;">
+      <button class="burger-page-back" onclick="closeBurgerPage()">← Back</button>
+      <div class="burger-page-title">Support</div>
+      <div class="burger-page-sub">Get in touch.</div>
+
+      <div class="burger-card" style="text-align:center;padding:28px 22px;">
+        <h3 style="margin-bottom:14px;">Call us</h3>
+        <a href="tel:07803856078" style="display:inline-block;background:var(--ice);color:var(--navy);text-decoration:none;border-radius:10px;padding:12px 28px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;margin-bottom:6px;">07803856078</a>
+        <p style="font-size:11px;color:var(--grey);margin-top:10px;">Anytime during a session. For non-urgent matters, email is best.</p>
+      </div>
+
+      <div class="burger-card" style="text-align:center;padding:24px 22px;">
+        <h3 style="margin-bottom:10px;">Email</h3>
+        <a href="mailto:hello@glasi.co.uk" style="color:var(--ice);text-decoration:none;font-size:15px;font-weight:600;">hello@glasi.co.uk</a>
+      </div>
+
+      <div class="burger-card">
+        <h3>If you've had a shift issue</h3>
+        <p>Contact us within 48 hours. The sooner we hear, the easier it is to put right.</p>
+      </div>
+    </div>
+
+    <!-- Bars in my zone (dedicated page; richer than the Profile summary) -->
+    <div id="burger-page-bars-zone" class="burger-page" style="display:none;">
+      <button class="burger-page-back" onclick="closeBurgerPage()">← Back</button>
+      <div class="burger-page-title">Bars in my zone</div>
+      <div class="burger-page-sub">Every venue you can be dispatched to. Tap to read and sign their health and safety document.</div>
+      <div id="bars-zone-detailed-list">
+        <div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>
+      </div>
+    </div>
+
     <!-- SESSIONS TAB -->
     <div id="tab-sessions" style="display:none;">
 
-      <!-- STATE: No active session -->
+      <!-- STATE 3: scheduled invite, pending response -->
+      <div id="sessions-pending-response" style="display:none;">
+        <div class="session-invite-card">
+          <div class="session-invite-label">Session Invite</div>
+          <div class="session-invite-headline">You've been invited to a session</div>
+          <div class="session-invite-when" id="pending-session-when">—</div>
+          <div class="session-invite-actions">
+            <button id="invite-yes-btn" class="session-invite-yes" onclick="confirmAttendance()">Yes I'm in</button>
+            <button id="invite-no-btn" class="session-invite-no" onclick="declineAttendance()">No I'll pass</button>
+          </div>
+          <div id="invite-response-error" class="session-invite-error"></div>
+        </div>
+      </div>
+
+      <!-- STATE: live session, worker pre-confirmed via accept/decline,
+           not yet through prejoin. Shown instead of sessions-code-entry
+           when attendance_confirmed='confirmed'. Click → enterPrejoin →
+           prejoin checks → live waiting room. -->
+      <div id="sessions-live-confirmed-join" style="display:none;">
+        <div class="session-live-confirmed-card">
+          <div class="session-live-confirmed-label">
+            <span class="live-dot"></span>
+            <span>Session live</span>
+          </div>
+          <div class="session-live-confirmed-headline">Session is live</div>
+          <div class="session-live-confirmed-zone" id="live-confirmed-zone">—</div>
+          <button class="session-live-confirmed-btn" onclick="joinConfirmedSession()">Join Session</button>
+        </div>
+      </div>
+
+      <!-- STATE 2: scheduled invite, confirmed, waiting for go-live -->
+      <div id="sessions-confirmed-waiting" style="display:none;">
+        <div class="session-confirmed-card">
+          <div class="session-confirmed-label">Confirmed</div>
+          <div class="session-confirmed-headline">Session not live yet. We'll let you know when it's time.</div>
+          <div class="session-confirmed-when" id="confirmed-session-when">—</div>
+        </div>
+      </div>
+
+      <!-- STATE 4: No active session -->
       <div id="sessions-empty" class="sessions-empty">
         <div class="sessions-empty-icon">🕐</div>
         <div class="sessions-empty-title">No active session right now</div>
@@ -1602,6 +2225,19 @@
     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
   };
 
+  // Supabase Auth client. Named sbAuth (not supabase) to avoid colliding
+  // with the global window.supabase that the UMD CDN registers, which
+  // would throw "Identifier 'supabase' has already been declared" at
+  // parse time. The factory call on the right is the library entry point.
+  const sbAuth = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Keep H.Authorization in sync with Supabase JS's automatic token
+  // refresh. Without this, an in-the-background token rotation would leave
+  // REST fetches sending an expired JWT.
+  sbAuth.auth.onAuthStateChange((_event, session) => {
+    H.Authorization = 'Bearer ' + (session?.access_token || SUPABASE_ANON_KEY);
+  });
+
   // -- DEMO STATE (replace with real auth later) --
   let currentWorker = null;
   let currentSessionInvite = null;
@@ -1610,6 +2246,10 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + id).classList.add('active');
   }
+
+  // Track the most-recently-active top-nav tab so closeBurgerPage can return
+  // the worker to where they were before opening the burger menu.
+  let previousTab = 'profile';
 
   function showTab(tab) {
     const tabs = ['profile','tiers','sessions','activity'];
@@ -1634,9 +2274,52 @@
       const main = document.getElementById('profile-main');
       if(main) main.style.display = 'block';
     }
+    // Hide any open burger page when switching to a top-nav tab.
+    document.querySelectorAll('.burger-page').forEach(el => { el.style.display = 'none'; });
     // Activity is lazy-loaded on entry. The cache window inside loadActivityPage
     // means rapid back-and-forth doesn't spam fetches.
     if(tab === 'activity') loadActivityPage();
+    previousTab = tab;
+  }
+
+  // ── Burger destination pages (Phase 3) ───────────────────────────
+  // showBurgerPage hides every top-nav tab and every other burger page,
+  // shows the requested one, and clears the top-nav active state. The
+  // top-nav itself stays visible so the worker can leave the burger page
+  // by clicking any tab.
+  function showBurgerPage(pageId) {
+    const validIds = ['shift-history','earnings','how-glasi-works','how-selection-works','support','bars-zone'];
+    if(!validIds.includes(pageId)) return;
+
+    // Hide all top-nav tabs.
+    ['profile','tiers','sessions','activity'].forEach(t => {
+      const el = document.getElementById('tab-' + t);
+      if(el) el.style.display = 'none';
+      const navBtn = document.getElementById('nav-' + t);
+      if(navBtn) navBtn.classList.remove('active');
+    });
+    // Also collapse any open Profile sub-view so a later return trip lands clean.
+    const profDetail = document.getElementById('profile-bar-detail');
+    if(profDetail) profDetail.style.display = 'none';
+    const profMain = document.getElementById('profile-main');
+    if(profMain) profMain.style.display = 'block';
+
+    // Hide all burger pages, show the requested one.
+    document.querySelectorAll('.burger-page').forEach(el => { el.style.display = 'none'; });
+    const target = document.getElementById('burger-page-' + pageId);
+    if(target) target.style.display = 'block';
+
+    // Lazy loaders for pages with data.
+    if(pageId === 'shift-history') loadShiftHistory();
+    else if(pageId === 'earnings') loadEarningsSummary();
+    else if(pageId === 'bars-zone') loadDedicatedBarsInZone();
+
+    // Scroll to top so each new page lands at the top.
+    window.scrollTo(0, 0);
+  }
+
+  function closeBurgerPage() {
+    showTab(previousTab || 'profile');
   }
 
   // ── Burger drawer ─────────────────────────────────────────────────
@@ -1652,12 +2335,7 @@
     if(drawer) drawer.classList.remove('open');
     if(overlay) overlay.classList.remove('open');
   }
-  function showBurgerPlaceholder(label) {
-    closeBurgerMenu();
-    alert(label + '\n\nComing soon. This page lands in a later phase.');
-  }
-
-  // ── Profile picture upload — Phase 1 placeholder, no Storage work yet ──
+  // ── Profile picture upload — placeholder, no Storage work yet ──
   function handleProfileAvatarUpload() {
     alert('Profile picture upload\n\nComing soon. The avatar will be uploaded to Supabase Storage in a later phase.');
   }
@@ -1670,22 +2348,20 @@
 
     if(!email || !password) { errorEl.textContent = 'Please enter your email and password.'; return; }
 
-    // For now -- check applications table directly
-    // Later this will use Supabase Auth
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,portal_password,postcode_full', { headers: H }).then(r => r.json());
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
+    if(error || !data?.session) {
+      errorEl.textContent = /invalid/i.test(error?.message || '') ? 'Incorrect email or password.' : 'Sign-in failed. Try again.';
+      return;
+    }
 
+    // Auth succeeded. Verify the worker is onboarded before letting them
+    // into the portal. A valid Supabase Auth session is not enough on its
+    // own, the applications row still gates access.
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,postcode_full', { headers: H }).then(r => r.json());
     if(!rows || !rows.length) {
-      errorEl.textContent = 'No account found. Please check your email or contact hello@glasi.co.uk.';
-      return;
-    }
-
-    // Check portal_password from database
-    if(!rows[0].portal_password) {
+      await sbAuth.auth.signOut();
+      H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
       errorEl.textContent = 'Your account is not yet active. Please contact hello@glasi.co.uk.';
-      return;
-    }
-    if(password !== rows[0].portal_password) {
-      errorEl.textContent = 'Incorrect password.';
       return;
     }
 
@@ -1695,15 +2371,22 @@
     loadPortal();
     showScreen('portal');
     startSessionsWatch();
+    // Phase 3.5/4: react to invite changes (new invite, attendance flip
+    // from another tab, decline from another device).
+    startInviteWatch();
   }
 
   function handleForgot() {
     alert('Please email hello@glasi.co.uk to reset your password.');
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    await sbAuth.auth.signOut();
+    H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
     stopRealtime();
     if(sessionsWatchWs) { try { sessionsWatchWs.close(); } catch(e) {} sessionsWatchWs = null; }
+    if(inviteWatchWs) { try { inviteWatchWs.close(); } catch(e) {} inviteWatchWs = null; }
+    pendingInvite = null;
     resetSessionStates();
     currentWorker = null;
     currentSessionInvite = null;
@@ -1713,6 +2396,30 @@
     document.getElementById('login-error').textContent = '';
     showScreen('login');
   }
+
+  // Restore session on page reload. If a valid Supabase Auth session
+  // exists AND the worker is still onboarded, skip the login screen and
+  // load the portal straight away. If the session is valid but the
+  // worker is no longer onboarded, sign out and stay on login.
+  window.addEventListener('DOMContentLoaded', async () => {
+    const { data } = await sbAuth.auth.getSession();
+    if(!data?.session) return;
+    H.Authorization = 'Bearer ' + data.session.access_token;
+    const email = data.session.user.email;
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,postcode_full', { headers: H }).then(r => r.json());
+    if(!rows || !rows.length) {
+      await sbAuth.auth.signOut();
+      H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
+      return;
+    }
+    currentWorker = rows[0];
+    resetSessionStates();
+    stopRealtime();
+    loadPortal();
+    showScreen('portal');
+    startSessionsWatch();
+    startInviteWatch();
+  });
 
   function loadPortal() {
     if(!currentWorker) return;
@@ -2106,6 +2813,12 @@
     return REASON_LABELS[reason] || reason.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  // Phase 3.5/4: rebuilt feed from scratch. Five high-level operational
+  // event types — session_invite, session_live, shift, hs_needs_signing,
+  // tier_increase. The previous Phase 3 sources (session_joined,
+  // session_worker_dispatched, hs_acknowledgement, per-ledger-entry) are
+  // gone; only the most recent tier_promoted ledger row remains as a
+  // tier_increase event.
   async function loadActivityPage(force) {
     if(!currentWorker) return;
     if(!force && activityLoadedAt && (Date.now() - activityLoadedAt) < ACTIVITY_CACHE_MS) return;
@@ -2115,127 +2828,890 @@
     if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>';
 
     try {
-      // Last 50 ledger entries for this worker, plus enough metadata to
-      // render the timeline. session_id is used downstream when wiring
-      // session-context labels in a future phase.
-      const ledger = await fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + currentWorker.id + '&order=awarded_at.desc&limit=50&select=id,amount,reason,session_id,shift_id,awarded_at,metadata,notes', { headers: H }).then(r => r.json());
+      // 1. Worker session_workers — needed for the shifts query (shifts
+      // joins on session_worker_id) and for the lifetime stats summary.
+      const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=id,status', { headers: H }).then(r => r.json());
+      const swList = swRows || [];
+      const swIds = swList.map(r => r.id);
 
-      // 7-day points sum (amount > 0 only is debatable; spec says "points
-      // earned", so sum positives).
+      // 2. Parallel fetch: invites (drives session_invite + session_live +
+      // upcoming card), shifts, latest tier_promoted, dismissals, ledger
+      // 7-day stat. Bars-in-zone is needed for hs_needs_signing — load
+      // through the existing cache helper if not already populated.
+      const [invites, shiftRows, latestTierRows, dismissalsRows, allLedger] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/session_invites?application_id=eq.' + currentWorker.id + '&select=id,created_at,session_id,attendance_confirmed,sessions(status,session_date,scheduled_start,start_time,zone_id,zones(name))', { headers: H }).then(r => r.json()),
+        swIds.length
+          ? fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=in.(' + swIds.join(',') + ')&status=eq.completed&select=id,clock_in_confirmed_at,clock_out_confirmed_at,shift_length_hours,total_earned,hourly_rate,bar_id,session_id&order=clock_out_confirmed_at.desc&limit=50', { headers: H }).then(r => r.json())
+          : Promise.resolve([]),
+        fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + currentWorker.id + '&reason=eq.tier_promoted&order=awarded_at.desc&limit=1&select=id,reason,awarded_at,metadata', { headers: H }).then(r => r.json()),
+        fetch(SUPABASE_URL + '/rest/v1/activity_dismissals?application_id=eq.' + currentWorker.id + '&select=source_type,source_id', { headers: H }).then(r => r.json()).catch(() => []),
+        fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + currentWorker.id + '&order=awarded_at.desc&limit=200&select=amount,awarded_at', { headers: H }).then(r => r.json()).catch(() => [])
+      ]);
+
+      const dismissed = new Set((dismissalsRows || []).map(d => d.source_type + ':' + d.source_id));
+
+      // 3. Bars-in-zone cache for hs_needs_signing items + shift bar names.
+      // Phase 1's loadBarsInZone populates barsInZoneCache with name +
+      // hs_document_path + signed_at per bar. Trigger it if empty.
+      if(!barsInZoneCache.length) await loadBarsInZone();
+
+      // Resolve any shift bar_ids not in the zone cache (e.g. historical
+      // shifts at a bar that's since been re-zoned).
+      const barNameById = {};
+      barsInZoneCache.forEach(b => { barNameById[b.id] = b.name; });
+      const missingBarIds = [...new Set((shiftRows || []).map(s => s.bar_id).filter(id => id && !barNameById[id]))];
+      if(missingBarIds.length) {
+        const extra = await fetch(SUPABASE_URL + '/rest/v1/bars?id=in.(' + missingBarIds.join(',') + ')&select=id,name', { headers: H }).then(r => r.json()).catch(() => []);
+        (extra || []).forEach(b => { barNameById[b.id] = b.name; });
+      }
+      const barName = id => barNameById[id] || 'a venue';
+
+      // 4. Build the events array (5 types).
+      const events = [];
+
+      // 4a. session_invite — show all invites where session is scheduled
+      // and worker has either responded or is pending. Once session goes
+      // live or closes, this row is suppressed (filtered out below).
+      (invites || []).forEach(inv => {
+        const status = inv.sessions?.status;
+        const conf = inv.attendance_confirmed;
+        if(status === 'scheduled' && (conf === 'pending' || conf === 'confirmed')) {
+          events.push({
+            source_type: 'session_invite',
+            source_id: inv.id,
+            ts: inv.created_at,
+            payload: inv
+          });
+        }
+      });
+
+      // 4b. session_live — fires when the worker has a confirmed invite
+      // and the session has gone live. Timestamp = scheduled_start (or
+      // session_date+start_time fallback) so it sorts near the top.
+      (invites || []).forEach(inv => {
+        const status = inv.sessions?.status;
+        const conf = inv.attendance_confirmed;
+        if(status === 'live' && conf === 'confirmed') {
+          const s = inv.sessions || {};
+          let ts = s.scheduled_start
+            || (s.session_date && s.start_time ? s.session_date + 'T' + s.start_time : null)
+            || (s.session_date ? s.session_date + 'T18:00:00' : null);
+          if(!ts) ts = new Date().toISOString();
+          events.push({
+            source_type: 'session_live',
+            source_id: inv.session_id,
+            ts: ts,
+            payload: inv
+          });
+        }
+      });
+
+      // 4c. shift — one row per completed shift.
+      (shiftRows || []).forEach(s => {
+        events.push({
+          source_type: 'shift',
+          source_id: s.id,
+          ts: s.clock_out_confirmed_at || s.clock_in_confirmed_at,
+          payload: s,
+          bar_name: barName(s.bar_id)
+        });
+      });
+
+      // 4d. tier_increase — only the most recent tier_promoted entry.
+      if(latestTierRows && latestTierRows.length) {
+        const t = latestTierRows[0];
+        events.push({
+          source_type: 'tier_increase',
+          source_id: t.id,
+          ts: t.awarded_at,
+          payload: t
+        });
+      }
+
+      // 4e. hs_needs_signing — bars in zone with hs_document_path set and
+      // no acknowledgement row yet. Pinned at the top (no ts), alphabetical
+      // by bar name. NOT dismissable.
+      const hsItems = barsInZoneCache
+        .filter(b => b.hs_document_path && !b.signed_at)
+        .map(b => ({
+          source_type: 'hs_needs_signing',
+          source_id: b.id,
+          ts: null,
+          payload: b
+        }))
+        .sort((a, b) => (a.payload.name || '').localeCompare(b.payload.name || ''));
+
+      // 5. Filter dismissed events (h&s items aren't dismissable; they
+      // never appear in dismissals queries, but the filter still handles
+      // them safely if a stale row exists).
+      const filtered = events
+        .filter(e => !dismissed.has(e.source_type + ':' + e.source_id))
+        .filter(e => e.ts);
+
+      filtered.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+
+      // H&S items pinned at the top of the visible list, then chronological events.
+      const visible = [...hsItems, ...filtered].slice(0, 50);
+
+      // 6. Stats summary (preserved).
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const last7d = (ledger || []).reduce((sum, r) => {
+      const last7d = (allLedger || []).reduce((sum, r) => {
         const ts = r.awarded_at ? new Date(r.awarded_at).getTime() : 0;
         if(ts >= sevenDaysAgo) sum += parseInt(r.amount) || 0;
         return sum;
       }, 0);
-
       const stat7 = document.getElementById('activity-stat-7d');
       if(stat7) stat7.textContent = (last7d >= 0 ? '+' : '') + last7d.toLocaleString();
 
-      // Lifetime sessions joined: session_workers rows with status in
-      // (available, dispatched, onshift, completed). 'available' covers
-      // the "joined and waited" case.
-      const swCount = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&status=in.(available,dispatched,onshift,completed)&select=id', { headers: H }).then(r => r.json());
+      const sessionsCount = swList.filter(sw => ['available','dispatched','onshift','completed'].includes(sw.status)).length;
       const stat2 = document.getElementById('activity-stat-sessions');
-      if(stat2) stat2.textContent = String((swCount || []).length);
+      if(stat2) stat2.textContent = String(sessionsCount);
 
-      // Lifetime shifts completed.
-      const swIdsRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=id', { headers: H }).then(r => r.json());
-      const swIds = (swIdsRows || []).map(r => r.id);
-      let shiftsCount = 0;
-      if(swIds.length) {
-        const sh = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=in.(' + swIds.join(',') + ')&status=eq.completed&select=id', { headers: H }).then(r => r.json());
-        shiftsCount = (sh || []).length;
-      }
       const stat3 = document.getElementById('activity-stat-shifts');
-      if(stat3) stat3.textContent = String(shiftsCount);
+      if(stat3) stat3.textContent = String((shiftRows || []).length);
 
-      // Render the feed.
-      if(!ledger || !ledger.length) {
+      // 7. H&S compliance counter at top of feed.
+      const hsCounterEl = document.getElementById('activity-hs-counter');
+      if(hsCounterEl) {
+        if(hsItems.length > 0) {
+          hsCounterEl.style.display = 'block';
+          hsCounterEl.textContent = hsItems.length + ' document' + (hsItems.length === 1 ? '' : 's') + ' need signing';
+        } else {
+          hsCounterEl.style.display = 'none';
+        }
+      }
+
+      // 8. Pinned upcoming session card. Reuses the invites query above —
+      // picks the soonest future scheduled session the worker has an invite for.
+      const card = document.getElementById('upcoming-session-card');
+      const whenEl = document.getElementById('upcoming-session-when');
+      const zoneEl = document.getElementById('upcoming-session-zone');
+      const now = Date.now();
+      const upcoming = (invites || [])
+        .map(inv => {
+          const s = inv.sessions || {};
+          let ts = null;
+          if(s.scheduled_start) ts = new Date(s.scheduled_start).getTime();
+          else if(s.session_date) {
+            const dateStr = s.start_time ? (s.session_date + 'T' + s.start_time) : (s.session_date + 'T18:00:00');
+            const parsed = new Date(dateStr).getTime();
+            if(!isNaN(parsed)) ts = parsed;
+          }
+          return { inv, ts, status: s.status, zoneName: s.zones?.name || '' };
+        })
+        .filter(x => x.ts && x.ts > now && x.status !== 'closed')
+        .sort((a, b) => a.ts - b.ts)[0];
+      if(card && upcoming) {
+        const d = new Date(upcoming.ts);
+        const day = d.toLocaleDateString('en-GB', { weekday: 'long' });
+        const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+        const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+        if(whenEl) whenEl.textContent = day + ', ' + date + ' at ' + time;
+        if(zoneEl) zoneEl.textContent = upcoming.zoneName || '';
+        card.style.display = 'block';
+      } else if(card) {
+        card.style.display = 'none';
+      }
+
+      // 9. Render.
+      if(!visible.length) {
         if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No activity yet. Join a session to start earning points.</div>';
         return;
       }
-
-      if(listEl) {
-        listEl.innerHTML = ledger.map(r => {
-          const amt = parseInt(r.amount) || 0;
-          const cls = amt > 0 ? 'positive' : amt < 0 ? 'negative' : 'zero';
-          const sign = amt > 0 ? '+' : amt < 0 ? '−' : '';
-          const display = sign + Math.abs(amt);
-          const reason = reasonToLabel(r.reason);
-          // tier_promoted carries from_tier/to_tier in metadata.
-          let metaText = '';
-          if(r.reason === 'tier_promoted' && r.metadata && r.metadata.to_tier) {
-            const TIER_NAMES = ['New', 'Reliable', 'Trusted', 'Elite', 'Elite+'];
-            metaText = 'Now ' + (TIER_NAMES[r.metadata.to_tier - 1] || 'Tier ' + r.metadata.to_tier);
-          } else if(r.notes) {
-            metaText = r.notes;
-          }
-          const when = r.awarded_at
-            ? new Date(r.awarded_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              + ' · ' + new Date(r.awarded_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-            : '';
-          return '<div class="activity-row">'
-            + '<div class="activity-row-pts ' + cls + '">' + display + '</div>'
-            + '<div class="activity-row-body">'
-            + '<div class="activity-row-reason">' + escapeHtml(reason) + '</div>'
-            + '<div class="activity-row-meta">' + escapeHtml(when) + (metaText ? ' · ' + escapeHtml(metaText) : '') + '</div>'
-            + '</div>'
-            + '</div>';
-        }).join('');
-      }
+      if(listEl) listEl.innerHTML = visible.map(renderActivityRow).join('');
     } catch(e) {
       console.error('loadActivityPage failed', e);
       if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--red);padding:12px 0;">Could not load activity. Try again later.</div>';
     }
   }
 
+  // Per-event-type rendering. Phase 3.5/4 set: session_invite, session_live,
+  // shift, hs_needs_signing, tier_increase.
+  function renderActivityRow(ev) {
+    const dt = ev.ts ? new Date(ev.ts) : null;
+    const when = dt
+      ? dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        + ' · ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : '';
+
+    let iconHtml = '';
+    let label = '';
+    let metaText = '';
+    let onclickAttr = '';
+    let dismissable = true;
+    let rowClass = 'activity-row clickable';
+
+    if(ev.source_type === 'session_invite') {
+      const inv = ev.payload;
+      const s = inv.sessions || {};
+      const dt2 = s.scheduled_start
+        ? new Date(s.scheduled_start)
+        : (s.session_date ? new Date(s.session_date + 'T' + (s.start_time || '18:00:00')) : null);
+      const when2 = dt2
+        ? dt2.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+          + ' at ' + dt2.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+        : 'Date TBC';
+      const zone = s.zones?.name || '';
+      iconHtml = '<div class="activity-row-icon session">★</div>';
+      label = 'Session invite for ' + when2 + (zone ? ' in ' + zone : '');
+      if(inv.attendance_confirmed === 'pending') {
+        metaText = 'Pending response';
+        // Dismiss control hidden until the worker has responded.
+        dismissable = false;
+      } else if(inv.attendance_confirmed === 'confirmed') {
+        metaText = 'You confirmed';
+      }
+      onclickAttr = 'onclick="onActivityRowClick(event, this)" data-nav="sessions"';
+    } else if(ev.source_type === 'session_live') {
+      const inv = ev.payload;
+      const zone = inv.sessions?.zones?.name || '';
+      iconHtml = '<div class="activity-row-icon dispatched">●</div>';
+      label = 'Session is live' + (zone ? ' in ' + zone : '');
+      onclickAttr = 'onclick="onActivityRowClick(event, this)" data-nav="sessions"';
+    } else if(ev.source_type === 'shift') {
+      const s = ev.payload;
+      const hours = s.shift_length_hours != null
+        ? parseFloat(s.shift_length_hours).toFixed(1).replace(/\.0$/, '')
+        : '—';
+      const earned = (s.total_earned != null && s.total_earned !== '')
+        ? parseFloat(s.total_earned)
+        : (parseFloat(s.shift_length_hours) || 0) * (parseFloat(s.hourly_rate) || 0);
+      iconHtml = '<div class="activity-row-icon shift">✓</div>';
+      label = 'Completed ' + hours + 'hr shift at ' + (ev.bar_name || 'a venue');
+      metaText = '£' + earned.toFixed(2);
+      onclickAttr = 'onclick="onActivityRowClick(event, this)" data-nav="shift-history"';
+    } else if(ev.source_type === 'hs_needs_signing') {
+      const bar = ev.payload;
+      iconHtml = '<div class="activity-row-icon hs-needs">!</div>';
+      label = 'Sign health and safety for ' + (bar.name || 'a venue');
+      onclickAttr = 'onclick="onActivityRowClick(event, this)" data-nav="hs-detail" data-bar-id="' + bar.id + '"';
+      dismissable = false;
+      rowClass = 'activity-row clickable hs-needs';
+    } else if(ev.source_type === 'tier_increase') {
+      const t = ev.payload;
+      const TIER_NAMES = ['New', 'Reliable', 'Trusted', 'Elite', 'Elite+'];
+      const toTier = t.metadata?.to_tier;
+      const tierName = toTier ? (TIER_NAMES[toTier - 1] || ('Tier ' + toTier)) : 'a new tier';
+      iconHtml = '<div class="activity-row-icon tier-up">↑</div>';
+      label = "You're now " + tierName;
+      onclickAttr = 'onclick="onActivityRowClick(event, this)" data-nav="tiers"';
+    } else {
+      // Unknown type — render nothing.
+      return '';
+    }
+
+    const dismissBtn = dismissable
+      ? '<button class="activity-dismiss-btn" onclick="dismissActivityEvent(event, this)" aria-label="Dismiss">×</button>'
+      : '';
+
+    return '<div class="' + rowClass + '" data-source-type="' + ev.source_type + '" data-source-id="' + ev.source_id + '" ' + onclickAttr + '>'
+      + iconHtml
+      + '<div class="activity-row-body">'
+      +   '<div class="activity-row-reason">' + escapeHtml(label) + '</div>'
+      +   '<div class="activity-row-meta">' + escapeHtml(when) + (metaText ? (when ? ' · ' : '') + escapeHtml(metaText) : '') + '</div>'
+      + '</div>'
+      + dismissBtn
+      + '</div>';
+  }
+
+  // Click handler for activity row. Routes by data-nav. The dismiss button's
+  // own handler stops propagation so it doesn't trigger this.
+  function onActivityRowClick(event, rowEl) {
+    if(!rowEl) return;
+    const nav = rowEl.getAttribute('data-nav');
+    if(nav === 'tiers') showTab('tiers');
+    else if(nav === 'sessions') showTab('sessions');
+    else if(nav === 'shift-history') showBurgerPage('shift-history');
+    else if(nav === 'hs-detail') {
+      const barId = rowEl.getAttribute('data-bar-id');
+      if(barId) {
+        showTab('profile');
+        // Defer slightly so the profile DOM has settled before the detail
+        // view takes over. openBarDetail relies on barsInZoneCache, which
+        // is loaded on Profile entry — re-trigger a load if cache is empty.
+        setTimeout(() => {
+          if(!barsInZoneCache.length) loadBarsInZone().then(() => openBarDetail(barId));
+          else openBarDetail(barId);
+        }, 30);
+      }
+    }
+  }
+
+  // Persist a dismissal. Removes the row from the DOM immediately so the
+  // worker sees the action register; future loads will filter it out via
+  // the activity_dismissals join.
+  async function dismissActivityEvent(event, btnEl) {
+    if(event) event.stopPropagation();
+    const row = btnEl?.closest('.activity-row');
+    if(!row || !currentWorker) return;
+    const sourceType = row.getAttribute('data-source-type');
+    const sourceId = row.getAttribute('data-source-id');
+    if(!sourceType || !sourceId) return;
+    // Optimistic remove + cache invalidation so the next load doesn't show
+    // the row briefly while the dismissal hits the DB.
+    row.remove();
+    activityLoadedAt = 0;
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/activity_dismissals', {
+        method: 'POST',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          application_id: currentWorker.id,
+          source_type: sourceType,
+          source_id: parseInt(sourceId),
+          dismissed_at: new Date().toISOString()
+        })
+      });
+    } catch(e) { console.error('dismissActivityEvent failed', e); }
+  }
+
+  // ── Shift History page ───────────────────────────────────────────
+  // Lazy-loaded on burger-page entry. Each row collapses by default; tap to
+  // expand the per-shift points breakdown. Points per shift are read from
+  // points_ledger filtered to the shift's session_id and time window
+  // (dispatched_at on session_workers through clock_out_confirmed_at) so
+  // selected_for_shift, completed_shift, and arrival bonuses all show.
+  let shiftHistoryLoadedAt = 0;
+  const SHIFT_HISTORY_CACHE_MS = 60 * 1000;
+
+  async function loadShiftHistory(force) {
+    if(!currentWorker) return;
+    if(!force && shiftHistoryLoadedAt && (Date.now() - shiftHistoryLoadedAt) < SHIFT_HISTORY_CACHE_MS) return;
+    shiftHistoryLoadedAt = Date.now();
+
+    const listEl = document.getElementById('shift-history-list');
+    if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>';
+
+    try {
+      // Worker's session_workers (for shift lookup + dispatched_at window).
+      const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=id,session_id,dispatched_at', { headers: H }).then(r => r.json());
+      const swList = swRows || [];
+      const swIds = swList.map(r => r.id);
+      if(!swIds.length) {
+        if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No completed shifts yet.</div>';
+        return;
+      }
+      const swById = {}; swList.forEach(sw => { swById[sw.id] = sw; });
+
+      // Completed shifts + worker's full ledger in parallel. We filter the
+      // ledger client-side per shift via session_id + time window.
+      const [shiftRows, ledgerRows] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=in.(' + swIds.join(',') + ')&status=eq.completed&order=clock_out_confirmed_at.desc&limit=200&select=id,session_worker_id,session_id,bar_id,clock_in_confirmed_at,clock_out_confirmed_at,shift_length_hours,hourly_rate,total_earned', { headers: H }).then(r => r.json()),
+        fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + currentWorker.id + '&order=awarded_at.desc&select=id,amount,reason,session_id,shift_id,awarded_at,metadata', { headers: H }).then(r => r.json())
+      ]);
+
+      if(!shiftRows || !shiftRows.length) {
+        if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No completed shifts yet.</div>';
+        return;
+      }
+
+      // Resolve bar names in one query.
+      const barIds = [...new Set(shiftRows.map(s => s.bar_id).filter(Boolean))];
+      let barNameById = {};
+      if(barIds.length) {
+        const bars = await fetch(SUPABASE_URL + '/rest/v1/bars?id=in.(' + barIds.join(',') + ')&select=id,name', { headers: H }).then(r => r.json()).catch(() => []);
+        (bars || []).forEach(b => { barNameById[b.id] = b.name; });
+      }
+
+      // Build per-shift HTML.
+      if(listEl) {
+        listEl.innerHTML = shiftRows.map(s => {
+          const sw = swById[s.session_worker_id] || {};
+          const dispatchedAt = sw.dispatched_at;
+          const clockOut = s.clock_out_confirmed_at;
+          // Time window: dispatched_at (or clock_in_at as fallback) through
+          // clock_out_confirmed_at + 60s buffer. Catches selected_for_shift
+          // (awarded at dispatch), completed_shift, and arrival bonuses
+          // (awarded at clock-out).
+          const winStart = dispatchedAt
+            ? new Date(dispatchedAt).getTime()
+            : s.clock_in_confirmed_at ? new Date(s.clock_in_confirmed_at).getTime() : 0;
+          const winEnd = clockOut ? (new Date(clockOut).getTime() + 60_000) : Number.MAX_SAFE_INTEGER;
+          const breakdown = (ledgerRows || []).filter(l => {
+            if(l.session_id !== s.session_id) return false;
+            const t = l.awarded_at ? new Date(l.awarded_at).getTime() : 0;
+            return t >= winStart && t <= winEnd;
+          });
+          const pointsTotal = breakdown.reduce((sum, l) => sum + (parseInt(l.amount) || 0), 0);
+
+          const date = clockOut
+            ? new Date(clockOut).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+            : '';
+          const hours = parseFloat(s.shift_length_hours) || 0;
+          const rate = parseFloat(s.hourly_rate) || 0;
+          const estTotal = (s.total_earned != null && s.total_earned !== '')
+            ? parseFloat(s.total_earned)
+            : (hours * rate);
+          const venue = barNameById[s.bar_id] || 'Unknown venue';
+
+          const breakdownHtml = breakdown.length
+            ? breakdown.map(l => {
+              const amt = parseInt(l.amount) || 0;
+              const sign = amt > 0 ? '+' : amt < 0 ? '−' : '';
+              const cls = amt < 0 ? 'negative' : '';
+              return '<div class="shift-row-breakdown-line">'
+                + '<strong>' + escapeHtml(reasonToLabel(l.reason)) + '</strong>'
+                + '<span class="pts ' + cls + '">' + sign + Math.abs(amt) + '</span>'
+                + '</div>';
+            }).join('')
+            : '<div class="shift-row-breakdown-line"><strong>Points still pending</strong><span class="pts">—</span></div>';
+
+          return '<div class="shift-row" onclick="this.classList.toggle(\'expanded\')">'
+            + '<div class="shift-row-summary">'
+            + '<div>'
+            +   '<div class="shift-row-venue">' + escapeHtml(venue) + '</div>'
+            +   '<div class="shift-row-meta">' + escapeHtml(date) + ' · ' + (hours ? hours.toFixed(2).replace(/\.?0+$/, '') + 'h' : '—') + ' · £' + rate.toFixed(2) + '/hr</div>'
+            + '</div>'
+            + '<div class="shift-row-money">'
+            +   '<div class="shift-row-earned">£' + estTotal.toFixed(2) + '</div>'
+            +   '<div class="shift-row-points">+' + pointsTotal + ' pts</div>'
+            + '</div>'
+            + '</div>'
+            + '<div class="shift-row-breakdown">'
+            +   '<div style="font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--grey);text-transform:uppercase;margin-bottom:8px;">Points breakdown</div>'
+            +   breakdownHtml
+            + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    } catch(e) {
+      console.error('loadShiftHistory failed', e);
+      if(listEl) listEl.innerHTML = '<div style="font-size:13px;color:var(--red);padding:12px 0;">Could not load shift history. Try again later.</div>';
+    }
+  }
+
+  // ── Earnings Summary page ────────────────────────────────────────
+  let earningsLoadedAt = 0;
+  const EARNINGS_CACHE_MS = 60 * 1000;
+
+  async function loadEarningsSummary(force) {
+    if(!currentWorker) return;
+    if(!force && earningsLoadedAt && (Date.now() - earningsLoadedAt) < EARNINGS_CACHE_MS) return;
+    earningsLoadedAt = Date.now();
+
+    try {
+      const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&select=id', { headers: H }).then(r => r.json());
+      const swIds = (swRows || []).map(r => r.id);
+      if(!swIds.length) {
+        renderEarnings([]);
+        return;
+      }
+      const shiftRows = await fetch(SUPABASE_URL + '/rest/v1/shifts?session_worker_id=in.(' + swIds.join(',') + ')&status=eq.completed&select=id,bar_id,clock_in_confirmed_at,clock_out_confirmed_at,shift_length_hours,hourly_rate,total_earned', { headers: H }).then(r => r.json());
+
+      // Resolve bar names for "Most worked at" + "Best shift" labels.
+      const barIds = [...new Set((shiftRows || []).map(s => s.bar_id).filter(Boolean))];
+      let barNameById = {};
+      if(barIds.length) {
+        const bars = await fetch(SUPABASE_URL + '/rest/v1/bars?id=in.(' + barIds.join(',') + ')&select=id,name', { headers: H }).then(r => r.json()).catch(() => []);
+        (bars || []).forEach(b => { barNameById[b.id] = b.name; });
+      }
+      renderEarnings(shiftRows || [], barNameById);
+    } catch(e) {
+      console.error('loadEarningsSummary failed', e);
+    }
+  }
+
+  function renderEarnings(shifts, barNameById) {
+    barNameById = barNameById || {};
+    const setText = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
+
+    if(!shifts.length) {
+      setText('earnings-total', '£0.00');
+      setText('earnings-total-meta', 'across 0 shifts');
+      setText('earnings-hours', '0h');
+      setText('earnings-avg', '£0.00');
+      setText('earnings-best', '£0.00');
+      setText('earnings-best-meta', '—');
+      setText('earnings-most-bar', '—');
+      setText('earnings-most-bar-meta', '—');
+      setText('earnings-7d', '£0.00');
+      setText('earnings-30d', '£0.00');
+      return;
+    }
+
+    const earnedFor = s => {
+      if(s.total_earned != null && s.total_earned !== '') return parseFloat(s.total_earned);
+      const h = parseFloat(s.shift_length_hours) || 0;
+      const r = parseFloat(s.hourly_rate) || 0;
+      return h * r;
+    };
+
+    let total = 0, hours = 0, best = 0, bestBarId = null;
+    const byBar = {};
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    let last7 = 0, last30 = 0;
+
+    shifts.forEach(s => {
+      const e = earnedFor(s);
+      total += e;
+      hours += parseFloat(s.shift_length_hours) || 0;
+      if(e > best) { best = e; bestBarId = s.bar_id; }
+      if(s.bar_id) byBar[s.bar_id] = (byBar[s.bar_id] || 0) + 1;
+      const ts = s.clock_out_confirmed_at ? new Date(s.clock_out_confirmed_at).getTime() : 0;
+      if(ts >= sevenDaysAgo) last7 += e;
+      if(ts >= thirtyDaysAgo) last30 += e;
+    });
+
+    const avg = total / shifts.length;
+    let mostBarId = null, mostBarCount = 0;
+    Object.entries(byBar).forEach(([id, n]) => { if(n > mostBarCount) { mostBarCount = n; mostBarId = id; } });
+
+    setText('earnings-total', '£' + total.toFixed(2));
+    setText('earnings-total-meta', 'across ' + shifts.length + ' shift' + (shifts.length === 1 ? '' : 's'));
+    setText('earnings-hours', hours.toFixed(1).replace(/\.0$/, '') + 'h');
+    setText('earnings-avg', '£' + avg.toFixed(2));
+    setText('earnings-best', '£' + best.toFixed(2));
+    setText('earnings-best-meta', bestBarId ? (barNameById[bestBarId] || '—') : '—');
+    setText('earnings-most-bar', mostBarId ? (barNameById[mostBarId] || '—') : '—');
+    setText('earnings-most-bar-meta', mostBarId ? (mostBarCount + ' shift' + (mostBarCount === 1 ? '' : 's')) : '—');
+    setText('earnings-7d', '£' + last7.toFixed(2));
+    setText('earnings-30d', '£' + last30.toFixed(2));
+  }
+
+  // ── Dedicated Bars-in-zone page ──────────────────────────────────
+  // Sibling of the Profile summary list; richer per-bar info (address +
+  // walking minutes from worker_bar_distances). Reuses barsInZoneCache
+  // populated by loadBarsInZone, augmented with walking_minutes here.
+  async function loadDedicatedBarsInZone() {
+    const listEl = document.getElementById('bars-zone-detailed-list');
+    if(!listEl || !currentWorker) return;
+
+    // If barsInZoneCache hasn't loaded yet (worker came straight to burger
+    // page without visiting Profile), trigger the Profile loader first.
+    if(!barsInZoneCache.length) {
+      listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>';
+      await loadBarsInZone();
+    }
+
+    // Augment cache with walking distances. Cached on the array itself so
+    // subsequent visits don't re-fetch.
+    if(!barsInZoneCache._distancesLoaded) {
+      try {
+        const dists = await fetch(SUPABASE_URL + '/rest/v1/worker_bar_distances?application_id=eq.' + currentWorker.id + '&select=bar_id,walking_minutes', { headers: H }).then(r => r.json());
+        const distByBar = {};
+        (dists || []).forEach(d => { distByBar[d.bar_id] = d.walking_minutes; });
+        barsInZoneCache.forEach(b => { b.walking_minutes = distByBar[b.id] != null ? distByBar[b.id] : null; });
+        barsInZoneCache._distancesLoaded = true;
+      } catch(e) { console.error('worker_bar_distances fetch failed', e); }
+    }
+
+    if(!barsInZoneCache.length) {
+      listEl.innerHTML = '<div style="font-size:13px;color:var(--grey);padding:12px 0;">No bars in your zone yet.</div>';
+      return;
+    }
+
+    listEl.innerHTML = barsInZoneCache.map(b => {
+      const signed = !!b.signed_at;
+      const statusClass = signed ? 'signed' : 'unsigned';
+      const statusLabel = signed ? 'Read and signed' : 'Not yet read';
+      const walking = b.walking_minutes != null ? (b.walking_minutes + ' min walk') : 'distance unknown';
+      return '<div class="burger-card" style="padding:18px 20px;cursor:pointer;" onclick="openBarFromDedicated(' + b.id + ')">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">'
+        +   '<div style="font-size:14px;font-weight:700;color:var(--white);">' + escapeHtml(b.name || 'Unknown bar') + '</div>'
+        +   '<div class="bar-row-status ' + statusClass + '">' + statusLabel + '</div>'
+        + '</div>'
+        + (b.address ? '<div style="font-size:12px;color:var(--grey);margin-bottom:6px;">' + escapeHtml(b.address) + '</div>' : '')
+        + '<div style="font-size:11px;color:var(--ice);">' + escapeHtml(walking) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // Click handler from the dedicated bars page. Navigates to Profile and
+  // opens the bar's H&S detail view there (consistent surface for the detail
+  // regardless of which list the worker came from).
+  function openBarFromDedicated(barId) {
+    showTab('profile');
+    setTimeout(() => openBarDetail(barId), 30);
+  }
+
+  // Phase 3.5/4: state-aware Sessions tab. Handles all four states based on
+  // priority: Live > Scheduled+Confirmed > Scheduled+Pending > No session.
+  // Function name kept for backward compat; it now handles every state.
   async function checkForLiveSession() {
     if(!currentWorker) return;
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_invites?application_id=eq.' + currentWorker.id + '&select=id,session_code,session_id,joined_at,left_at,sessions(status,zone_id,zones(name),scheduled_start)', { headers: H }).then(r => r.json());
-    const liveInvite = rows ? rows.find(r => r.sessions?.status === 'live') : null;
-    if(!liveInvite) return;
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/session_invites?application_id=eq.' + currentWorker.id + '&select=id,session_code,session_id,joined_at,left_at,attendance_confirmed,attendance_confirmed_at,sessions(status,session_date,scheduled_start,start_time,zone_id,zones(name))', { headers: H }).then(r => r.json());
 
-    // Check if worker was dispatched in this session. Widened SELECT — the
-    // render helpers route on (status, departed_at, clock_in_at), so all
-    // three need to be in the row we feed them.
-    const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&session_id=eq.' + liveInvite.session_id + '&select=id,status,bar_id,shift_length_hours,departed_at,clock_in_at,dispatched_at', { headers: H }).then(r => r.json());
-    const sw = swRows?.[0];
+    // Always reset the scheduled-state cards + the new live-confirmed card
+    // before evaluating; the branches below re-show whichever is relevant.
+    ['sessions-pending-response','sessions-confirmed-waiting','sessions-live-confirmed-join'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
 
-    if(sw && (sw.status === 'dispatched' || sw.status === 'onshift')) {
-      currentSessionWorkerId = sw.id;
-      currentSessionInvite = liveInvite;
-      // Restoring into an already-dispatched state — left_at was written on
-      // the original dispatch. Don't fire it again.
-      sessionInviteLeftAtMarked = true;
-      subscribeToSessionWorkers(liveInvite.session_id);
+    // Pick a live invite, but exclude declined ones unless the worker has
+    // already joined (defensive: legacy email+code path could in theory
+    // create a joined-but-declined row, and we shouldn't bump them out
+    // mid-session). Declined-without-joined falls through to the scheduled /
+    // no-session branches below — which lands the worker on State 4.
+    const liveInvite = rows ? rows.find(r =>
+      r.sessions?.status === 'live'
+      && (r.attendance_confirmed !== 'declined' || r.joined_at)
+    ) : null;
 
-      const zoneEl = document.getElementById('live-zone');
-      if(zoneEl) zoneEl.textContent = liveInvite.sessions?.zones?.name || '';
+    if(liveInvite) {
+      // STATE 1: Live. Existing dispatch / clock-in / clock-out flow.
+      const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?application_id=eq.' + currentWorker.id + '&session_id=eq.' + liveInvite.session_id + '&select=id,status,bar_id,shift_length_hours,departed_at,clock_in_at,dispatched_at', { headers: H }).then(r => r.json());
+      const sw = swRows?.[0];
 
-      // Same routing logic as the realtime handler — restore and realtime
-      // paths now share the helpers, so the worker lands on the same screen
-      // regardless of how they got here.
-      if(sw.status === 'onshift') {
-        await renderClockedIn(sw);
-      } else if(sw.departed_at) {
-        await renderEnRoute(sw);
-      } else {
-        await renderDispatchedFresh(sw);
+      // Live + in-flight (dispatched / onshift): the dispatch render
+      // helpers take over — highest priority.
+      if(sw && (sw.status === 'dispatched' || sw.status === 'onshift')) {
+        currentSessionWorkerId = sw.id;
+        currentSessionInvite = liveInvite;
+        sessionInviteLeftAtMarked = true;
+        subscribeToSessionWorkers(liveInvite.session_id);
+
+        const zoneEl = document.getElementById('live-zone');
+        if(zoneEl) zoneEl.textContent = liveInvite.sessions?.zones?.name || '';
+
+        if(sw.status === 'onshift') {
+          await renderClockedIn(sw);
+        } else if(sw.departed_at) {
+          await renderEnRoute(sw);
+        } else {
+          await renderDispatchedFresh(sw);
+        }
+        return;
       }
-      return;
-    } else if(liveInvite.joined_at && (!liveInvite.left_at || new Date(liveInvite.joined_at) > new Date(liveInvite.left_at))) {
-      // Worker already joined -- restore to live waiting room
-      currentSessionInvite = liveInvite;
-      document.getElementById('sessions-empty').style.display = 'none';
-      document.getElementById('sessions-live').style.display = 'block';
-      document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
-      startLiveSession();
-    } else {
-      // Show code entry
+
+      // Already past prejoin and in the live waiting room.
+      if(liveInvite.joined_at && (!liveInvite.left_at || new Date(liveInvite.joined_at) > new Date(liveInvite.left_at))) {
+        currentSessionInvite = liveInvite;
+        document.getElementById('sessions-empty').style.display = 'none';
+        document.getElementById('sessions-live').style.display = 'block';
+        document.getElementById('live-zone').textContent = liveInvite.sessions?.zones?.name || '';
+        startLiveSession();
+        return;
+      }
+
+      // NEW: Live + confirmed but not yet through prejoin. Show the Join
+      // Session card; the button calls enterPrejoin and skips the legacy
+      // 6-digit code step.
+      if(liveInvite.attendance_confirmed === 'confirmed') {
+        currentSessionInvite = liveInvite;
+        showSessionsLiveConfirmedJoinState(liveInvite);
+        return;
+      }
+
+      // Live session, worker has 'pending' attendance or null (legacy
+      // email-invite path). Existing 6-digit code entry still works.
       document.getElementById('sessions-empty').style.display = 'none';
       document.getElementById('sessions-code-entry').style.display = 'block';
+      return;
     }
+
+    // STATE 2 / STATE 3: scheduled invite. Pick the soonest scheduled
+    // session the worker has a relevant invite for. 'declined' invites
+    // are treated as "no session" (skipped here, default to State 4).
+    const scheduledInvite = (rows || [])
+      .filter(r => r.sessions?.status === 'scheduled'
+        && (r.attendance_confirmed === 'pending' || r.attendance_confirmed === 'confirmed'))
+      .sort((a, b) => {
+        const at = inviteSortTs(a);
+        const bt = inviteSortTs(b);
+        return at - bt;
+      })[0];
+
+    if(scheduledInvite) {
+      renderSessionsScheduledState(scheduledInvite);
+      return;
+    }
+
+    // STATE 4: no session.
+    renderSessionsNoSessionState();
+  }
+
+  // Helper: derive a sortable timestamp from a session_invites row. Prefers
+  // scheduled_start; falls back to session_date + start_time; falls back
+  // to invite created_at.
+  function inviteSortTs(inv) {
+    const s = inv.sessions || {};
+    if(s.scheduled_start) {
+      const t = new Date(s.scheduled_start).getTime();
+      if(!isNaN(t)) return t;
+    }
+    if(s.session_date) {
+      const dateStr = s.start_time ? (s.session_date + 'T' + s.start_time) : (s.session_date + 'T18:00:00');
+      const t = new Date(dateStr).getTime();
+      if(!isNaN(t)) return t;
+    }
+    if(inv.created_at) {
+      const t = new Date(inv.created_at).getTime();
+      if(!isNaN(t)) return t;
+    }
+    return 0;
+  }
+
+  // Tracks the invite the Sessions tab is currently rendering (State 2 or 3).
+  // Used by confirmAttendance / declineAttendance to know which row to PATCH.
+  let pendingInvite = null;
+
+  function renderSessionsScheduledState(invite) {
+    pendingInvite = invite;
+
+    // Hide live-flow + no-session components.
+    document.getElementById('sessions-empty').style.display = 'none';
+    const codeEntry = document.getElementById('sessions-code-entry'); if(codeEntry) codeEntry.style.display = 'none';
+    const prejoin = document.getElementById('sessions-prejoin'); if(prejoin) prejoin.style.display = 'none';
+    const live = document.getElementById('sessions-live'); if(live) live.style.display = 'none';
+
+    const s = invite.sessions || {};
+    const dt = s.scheduled_start
+      ? new Date(s.scheduled_start)
+      : (s.session_date ? new Date(s.session_date + 'T' + (s.start_time || '18:00:00')) : null);
+    const whenStr = dt
+      ? dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+        + ' at ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : 'Date TBC';
+    const zoneStr = s.zones?.name ? ' in ' + s.zones.name : '';
+    const fullStr = whenStr + zoneStr;
+
+    if(invite.attendance_confirmed === 'confirmed') {
+      const el = document.getElementById('sessions-confirmed-waiting');
+      const whenEl = document.getElementById('confirmed-session-when');
+      if(whenEl) whenEl.textContent = fullStr;
+      if(el) el.style.display = 'block';
+    } else {
+      // pending
+      const el = document.getElementById('sessions-pending-response');
+      const whenEl = document.getElementById('pending-session-when');
+      if(whenEl) whenEl.textContent = fullStr;
+      // Reset response buttons + error in case this is a re-render after
+      // a failed PATCH.
+      const yesBtn = document.getElementById('invite-yes-btn');
+      const noBtn = document.getElementById('invite-no-btn');
+      if(yesBtn) { yesBtn.disabled = false; yesBtn.textContent = "Yes I'm in"; }
+      if(noBtn) { noBtn.disabled = false; noBtn.textContent = "No I'll pass"; }
+      const errEl = document.getElementById('invite-response-error');
+      if(errEl) errEl.textContent = '';
+      if(el) el.style.display = 'block';
+    }
+  }
+
+  function renderSessionsNoSessionState() {
+    pendingInvite = null;
+    const pendingEl = document.getElementById('sessions-pending-response');
+    const confirmedEl = document.getElementById('sessions-confirmed-waiting');
+    if(pendingEl) pendingEl.style.display = 'none';
+    if(confirmedEl) confirmedEl.style.display = 'none';
+    const codeEntry = document.getElementById('sessions-code-entry');
+    if(codeEntry) codeEntry.style.display = 'none';
+    const live = document.getElementById('sessions-live');
+    if(live) live.style.display = 'none';
+    const empty = document.getElementById('sessions-empty');
+    if(empty) empty.style.display = 'block';
+  }
+
+  async function confirmAttendance() {
+    if(!pendingInvite) return;
+    const yesBtn = document.getElementById('invite-yes-btn');
+    const noBtn = document.getElementById('invite-no-btn');
+    const errEl = document.getElementById('invite-response-error');
+    if(yesBtn) { yesBtn.disabled = true; yesBtn.textContent = 'Sending…'; }
+    if(noBtn) noBtn.disabled = true;
+    if(errEl) errEl.textContent = '';
+
+    const now = new Date().toISOString();
+    try {
+      const resp = await fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + pendingInvite.id, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ attendance_confirmed: 'confirmed', attendance_confirmed_at: now })
+      });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      pendingInvite.attendance_confirmed = 'confirmed';
+      pendingInvite.attendance_confirmed_at = now;
+      // Invalidate the activity cache so the session_invite row's "You
+      // confirmed" meta + the dismissable control pick up immediately.
+      activityLoadedAt = 0;
+      renderSessionsScheduledState(pendingInvite);
+    } catch(e) {
+      console.error('confirmAttendance failed', e);
+      if(yesBtn) { yesBtn.disabled = false; yesBtn.textContent = "Yes I'm in"; }
+      if(noBtn) noBtn.disabled = false;
+      if(errEl) errEl.textContent = "Couldn't save your response. Try again.";
+    }
+  }
+
+  async function declineAttendance() {
+    if(!pendingInvite) return;
+    const yesBtn = document.getElementById('invite-yes-btn');
+    const noBtn = document.getElementById('invite-no-btn');
+    const errEl = document.getElementById('invite-response-error');
+    if(noBtn) { noBtn.disabled = true; noBtn.textContent = 'Sending…'; }
+    if(yesBtn) yesBtn.disabled = true;
+    if(errEl) errEl.textContent = '';
+
+    const now = new Date().toISOString();
+    try {
+      const resp = await fetch(SUPABASE_URL + '/rest/v1/session_invites?id=eq.' + pendingInvite.id, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ attendance_confirmed: 'declined', attendance_confirmed_at: now })
+      });
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      activityLoadedAt = 0;
+      // Decline → no relevant invite remaining → State 4.
+      renderSessionsNoSessionState();
+    } catch(e) {
+      console.error('declineAttendance failed', e);
+      if(yesBtn) yesBtn.disabled = false;
+      if(noBtn) { noBtn.disabled = false; noBtn.textContent = "No I'll pass"; }
+      if(errEl) errEl.textContent = "Couldn't save your response. Try again.";
+    }
+  }
+
+  // Realtime: react to session_invites INSERT/UPDATE for this worker. New
+  // invite arriving → re-evaluate Sessions tab (likely lands on State 3).
+  // attendance_confirmed flipping in another tab → mirror the change here.
+  let inviteWatchWs = null;
+
+  function startInviteWatch() {
+    if(!currentWorker || inviteWatchWs) return;
+    const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0';
+    inviteWatchWs = new WebSocket(wsUrl);
+    let hb = null;
+
+    inviteWatchWs.onopen = () => {
+      inviteWatchWs.send(JSON.stringify({
+        topic: 'realtime:public:session_invites',
+        event: 'phx_join',
+        payload: { config: { postgres_changes: [
+          { event: 'INSERT', schema: 'public', table: 'session_invites', filter: 'application_id=eq.' + currentWorker.id },
+          { event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'application_id=eq.' + currentWorker.id }
+        ] } },
+        ref: 'iw1'
+      }));
+      hb = setInterval(() => {
+        if(inviteWatchWs?.readyState === WebSocket.OPEN) {
+          inviteWatchWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: 'hb' }));
+        }
+      }, 30000);
+    };
+
+    inviteWatchWs.onmessage = async (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.event !== 'postgres_changes') return;
+        // Re-evaluate sessions tab + invalidate the activity cache so the
+        // new invite (or attendance change) surfaces in both surfaces.
+        activityLoadedAt = 0;
+        await checkForLiveSession();
+        // If the worker is currently looking at the activity tab, refresh
+        // it inline so the new event appears without a manual re-entry.
+        if(document.getElementById('tab-activity')?.style.display === 'block') {
+          loadActivityPage(true);
+        }
+      } catch(err) { console.error('session_invites realtime error:', err); }
+    };
+
+    inviteWatchWs.onclose = () => {
+      if(hb) clearInterval(hb);
+      inviteWatchWs = null;
+    };
+    inviteWatchWs.onerror = (err) => { console.error('[session_invites ws] error', err); };
   }
 
   async function handleCodeEntry() {
@@ -2258,10 +3734,49 @@
       return;
     }
 
+    enterPrejoin(invite);
+  }
+
+  // Shared "into prejoin" transition. Called from handleCodeEntry (legacy
+  // 6-digit code path) and from joinConfirmedSession (new live+confirmed
+  // bypass). Single source of truth for which Sessions-tab surface yields
+  // to the prejoin checks; prejoin Stage 1 + Stage 2 logic is unchanged.
+  function enterPrejoin(invite) {
+    if(!invite) return;
     currentSessionInvite = invite;
-    document.getElementById('live-zone').textContent = invite.sessions?.zones?.name || '';
-    document.getElementById('sessions-code-entry').style.display = 'none';
+    const zoneEl = document.getElementById('live-zone');
+    if(zoneEl) zoneEl.textContent = invite.sessions?.zones?.name || '';
+    // Hide every other Sessions-tab surface so prejoin renders clean.
+    ['sessions-empty','sessions-pending-response','sessions-confirmed-waiting',
+     'sessions-live-confirmed-join','sessions-code-entry','sessions-live'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
     document.getElementById('sessions-prejoin').style.display = 'block';
+  }
+
+  // Click handler for the new "Join Session" button on the live+confirmed
+  // card. The worker has already accepted the invite, so we skip the
+  // 6-digit code validation entirely and drop straight into prejoin.
+  function joinConfirmedSession() {
+    if(!currentSessionInvite) return;
+    enterPrejoin(currentSessionInvite);
+  }
+
+  // Render helper for the live+confirmed bypass state. Mirrors the layout
+  // pattern of renderSessionsScheduledState (hide everything else, set the
+  // zone text, show the new card).
+  function showSessionsLiveConfirmedJoinState(invite) {
+    pendingInvite = null;
+    ['sessions-empty','sessions-pending-response','sessions-confirmed-waiting',
+     'sessions-code-entry','sessions-prejoin','sessions-live'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+    const zoneEl = document.getElementById('live-confirmed-zone');
+    if(zoneEl) zoneEl.textContent = invite.sessions?.zones?.name || '';
+    const card = document.getElementById('sessions-live-confirmed-join');
+    if(card) card.style.display = 'block';
   }
 
   function checkPreJoinStage1() {
@@ -2572,11 +4087,18 @@
     sessionWorkersWsSessionId = null;
     sessionInviteLeftAtMarked = false;
     lastRenderedDispatchBarId = null;
+    pendingInvite = null;
     currentSessionInvite = null;
     currentSessionWorkerId = null;
     document.getElementById('sessions-live').style.display = 'none';
     document.getElementById('sessions-code-entry').style.display = 'none';
     document.getElementById('sessions-prejoin').style.display = 'none';
+    const pendingEl = document.getElementById('sessions-pending-response');
+    if(pendingEl) pendingEl.style.display = 'none';
+    const confirmedEl = document.getElementById('sessions-confirmed-waiting');
+    if(confirmedEl) confirmedEl.style.display = 'none';
+    const liveConfirmedEl = document.getElementById('sessions-live-confirmed-join');
+    if(liveConfirmedEl) liveConfirmedEl.style.display = 'none';
     const empty = document.getElementById('sessions-empty');
     if(empty) {
       empty.style.display = 'block';
@@ -3694,9 +5216,13 @@
   }
 
   function resetSessionStates() {
-    // Reset session tab screens
+    // Reset session tab screens. The two scheduled-invite cards default to
+    // hidden — checkForLiveSession surfaces them when appropriate.
     const screens = {
       'sessions-empty': 'block',
+      'sessions-pending-response': 'none',
+      'sessions-confirmed-waiting': 'none',
+      'sessions-live-confirmed-join': 'none',
       'sessions-code-entry': 'none',
       'sessions-prejoin': 'none',
       'sessions-live': 'none'
