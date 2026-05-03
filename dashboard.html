@@ -2874,15 +2874,9 @@ const liveSessionOps = {
     }
     this._subs = [];
     if(this._resyncTimer) { clearTimeout(this._resyncTimer); this._resyncTimer = null; }
-    if(typeof responseWindowTimers !== 'undefined') {
-      for(const t of responseWindowTimers.values()) clearInterval(t);
-      responseWindowTimers.clear();
-    }
+    // Legacy responseWindow timers retired in CORE v6 F-03; the no-op shim's
+    // Map is harmless to skip clearing. Just clear the response cache.
     if(typeof liveSessionResponses !== 'undefined') liveSessionResponses.clear();
-    if(typeof responseWindowInterval !== 'undefined' && responseWindowInterval) {
-      clearInterval(responseWindowInterval);
-      responseWindowInterval = null;
-    }
     this.workers.length = 0;
     this.requests.length = 0;
     this._dirty.clear();
@@ -3104,23 +3098,73 @@ async function renderLiveResponses() {
   }
 
   const blocks = pending.map(req => {
+    // Under CORE v6 F-03 we render the per-request rollup even when zero
+    // workers have responded yet, so Sam can see open-window state. The
+    // earlier "no responses → empty block" short-circuit is gone.
     const responses = liveSessionResponses.get(req.id) || [];
-    if(!responses.length) return '';
 
     const elapsed = req.posted_at ? (Date.now() - new Date(req.posted_at).getTime()) / 1000 : 0;
     const windowExpired = elapsed >= 60;
 
-    const responseItems = responses.map(r => {
-      const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === Number(r.application_id));
-      const name = worker?.name || 'Unknown';
-      const label = r.response === 'available' ? "I'm available" : r.response === 'pass' ? "I'll pass" : 'No response';
-      const colour = r.response === 'available' ? 'var(--green)' : r.response === 'pass' ? 'var(--amber)' : 'var(--grey)';
-      const secs = r.response_seconds != null ? r.response_seconds + 's' : '';
-      return '<div class="response-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:8px;">'
-        + '<div style="font-size:13px;color:var(--white);font-weight:500;">' + name + '</div>'
+    // CORE v6 F-03: per-request rollup of all in-range invited workers with
+    // their distance, personal window remaining, and current state. Replaces
+    // the v5 responder-only list.
+    const dists = distByBar[req.bar_id] || {};
+    const postedAtMs = req.posted_at ? new Date(req.posted_at).getTime() : null;
+    const elapsedSecsForReq = postedAtMs ? Math.floor((Date.now() - postedAtMs) / 1000) : 0;
+    const respByApp = new Map(responses.map(r => [Number(r.application_id), r]));
+
+    const inRangeRollup = liveSessionOps.workers
+      .filter(w => w.status === 'in_session' || w.status === 'dispatched')
+      .map(w => {
+        const appId = Number(w.applicationId);
+        const mins = dists[appId];
+        if(mins == null || mins >= 30) return null;
+        return { worker: w, mins, response: respByApp.get(appId) || null };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.mins - b.mins);
+
+    const responseItems = inRangeRollup.map(o => {
+      const windowSecs = (30 - o.mins) * 60;
+      const remainingSecs = Math.max(0, windowSecs - elapsedSecsForReq);
+      const remainingStr = remainingSecs >= 60
+        ? Math.floor(remainingSecs / 60) + 'm ' + String(remainingSecs % 60).padStart(2, '0') + 's'
+        : remainingSecs + 's';
+
+      let stateLabel, stateColor, secsLabel = '';
+      if(o.response) {
+        if(o.response.response === 'available') {
+          stateLabel = 'Available';
+          stateColor = 'var(--green)';
+          secsLabel = (o.response.response_seconds != null ? o.response.response_seconds + 's' : '');
+        } else if(o.response.response === 'pass') {
+          stateLabel = 'Passed';
+          stateColor = 'var(--amber)';
+          secsLabel = (o.response.response_seconds != null ? o.response.response_seconds + 's' : '');
+        } else {
+          stateLabel = 'No response';
+          stateColor = 'var(--grey)';
+        }
+      } else if(o.worker.status === 'dispatched') {
+        stateLabel = 'Dispatched (other)';
+        stateColor = 'var(--ice)';
+      } else if(remainingSecs > 0) {
+        stateLabel = remainingStr + ' left';
+        stateColor = remainingSecs < 30 ? 'var(--amber)' : 'var(--grey)';
+      } else {
+        stateLabel = 'Window expired';
+        stateColor = 'var(--red)';
+      }
+
+      return '<div class="response-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;" id="rollup-row-' + req.id + '-' + Number(o.worker.applicationId) + '">'
+        + '<div>'
+        + '<span style="font-size:13px;color:var(--white);font-weight:500;">' + (o.worker.name || 'Unknown') + '</span>'
+        + '<span style="font-size:11px;color:var(--grey);margin-left:10px;">' + o.mins + ' min walk</span>'
+        + '</div>'
         + '<div style="display:flex;align-items:center;gap:10px;">'
-        + (secs ? '<span style="font-size:11px;color:var(--grey);">' + secs + '</span>' : '')
-        + '<span style="font-size:12px;font-weight:600;color:' + colour + ';">' + label + '</span>'
+        + (secsLabel ? '<span style="font-size:11px;color:var(--grey);">' + secsLabel + '</span>' : '')
+        + '<span id="rollup-state-' + req.id + '-' + Number(o.worker.applicationId) + '" style="font-size:12px;font-weight:600;color:' + stateColor + ';">' + stateLabel + '</span>'
         + '</div></div>';
     }).join('');
 
@@ -3156,6 +3200,10 @@ async function renderLiveResponses() {
       }
     }
 
+    // Suppress the entire block if there are zero in-range workers AND no
+    // recommendations panel to render. Otherwise show heading + rollup +
+    // recommendations.
+    if(!responseItems && !recHtml) return '';
     const heading = '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin:12px 0 8px;">Request &middot; '+(req._barName || 'Unknown')+'</div>';
     return heading + recHtml + responseItems;
   }).filter(Boolean).join('');
@@ -4642,64 +4690,19 @@ async function saveShiftRequest() {
   renderRoom();
 }
 
-let responseWindowInterval = null;
-let responseWindowSeconds = 60;
-let responseWindowRequestId = null;
-
-function startResponseWindow(requestId) {
-  responseWindowRequestId = requestId;
-  responseWindowSeconds = 60;
-  if(responseWindowInterval) clearInterval(responseWindowInterval);
-
-  // Render-only ticker: on 60s expiry, render the close state. Per-worker
-  // window calculation lands in audit Section 4a step 5; until then every
-  // worker on this request shares this flat 60s timer. The 30-minute
-  // request-level auto-expiry runs separately on the per-card interval.
-  responseWindowInterval = setInterval(() => {
-    responseWindowSeconds--;
-    if(responseWindowSeconds <= 0) {
-      clearInterval(responseWindowInterval);
-      renderLiveResponses();
-    }
-  }, 1000);
-}
-
-// Per-request response window timers, keyed by shift_request_id. Coexists with
-// the legacy single-timer responseWindow* globals. Used by the bootstrap path
-// to recover when the dashboard loaded with pre-existing pending requests.
-const responseWindowTimers = new Map();
-
-function startResponseWindowFor(requestId, seconds) {
-  if(responseWindowTimers.has(requestId)) return;
-
-  // Per-request render-only ticker (used by the bootstrap recovery path).
-  let remaining = Math.max(1, Math.floor(seconds));
-  const handle = setInterval(() => {
-    remaining--;
-    if(remaining <= 0) {
-      clearInterval(handle);
-      responseWindowTimers.delete(requestId);
-      renderLiveResponses();
-    }
-  }, 1000);
-  responseWindowTimers.set(requestId, handle);
-}
-
-// Recycle pattern retired in CORE v5. The maybeAutoRecycle, recycleRequest,
-// and confirmResendRequest helpers that lived here have been removed. The
-// shift_requests.current_round and shift_responses.round_number columns
-// remain in the schema as no-op decoration per CORE v5 explicit permission.
-// Per-worker response window calculation lands in audit Section 4a step 5.
+// CORE v6 F-03: legacy 60-second flat timer + per-request bootstrap timer
+// retired. Per-worker response windows are derived from worker_bar_distances
+// and ticked by the per-card render interval (see renderRequestCards). The
+// no-op shim functions below preserve callers (request creation, dispatchWorker
+// teardown, post-cancellation reset) without any timer side effects.
+function startResponseWindow(_requestId) { /* no-op under CORE v6 F-03 */ }
+function startResponseWindowFor(_requestId, _seconds) { /* no-op under CORE v6 F-03 */ }
+const responseWindowTimers = new Map(); // retained as no-op for legacy guards
 
 async function bootstrapPendingRequestTimers() {
+  // No timer setup under CORE v6 F-03; per-card render derives elapsed from
+  // posted_at. Just sync responses cache and render.
   await syncResponsesForPendingRequests();
-  for(const req of liveSessionOps.requests) {
-    if(req.status !== 'pending' || !req.posted_at) continue;
-    const elapsedSecs = (Date.now() - new Date(req.posted_at).getTime()) / 1000;
-    if(elapsedSecs < 60) {
-      startResponseWindowFor(req.id, 60 - Math.floor(elapsedSecs));
-    }
-  }
   await renderLiveResponses();
 }
 
@@ -5042,15 +5045,8 @@ async function dispatchWorker(applicationId, requestId) {
   // Cancel any pending response-window timer for this request so the
   // recommendations engine doesn't fire after dispatch (no amber "request not
   // found" message, no late panel render).
-  if(responseWindowTimers.has(requestId)) {
-    clearInterval(responseWindowTimers.get(requestId));
-    responseWindowTimers.delete(requestId);
-  }
-  if(responseWindowRequestId === requestId && responseWindowInterval) {
-    clearInterval(responseWindowInterval);
-    responseWindowInterval = null;
-    responseWindowRequestId = null;
-  }
+  // Legacy responseWindow timer cleanup retired in CORE v6 F-03 (the timers
+  // were no-op shims after recycle unwire; F-03 removes them entirely).
 
   // Award +20 points for being selected (writes to ledger, updates cache, logs tier promotion if crossed)
   const result = await awardPoints(worker.applicationId, {
@@ -5430,6 +5426,40 @@ function renderRequestCards() {
           windowEl.style.color = 'var(--grey)';
           windowEl.style.fontWeight = '400';
         }
+      }
+
+      // CORE v6 F-03 follow-up: per-second update of per-worker window remaining
+      // values in the live-response rollup. Workers with a recorded response
+      // (or dispatched elsewhere) hold their final state and are skipped here.
+      // Workers still in their window tick down naturally; at expiry the
+      // visual state flips to "Window expired" without writing anything to
+      // the DB (no_response writes happen via F-04 sweep on request close).
+      if(r.status === 'pending' && r.posted_at && typeof workerBarDistances !== 'undefined') {
+        const elapsedSecsForReq = Math.floor((Date.now() - new Date(r.posted_at).getTime()) / 1000);
+        const responsesForReq = liveSessionResponses.get(r.id) || [];
+        const respondedAppIds = new Set(responsesForReq.map(x => Number(x.application_id)));
+        liveSessionOps.workers.forEach(w => {
+          const appId = Number(w.applicationId);
+          if(respondedAppIds.has(appId)) return;
+          if(w.status === 'dispatched') return;
+          if(w.status !== 'in_session') return;
+          const dist = workerBarDistances.find(d => Number(d.application_id) === appId && Number(d.bar_id) === Number(r.bar_id));
+          if(!dist || dist.walking_minutes == null || dist.walking_minutes >= 30) return;
+          const stateEl = document.getElementById('rollup-state-' + r.id + '-' + appId);
+          if(!stateEl) return;
+          const windowSecsForWorker = (30 - dist.walking_minutes) * 60;
+          const remainingSecs = Math.max(0, windowSecsForWorker - elapsedSecsForReq);
+          if(remainingSecs > 0) {
+            const remainingStr = remainingSecs >= 60
+              ? Math.floor(remainingSecs / 60) + 'm ' + String(remainingSecs % 60).padStart(2, '0') + 's'
+              : remainingSecs + 's';
+            stateEl.textContent = remainingStr + ' left';
+            stateEl.style.color = remainingSecs < 30 ? 'var(--amber)' : 'var(--grey)';
+          } else {
+            stateEl.textContent = 'Window expired';
+            stateEl.style.color = 'var(--red)';
+          }
+        });
       }
     });
   }, 1000);
