@@ -3389,7 +3389,7 @@
     // subsequent visits don't re-fetch.
     if(!barsInZoneCache._distancesLoaded) {
       try {
-        const dists = await fetch(SUPABASE_URL + '/rest/v1/worker_bar_distances?application_id=eq.' + currentWorker.id + '&select=bar_id,walking_minutes', { headers: H }).then(r => r.json());
+        const dists = await fetch(SUPABASE_URL + '/rest/v1/worker_bar_distances?application_id=eq.' + currentWorker.id + '&active=eq.true&select=bar_id,walking_minutes', { headers: H }).then(r => r.json());
         const distByBar = {};
         (dists || []).forEach(d => { distByBar[d.bar_id] = d.walking_minutes; });
         barsInZoneCache.forEach(b => { b.walking_minutes = distByBar[b.id] != null ? distByBar[b.id] : null; });
