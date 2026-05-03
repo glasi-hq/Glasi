@@ -131,12 +131,26 @@
     .worker-card.left .wc-status-label { color: var(--grey); }
     .worker-card.dispatched .wc-status-label { color: var(--amber); }
     .wc-bar { font-size: 11px; color: var(--amber);  margin-top: 4px; }
-    .wc-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .wc-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
     .wc-btn { flex: 1; border: none; border-radius: 8px; padding: 7px; font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
     .wc-btn:hover { opacity: 0.85; }
     .wc-btn-dispatch { background: var(--ice); color: var(--navy); }
     .wc-btn-left { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
     .wc-btn-restore { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.3); font-size: 10px; }
+
+    /* CORE v6 F-03 supplemental: per-card state row. One row per active in-range
+       request relevant to this worker. Window remaining ticks per second; on
+       response (available) the DISPATCH button surfaces. */
+    .wc-state-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: rgba(168,216,234,0.05); border: 1px solid rgba(168,216,234,0.2); border-radius: 6px; font-size: 11px; }
+    .wc-state-row-bar { flex: 0 0 auto; color: var(--ice); font-weight: 600; letter-spacing: 0.5px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wc-state-row-state { flex: 1 1 auto; color: var(--grey); font-weight: 600; font-family: 'JetBrains Mono', monospace; text-align: right; }
+    .wc-state-row-state.is-available { color: var(--green); }
+    .wc-state-row-state.is-passed { color: var(--amber); }
+    .wc-state-row-state.is-noresponse { color: var(--grey); }
+    .wc-state-row-state.is-expired { color: var(--red); }
+    .wc-state-row-state.is-urgent { color: var(--amber); }
+    .wc-state-row-dispatch { background: var(--ice); color: var(--navy); border: none; border-radius: 4px; padding: 4px 10px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; letter-spacing: 0.5px; }
+    .wc-state-row-dispatch:hover { opacity: 0.85; }
 
     /* ON SHIFT VIEW */
     .onshift-view { flex: 1; overflow-y: auto; padding: 24px; }
@@ -750,7 +764,7 @@
           <div style="margin-top:12px;font-size:12px;color:var(--grey);">Waiting for a request from a bar manager</div>
         </div>
         <div id="request-cards-container" style="display:none;">
-          <div class="request-section-label">Active Requests â€” select one to dispatch against</div>
+          <div class="request-section-label">Requests â€” select one to dispatch against</div>
           <div id="request-cards"></div>
           <button class="ghost-btn" style="margin-bottom:20px;" onclick="openRequestReceived()">+ New Request</button>
         </div>
@@ -3000,7 +3014,7 @@ function isLiveViewActive() {
 // liveSessionOps.start/stop cycles (the object is reused).
 function setupLiveViewListeners() {
   const renderOrDirty = () => {
-    if(isLiveViewActive()) { renderRoom(); renderRequestCards(); renderLiveResponses(); }
+    if(isLiveViewActive()) { renderRoom(); renderRequestCards(); }
     else liveSessionOps.markDirty('live');
   };
   liveSessionOps.on('worker:joined', renderOrDirty);
@@ -3017,10 +3031,9 @@ function setupLiveViewListeners() {
 }
 setupLiveViewListeners();
 
-// State-driven Live Responses + Dispatch Recommendations rendering. Replaces
-// the append-only DOM mutation that handleNewShiftResponse and the old
-// buildRecommendations did. Cache keyed by shift_request_id; cleared when a
-// request stops being pending or is dispatched/cancelled.
+// Per-request response cache keyed by shift_request_id. Populated by
+// syncResponsesForPendingRequests, consumed by renderRoom's per-card state
+// rows. Cleared when a request stops being pending.
 const liveSessionResponses = new Map();
 
 async function syncResponsesForPendingRequests() {
@@ -3035,186 +3048,6 @@ async function syncResponsesForPendingRequests() {
   for(const id of [...liveSessionResponses.keys()]) {
     if(!live.has(id)) liveSessionResponses.delete(id);
   }
-}
-
-// Score available responders for a request. Filters out workers not in a
-// dispatchable state: must be 'in_session' in liveSessionOps. Excludes
-// 'dispatched', 'onshift', 'completed', 'left', 'invited', 'no_show',
-// 'cancelled'. Same scoring weights the old buildRecommendations used.
-function scoreResponders(requestId, distancesByApp) {
-  const responses = liveSessionResponses.get(requestId) || [];
-  const available = responses.filter(r => r.response === 'available');
-  const workedTonight = liveSessionOps.workers
-    .filter(w => w.status === 'onshift' || w.status === 'completed')
-    .map(w => Number(w.applicationId));
-
-  return available.map(r => {
-    const appId = Number(r.application_id);
-    const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === appId);
-    if(!worker) return null;
-    // Dispatchable filter: in-room, not yet dispatched, not on-shift, not
-    // clocked out for the night, not left, not invited/noshow/cancelled.
-    if(worker.status !== 'in_session') return null;
-
-    let score = 0;
-    score += (worker.tier || 1) * 20;
-    score += ((worker.reliability_score || 50) * 0.3);
-    const secs = r.response_seconds != null ? r.response_seconds : 60;
-    if(secs <= 10) score += 30;
-    else if(secs <= 20) score += 20;
-    else if(secs <= 30) score += 10;
-    const mins = distancesByApp[appId];
-    if(mins != null) {
-      if(mins <= 10) score += 40;
-      else if(mins <= 20) score += 25;
-      else if(mins <= 30) score += 10;
-    }
-    if(worker.has_transport) score += 15;
-    if(workedTonight.includes(appId)) score -= 20;
-    return { worker, appId, score, secs, mins, workedTonight: workedTonight.includes(appId) };
-  }).filter(Boolean).sort((a, b) => b.score - a.score);
-}
-
-async function renderLiveResponses() {
-  const section = document.getElementById('live-response-feed-section');
-  const feed = document.getElementById('live-response-feed');
-  if(!section || !feed) return;
-
-  const pending = liveSessionOps.requests.filter(r => r.status === 'pending');
-  if(!pending.length) {
-    section.style.display = 'none';
-    feed.innerHTML = '';
-    return;
-  }
-
-  // Distances fetched once per render, keyed by bar.
-  const barIds = [...new Set(pending.map(r => r.bar_id).filter(Boolean))];
-  const distByBar = {};
-  for(const bid of barIds) {
-    const rows = await sbGet('worker_bar_distances', '?bar_id=eq.'+bid+'&active=eq.true&select=application_id,walking_minutes');
-    const m = {};
-    (rows || []).forEach(d => { m[Number(d.application_id)] = d.walking_minutes; });
-    distByBar[bid] = m;
-  }
-
-  const blocks = pending.map(req => {
-    // Under CORE v6 F-03 we render the per-request rollup even when zero
-    // workers have responded yet, so Sam can see open-window state. The
-    // earlier "no responses → empty block" short-circuit is gone.
-    const responses = liveSessionResponses.get(req.id) || [];
-
-    const elapsed = req.posted_at ? (Date.now() - new Date(req.posted_at).getTime()) / 1000 : 0;
-    const windowExpired = elapsed >= 60;
-
-    // CORE v6 F-03: per-request rollup of all in-range invited workers with
-    // their distance, personal window remaining, and current state. Replaces
-    // the v5 responder-only list.
-    const dists = distByBar[req.bar_id] || {};
-    const postedAtMs = req.posted_at ? new Date(req.posted_at).getTime() : null;
-    const elapsedSecsForReq = postedAtMs ? Math.floor((Date.now() - postedAtMs) / 1000) : 0;
-    const respByApp = new Map(responses.map(r => [Number(r.application_id), r]));
-
-    const inRangeRollup = liveSessionOps.workers
-      .filter(w => w.status === 'in_session' || w.status === 'dispatched')
-      .map(w => {
-        const appId = Number(w.applicationId);
-        const mins = dists[appId];
-        if(mins == null || mins >= 30) return null;
-        return { worker: w, mins, response: respByApp.get(appId) || null };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.mins - b.mins);
-
-    const responseItems = inRangeRollup.map(o => {
-      const windowSecs = (30 - o.mins) * 60;
-      const remainingSecs = Math.max(0, windowSecs - elapsedSecsForReq);
-      const remainingStr = remainingSecs >= 60
-        ? Math.floor(remainingSecs / 60) + 'm ' + String(remainingSecs % 60).padStart(2, '0') + 's'
-        : remainingSecs + 's';
-
-      let stateLabel, stateColor, secsLabel = '';
-      if(o.response) {
-        if(o.response.response === 'available') {
-          stateLabel = 'Available';
-          stateColor = 'var(--green)';
-          secsLabel = (o.response.response_seconds != null ? o.response.response_seconds + 's' : '');
-        } else if(o.response.response === 'pass') {
-          stateLabel = 'Passed';
-          stateColor = 'var(--amber)';
-          secsLabel = (o.response.response_seconds != null ? o.response.response_seconds + 's' : '');
-        } else {
-          stateLabel = 'No response';
-          stateColor = 'var(--grey)';
-        }
-      } else if(o.worker.status === 'dispatched') {
-        stateLabel = 'Dispatched (other)';
-        stateColor = 'var(--ice)';
-      } else if(remainingSecs > 0) {
-        stateLabel = remainingStr + ' left';
-        stateColor = remainingSecs < 30 ? 'var(--amber)' : 'var(--grey)';
-      } else {
-        stateLabel = 'Window expired';
-        stateColor = 'var(--red)';
-      }
-
-      return '<div class="response-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy-mid);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;" id="rollup-row-' + req.id + '-' + Number(o.worker.applicationId) + '">'
-        + '<div>'
-        + '<span style="font-size:13px;color:var(--white);font-weight:500;">' + (o.worker.name || 'Unknown') + '</span>'
-        + '<span style="font-size:11px;color:var(--grey);margin-left:10px;">' + o.mins + ' min walk</span>'
-        + '</div>'
-        + '<div style="display:flex;align-items:center;gap:10px;">'
-        + (secsLabel ? '<span style="font-size:11px;color:var(--grey);">' + secsLabel + '</span>' : '')
-        + '<span id="rollup-state-' + req.id + '-' + Number(o.worker.applicationId) + '" style="font-size:12px;font-weight:600;color:' + stateColor + ';">' + stateLabel + '</span>'
-        + '</div></div>';
-    }).join('');
-
-    let recHtml = '';
-    if(windowExpired) {
-      const scored = scoreResponders(req.id, distByBar[req.bar_id] || {});
-      if(scored.length) {
-        recHtml = '<div id="recommendations-panel-'+req.id+'" style="margin-bottom:12px;">'
-          + '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">Dispatch Recommendations</div>'
-          + scored.map((s, i) => {
-            const isTop = i === 0;
-            const distStr = s.mins != null ? s.mins + ' min walk' : 'distance unknown';
-            const speedStr = s.secs + 's response';
-            const transportStr = s.worker.has_transport ? 'Has transport' : '';
-            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:'+(isTop?'rgba(168,198,232,0.08)':'rgba(255,255,255,0.02)')+';border:1px solid '+(isTop?'rgba(168,198,232,0.25)':'var(--border)')+';border-radius:10px;margin-bottom:8px;">'
-              + '<div>'
-              + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
-              + '<span style="font-size:14px;font-weight:600;color:var(--white);">'+s.worker.name+'</span>'
-              + (isTop ? '<span style="font-size:9px;letter-spacing:1px;background:var(--ice);color:var(--navy);padding:2px 8px;border-radius:4px;font-weight:700;">RECOMMENDED</span>' : '')
-              + (s.workedTonight ? '<span style="font-size:9px;color:var(--amber);">Worked tonight</span>' : '')
-              + '</div>'
-              + '<div style="font-size:11px;color:var(--grey);display:flex;gap:10px;flex-wrap:wrap;">'
-              + '<span>Tier '+s.worker.tier+'</span>'
-              + '<span>'+distStr+'</span>'
-              + '<span>'+speedStr+'</span>'
-              + (transportStr ? '<span style="color:var(--green);">'+transportStr+'</span>' : '')
-              + '</div></div>'
-              + '<button onclick="dispatchWorker('+s.worker.applicationId+','+req.id+')" style="background:'+(isTop?'var(--ice)':'var(--navy-mid)')+';color:'+(isTop?'var(--navy)':'var(--white)')+';border:1px solid '+(isTop?'var(--ice)':'var(--border)')+';border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:\'Inter\',sans-serif;">Dispatch</button>'
-              + '</div>';
-          }).join('') + '</div>';
-      } else {
-        recHtml = '<div style="padding:12px 16px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:8px;font-size:13px;color:var(--red);text-align:center;margin-bottom:8px;">No dispatchable responders for this request.</div>';
-      }
-    }
-
-    // Suppress the entire block if there are zero in-range workers AND no
-    // recommendations panel to render. Otherwise show heading + rollup +
-    // recommendations.
-    if(!responseItems && !recHtml) return '';
-    const heading = '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);text-transform:uppercase;margin:12px 0 8px;">Request &middot; '+(req._barName || 'Unknown')+'</div>';
-    return heading + recHtml + responseItems;
-  }).filter(Boolean).join('');
-
-  if(!blocks) {
-    section.style.display = 'none';
-    feed.innerHTML = '';
-    return;
-  }
-  section.style.display = 'block';
-  feed.innerHTML = blocks;
 }
 
 function makeRealtimeWs(topic, pgChanges, onRecord, onClose) {
@@ -3315,36 +3148,96 @@ async function handleWorkerPortalJoin(record) {
   }
 }
 
-// ROOM
+// "In the session" rendering. Workers with status='in_session' appear here as
+// cards. Each card carries one .wc-state-row per active in-range pending
+// request (CORE v6 F-03 supplemental). Workers in dispatched/onshift/completed
+// status appear instead as the paired worker beside their request card via
+// renderRequestCards. Workers with status='left' don't render here at all
+// (Refinement 1: data remains in DB; left section is separate scope).
 function renderRoom() {
   const grid = document.getElementById('worker-grid');
   const invitedGrid = document.getElementById('invited-grid');
   const invitedSection = document.getElementById('invited-section');
 
-  const available = liveSessionOps.workers.filter(w => w.status==='in_session'||w.status==='left');
-  const invited = liveSessionOps.workers.filter(w => (w.status==='invited'||w.status==='no_show') && w.status !== 'dispatched' && w.status !== 'onshift');
+  const available = liveSessionOps.workers.filter(w => w.status === 'in_session');
+  const invited = liveSessionOps.workers.filter(w => w.status === 'invited' || w.status === 'no_show');
+
+  // Pending in-range requests for a given worker. Drives the per-card state
+  // rows: one row per in-range pending request relevant to this worker.
+  function pendingInRangeFor(worker) {
+    if(typeof workerBarDistances === 'undefined') return [];
+    const appId = Number(worker.applicationId);
+    return liveSessionOps.requests
+      .filter(r => r.status === 'pending')
+      .map(r => {
+        const dist = workerBarDistances.find(d =>
+          Number(d.application_id) === appId && Number(d.bar_id) === Number(r.bar_id));
+        if(!dist || dist.walking_minutes == null || dist.walking_minutes >= 30) return null;
+        const responses = (typeof liveSessionResponses !== 'undefined') ? (liveSessionResponses.get(r.id) || []) : [];
+        const myResponse = responses.find(x => Number(x.application_id) === appId) || null;
+        return { req: r, mins: dist.walking_minutes, response: myResponse };
+      })
+      .filter(Boolean);
+  }
+
+  function renderStateRow(worker, entry) {
+    const appId = Number(worker.applicationId);
+    const reqId = entry.req.id;
+    const barName = (entry.req._barName) || (bars.find(b => b.id === entry.req.bar_id)?.name) || 'Unknown';
+    const postedAtMs = entry.req.posted_at ? new Date(entry.req.posted_at).getTime() : Date.now();
+    const elapsedSecs = Math.floor((Date.now() - postedAtMs) / 1000);
+    const windowSecs = (30 - entry.mins) * 60;
+    const remainingSecs = Math.max(0, windowSecs - elapsedSecs);
+    let stateLabel = '';
+    let stateClass = '';
+    let showDispatch = false;
+    if(entry.response) {
+      if(entry.response.response === 'available') {
+        stateLabel = 'Available' + (entry.response.response_seconds != null ? ' Â· ' + entry.response.response_seconds + 's' : '');
+        stateClass = 'is-available';
+        showDispatch = true;
+      } else if(entry.response.response === 'pass') {
+        stateLabel = 'Passed';
+        stateClass = 'is-passed';
+      } else {
+        stateLabel = 'No response';
+        stateClass = 'is-noresponse';
+      }
+    } else if(remainingSecs > 0) {
+      const m = Math.floor(remainingSecs / 60);
+      const s = String(remainingSecs % 60).padStart(2, '0');
+      stateLabel = (m > 0 ? (m + 'm ' + s + 's') : (remainingSecs + 's')) + ' left';
+      stateClass = remainingSecs < 30 ? 'is-urgent' : '';
+    } else {
+      stateLabel = 'Window expired';
+      stateClass = 'is-expired';
+    }
+    return '<div class="wc-state-row" data-req-id="' + reqId + '" data-app-id="' + appId + '">'
+      + '<div class="wc-state-row-bar">' + barName + '</div>'
+      + '<span class="wc-state-row-state ' + stateClass + '" id="wc-state-' + appId + '-' + reqId + '">' + stateLabel + '</span>'
+      + '<button class="wc-state-row-dispatch" onclick="event.stopPropagation();dispatchWorker(' + appId + ',' + reqId + ')"'
+      + (showDispatch ? '' : ' style="display:none"') + '>DISPATCH</button>'
+      + '</div>';
+  }
 
   // Available section -- workers who joined via portal
   if(!available.length) {
-    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">No workers in the room yet. Workers will appear here as they join via the portal.</div>';
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">No workers in the session yet. Workers will appear here as they join via the portal.</div>';
   } else {
     grid.innerHTML=available.map(w=>{
-      const isLeft=w.status==='left';
       const isSelected=w.id===selectedWorkerId;
-      const selectedClass=(!isLeft&&isSelected)?' worker-selected':'';
-      return '<div class="worker-card '+w.status+selectedClass+'" id="wc-'+w.id+'" onclick="'+(isLeft?'':'selectWorker(\''+w.id+'\')')+'">'+
+      const selectedClass=isSelected?' worker-selected':'';
+      const stateRows = pendingInRangeFor(w).map(entry => renderStateRow(w, entry)).join('');
+      return '<div class="worker-card '+w.status+selectedClass+'" id="wc-'+w.id+'" onclick="selectWorker(\''+w.id+'\')">'+
         '<div class="wc-status-dot"></div>'+
         '<div class="wc-name">'+w.name+'</div>'+
         '<div class="wc-phone">'+(w.phone||'')+'</div>'+
         '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
-        '<div class="wc-status-label">'+(isLeft?'Left Session':'Available')+'</div>'+
+        '<div class="wc-status-label">Available</div>'+
         (w.reliability_score!=null?scorebadge(w.reliability_score):'')+
         '</div>'+
-        '<div class="wc-actions">'+
-        
-        '</div>'+
-
+        '<div class="wc-actions">' + stateRows + '</div>'+
         '</div>';
     }).join('');
   }
@@ -4703,7 +4596,7 @@ async function bootstrapPendingRequestTimers() {
   // No timer setup under CORE v6 F-03; per-card render derives elapsed from
   // posted_at. Just sync responses cache and render.
   await syncResponsesForPendingRequests();
-  await renderLiveResponses();
+  if(isLiveViewActive()) renderRoom();
 }
 
 // Cancel dispatch UI scaffolding. Logic lands in step 3.
@@ -5074,14 +4967,14 @@ async function dispatchWorker(applicationId, requestId) {
   const req = liveSessionOps.requests.find(r => r.id === requestId);
   if(req) req.status = 'dispatched';
 
-  // 4. State-driven re-render. The request just flipped to 'dispatched' in
-  // liveSessionOps state, so renderLiveResponses will hide its panel; the
-  // worker just flipped to 'dispatched', so the recommendations filter drops
-  // them. No manual DOM clearing needed.
+  // 4. State-driven re-render. The request just flipped to 'dispatched' and
+  // the worker to 'dispatched' in liveSessionOps state; renderRoom now pairs
+  // the dispatched worker card with its request card, and other workers'
+  // state rows for this request disappear because the request is no longer
+  // 'pending'. No manual DOM clearing needed.
   liveSessionResponses.delete(requestId);
   renderRequestCards();
   renderRoom();
-  renderLiveResponses();
 }
 
 async function confirmClockIn(requestId, applicationId) {
@@ -5232,7 +5125,7 @@ function renderRequestCards() {
   container.style.display = 'block';
   workersLabel.style.display = 'block';
 
-  cardsEl.innerHTML = liveSessionOps.requests.map(r => {
+  cardsEl.innerHTML = liveSessionOps.requests.filter(r => r.status !== 'completed').map(r => {
     const barName = r._barName || bars.find(b => b.id === r.bar_id)?.name || 'Unknown';
     const reqTime = r.request_time ? new Date(r.request_time) : new Date(r.created_at);
     const totalSecs = Math.floor((Date.now() - reqTime.getTime()) / 1000);
@@ -5428,36 +5321,36 @@ function renderRequestCards() {
         }
       }
 
-      // CORE v6 F-03 follow-up: per-second update of per-worker window remaining
-      // values in the live-response rollup. Workers with a recorded response
-      // (or dispatched elsewhere) hold their final state and are skipped here.
-      // Workers still in their window tick down naturally; at expiry the
+      // CORE v6 F-03 supplemental: per-second update of per-card state-row
+      // spans on worker cards. Replaces the v5/v6 rollup tick. One pass over
+      // pending requests Ã— in-range workers, surgical DOM update on
+      // id="wc-state-${appId}-${reqId}". Workers with a recorded response
+      // (or no longer in 'in_session' status) hold their final state and are
+      // skipped. Workers still in their window tick naturally; at expiry the
       // visual state flips to "Window expired" without writing anything to
-      // the DB (no_response writes happen via F-04 sweep on request close).
+      // the DB (no_response writes still come via F-04 sweep on request close).
       if(r.status === 'pending' && r.posted_at && typeof workerBarDistances !== 'undefined') {
         const elapsedSecsForReq = Math.floor((Date.now() - new Date(r.posted_at).getTime()) / 1000);
-        const responsesForReq = liveSessionResponses.get(r.id) || [];
+        const responsesForReq = (typeof liveSessionResponses !== 'undefined') ? (liveSessionResponses.get(r.id) || []) : [];
         const respondedAppIds = new Set(responsesForReq.map(x => Number(x.application_id)));
         liveSessionOps.workers.forEach(w => {
+          if(w.status !== 'in_session') return;
           const appId = Number(w.applicationId);
           if(respondedAppIds.has(appId)) return;
-          if(w.status === 'dispatched') return;
-          if(w.status !== 'in_session') return;
           const dist = workerBarDistances.find(d => Number(d.application_id) === appId && Number(d.bar_id) === Number(r.bar_id));
           if(!dist || dist.walking_minutes == null || dist.walking_minutes >= 30) return;
-          const stateEl = document.getElementById('rollup-state-' + r.id + '-' + appId);
+          const stateEl = document.getElementById('wc-state-' + appId + '-' + r.id);
           if(!stateEl) return;
           const windowSecsForWorker = (30 - dist.walking_minutes) * 60;
           const remainingSecs = Math.max(0, windowSecsForWorker - elapsedSecsForReq);
           if(remainingSecs > 0) {
-            const remainingStr = remainingSecs >= 60
-              ? Math.floor(remainingSecs / 60) + 'm ' + String(remainingSecs % 60).padStart(2, '0') + 's'
-              : remainingSecs + 's';
-            stateEl.textContent = remainingStr + ' left';
-            stateEl.style.color = remainingSecs < 30 ? 'var(--amber)' : 'var(--grey)';
+            const m = Math.floor(remainingSecs / 60);
+            const s = String(remainingSecs % 60).padStart(2, '0');
+            stateEl.textContent = (m > 0 ? (m + 'm ' + s + 's') : (remainingSecs + 's')) + ' left';
+            stateEl.className = 'wc-state-row-state' + (remainingSecs < 30 ? ' is-urgent' : '');
           } else {
             stateEl.textContent = 'Window expired';
-            stateEl.style.color = 'var(--red)';
+            stateEl.className = 'wc-state-row-state is-expired';
           }
         });
       }
@@ -6773,7 +6666,6 @@ function renderLiveRoom() {
     if(zoneEl) zoneEl.textContent = activeZone?.name || '';
     renderRequestCards();
     renderRoom();
-    renderLiveResponses();
     return;
   }
 
@@ -6806,15 +6698,15 @@ function renderLiveRoom() {
         <div style="margin-top:12px;font-size:12px;color:var(--grey);">Waiting for a request from a bar manager</div>
       </div>
       <div id="request-cards-container" style="display:none;">
-        <div class="request-section-label">Active Requests</div>
+        <div class="request-section-label">Requests</div>
         <div id="request-cards"></div>
         <button class="ghost-btn" style="margin-bottom:20px;" onclick="openRequestReceived()">+ New Request</button>
       </div>
     </div>
 
-    <!-- In the room -->
+    <!-- In the session -->
     <div id="available-section" style="margin-bottom:24px;">
-      <div class="request-section-label" id="workers-label">In the Room</div>
+      <div class="request-section-label" id="workers-label">In the session</div>
       <div class="worker-grid" id="worker-grid"></div>
     </div>
 
@@ -6824,11 +6716,6 @@ function renderLiveRoom() {
       <div class="worker-grid" id="invited-grid"></div>
     </div>
 
-    <!-- Live response feed (state-driven, populated by renderLiveResponses) -->
-    <div id="live-response-feed-section" style="margin-top:24px;display:none;">
-      <div class="request-section-label" style="color:var(--ice);">Live Responses</div>
-      <div id="live-response-feed" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
-    </div>
   `;
 
   // Start elapsed timer
@@ -6844,7 +6731,6 @@ function renderLiveRoom() {
 
   renderRequestCards();
   renderRoom();
-  renderLiveResponses();
 }
 
 async function goToSessions() {
