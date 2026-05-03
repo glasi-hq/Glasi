@@ -2125,7 +2125,7 @@
       <!-- STATE: live session, worker pre-confirmed via accept/decline,
            not yet through prejoin. Shown instead of sessions-code-entry
            when attendance_confirmed='confirmed'. Click → enterPrejoin →
-           prejoin checks → live waiting room. -->
+           prejoin checks → live session. -->
       <div id="sessions-live-confirmed-join" style="display:none;">
         <div class="session-live-confirmed-card">
           <div class="session-live-confirmed-label">
@@ -3585,7 +3585,7 @@
         return;
       }
 
-      // Already past prejoin and in the live waiting room.
+      // Already past prejoin and in the live session.
       if(liveInvite.joined_at && (!liveInvite.left_at || new Date(liveInvite.joined_at) > new Date(liveInvite.left_at))) {
         currentSessionInvite = liveInvite;
         document.getElementById('sessions-empty').style.display = 'none';
@@ -3966,7 +3966,7 @@
   // Set when the active shift_request flips to 'dispatched' on the realtime
   // shift_requests UPDATE feed. Gives the session_workers UPDATE for self a
   // brief window to fire (renderEnRoute/renderClockedIn takes over). If it doesn't, this
-  // worker wasn't selected, so we drop them back into the waiting room.
+  // worker wasn't selected, so we drop them back into the session.
   let awaitingDispatchConfirmation = null;
 
   let sessionStartTime = null;
@@ -4155,16 +4155,16 @@
         } else if(record.status === 'left') {
           // CORE v3 cancellation terminal state. Sam pulled this worker; they are
           // out of the session entirely (no more rounds, no more requests this
-          // session). Clean exit, not a return to the waiting room.
+          // session). Clean exit, not a return to the session.
           exitSessionAfterCancellation();
         } else if(record.status === 'cancelled' || record.status === 'in_session') {
           // Recall (status='in_session') or en-route emergency cancel
-          // (status='cancelled') — drop the worker back into the waiting room.
+          // (status='cancelled') — drop the worker back into the session.
           // returnToWaitingRoom resets the dispatch-flow state flags so a
           // subsequent dispatch starts clean.
           returnToWaitingRoom(record.status === 'cancelled'
             ? 'Glasi recalled the dispatch. Stand by — a fresh shift may come through shortly.'
-            : 'Dispatch cancelled. You are back in the waiting room.');
+            : 'Dispatch cancelled. You are back in the session.');
         }
       } catch(err) { console.error('session_workers realtime error:', err); }
     };
@@ -5341,7 +5341,7 @@
   // Reset whenever the worker leaves the dispatch flow (recall/cancel/sign-out).
   let lastRenderedDispatchBarId = null;
   // One-shot flag for the session_invites.left_at write. The worker should
-  // be marked as "left the live waiting room because dispatched" exactly
+  // be marked as "left the live session because dispatched" exactly
   // once per dispatch — used to live in showDispatched and re-fired on every
   // realtime echo, overwriting left_at repeatedly. Now gated by this flag.
   let sessionInviteLeftAtMarked = false;
