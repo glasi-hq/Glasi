@@ -2471,6 +2471,10 @@
       const restored = await restoreUnsubmittedPostShift();
       if(!restored) checkForLiveSession();
     })();
+
+    // CORE: workers come to the portal to engage with sessions, not to look at
+    // their profile. Default landing tab is Sessions.
+    showTab('sessions');
   }
 
   async function loadProfileShiftsCount() {
