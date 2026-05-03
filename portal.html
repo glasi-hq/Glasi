@@ -4371,6 +4371,13 @@
     return card;
   }
 
+  // CORE v6 F-03 dedup race fix: tracks render-in-progress request_ids so a
+  // second concurrent caller (e.g. realtime INSERT racing the bootstrap fetch
+  // for the same request_id) can't slip past the activeRequests.has check
+  // before the first caller has finished its awaits and populated the Map.
+  // Cleared in the finally block of showShiftPost regardless of return path.
+  const _showingShiftPost = new Set();
+
   async function showShiftPost(record) {
     // The shift_requests WS stays open through the dispatch lifecycle, so
     // INSERT events for fresh shift posts can still arrive after this worker
@@ -4381,66 +4388,74 @@
     const completed = document.getElementById('portal-shift-complete');
     if(completed && completed.style.display === 'block') return;
 
-    // Idempotent: if a card is already on screen for this request, an INSERT
-    // re-fire (or a stale realtime echo) does not duplicate the card.
-    if(activeRequests.has(record.id)) return;
+    // Idempotent: if a card is already on screen for this request, OR a render
+    // for this request_id is already in progress, an INSERT re-fire / bootstrap
+    // race / stale realtime echo does not duplicate the card. The
+    // _showingShiftPost guard covers the race window between this dedup check
+    // and the activeRequests.set at the bottom of the function.
+    if(activeRequests.has(record.id) || _showingShiftPost.has(record.id)) return;
+    _showingShiftPost.add(record.id);
 
-    // Eligibility (b) — already dispatched elsewhere. The self-dispatch
-    // handler closes other cards, but this is a defensive backstop for late
-    // INSERTs arriving after dispatch.
-    if(currentSessionWorkerId) {
-      try {
-        const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=status', { headers: H }).then(r => r.json());
-        if(swRows && swRows[0] && swRows[0].status === 'dispatched') return;
-      } catch(e) {}
-    }
-
-    // Eligibility (c) — already responded to this request. No double-respond.
     try {
-      const existing = await fetch(SUPABASE_URL + '/rest/v1/shift_responses?shift_request_id=eq.' + record.id + '&application_id=eq.' + currentWorker.id + '&select=id', { headers: H }).then(r => r.json());
-      if(existing && existing.length > 0) return;
-    } catch(e) {}
-
-    // Eligibility (a) — walking_minutes < 30 from signup postcode. Workers
-    // beyond 30 minutes silently ignore the request per CORE v6 SLA.
-    let walkingMinutes = null;
-    try {
-      const dist = await fetch(SUPABASE_URL + '/rest/v1/worker_bar_distances?application_id=eq.' + currentWorker.id + '&bar_id=eq.' + record.bar_id + '&active=eq.true&select=walking_minutes', { headers: H }).then(r => r.json());
-      if(dist && dist[0] && dist[0].walking_minutes != null) {
-        walkingMinutes = dist[0].walking_minutes;
+      // Eligibility (b) — already dispatched elsewhere. The self-dispatch
+      // handler closes other cards, but this is a defensive backstop for late
+      // INSERTs arriving after dispatch.
+      if(currentSessionWorkerId) {
+        try {
+          const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=status', { headers: H }).then(r => r.json());
+          if(swRows && swRows[0] && swRows[0].status === 'dispatched') return;
+        } catch(e) {}
       }
-    } catch(e) {}
-    if(walkingMinutes == null || walkingMinutes >= 30) return;
 
-    const windowSeconds = (30 - walkingMinutes) * 60;
-    const postedAtMs = record.posted_at ? new Date(record.posted_at).getTime() : Date.now();
-    const elapsedSecs = Math.floor((Date.now() - postedAtMs) / 1000);
-    const remainingSecs = Math.max(1, windowSeconds - elapsedSecs);
+      // Eligibility (c) — already responded to this request. No double-respond.
+      try {
+        const existing = await fetch(SUPABASE_URL + '/rest/v1/shift_responses?shift_request_id=eq.' + record.id + '&application_id=eq.' + currentWorker.id + '&select=id', { headers: H }).then(r => r.json());
+        if(existing && existing.length > 0) return;
+      } catch(e) {}
 
-    let barName = 'Venue';
-    let barAddress = '';
-    try {
-      const bars = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + record.bar_id + '&select=name,address', { headers: H }).then(r => r.json());
-      if(bars && bars[0]) { barName = bars[0].name; barAddress = bars[0].address || ''; }
-    } catch(e) {}
+      // Eligibility (a) — walking_minutes < 30 from signup postcode. Workers
+      // beyond 30 minutes silently ignore the request per CORE v6 SLA.
+      let walkingMinutes = null;
+      try {
+        const dist = await fetch(SUPABASE_URL + '/rest/v1/worker_bar_distances?application_id=eq.' + currentWorker.id + '&bar_id=eq.' + record.bar_id + '&active=eq.true&select=walking_minutes', { headers: H }).then(r => r.json());
+        if(dist && dist[0] && dist[0].walking_minutes != null) {
+          walkingMinutes = dist[0].walking_minutes;
+        }
+      } catch(e) {}
+      if(walkingMinutes == null || walkingMinutes >= 30) return;
 
-    const cardEl = renderShiftPostCard(record, walkingMinutes, barName, barAddress);
-    const container = document.getElementById('live-shift-posts-container');
-    if(!container) return;
-    container.appendChild(cardEl);
+      const windowSeconds = (30 - walkingMinutes) * 60;
+      const postedAtMs = record.posted_at ? new Date(record.posted_at).getTime() : Date.now();
+      const elapsedSecs = Math.floor((Date.now() - postedAtMs) / 1000);
+      const remainingSecs = Math.max(1, windowSeconds - elapsedSecs);
 
-    // Hide the live-waiting block while at least one card is on screen.
-    const waiting = document.getElementById('live-waiting');
-    if(waiting) waiting.style.display = 'none';
+      let barName = 'Venue';
+      let barAddress = '';
+      try {
+        const bars = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + record.bar_id + '&select=name,address', { headers: H }).then(r => r.json());
+        if(bars && bars[0]) { barName = bars[0].name; barAddress = bars[0].address || ''; }
+      } catch(e) {}
 
-    const ctx = {
-      record, cardEl, walkingMinutes, windowSeconds, postedAtMs,
-      timerHandle: null, pingHandle: null, hasResponded: false
-    };
-    activeRequests.set(record.id, ctx);
+      const cardEl = renderShiftPostCard(record, walkingMinutes, barName, barAddress);
+      const container = document.getElementById('live-shift-posts-container');
+      if(!container) return;
+      container.appendChild(cardEl);
 
-    startCardTimer(ctx, remainingSecs);
-    startCardPings(ctx);
+      // Hide the live-waiting block while at least one card is on screen.
+      const waiting = document.getElementById('live-waiting');
+      if(waiting) waiting.style.display = 'none';
+
+      const ctx = {
+        record, cardEl, walkingMinutes, windowSeconds, postedAtMs,
+        timerHandle: null, pingHandle: null, hasResponded: false
+      };
+      activeRequests.set(record.id, ctx);
+
+      startCardTimer(ctx, remainingSecs);
+      startCardPings(ctx);
+    } finally {
+      _showingShiftPost.delete(record.id);
+    }
   }
 
   function startCardTimer(ctx, seconds) {
