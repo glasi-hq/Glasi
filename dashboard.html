@@ -1957,7 +1957,10 @@ async function openEditWorker(id) {
   }
 
   const allBars = await sbGet('bars', '?order=name.asc&select=id,name');
-  const existing = await sbGet('worker_bar_distances', '?application_id=eq.'+id+'&select=bar_id,walking_minutes');
+  // Modal shows only active rows. Soft-flagged rows stay invisible here so the
+  // input grid is empty for bars the worker has been removed from; re-typing a
+  // value reactivates the soft-flagged row in saveWorkerEdit below.
+  const existing = await sbGet('worker_bar_distances', '?application_id=eq.'+id+'&active=eq.true&select=bar_id,walking_minutes');
   const distMap = {};
   existing.forEach(d => distMap[d.bar_id] = d.walking_minutes);
   const distEl = document.getElementById('edit-worker-distances');
@@ -2002,9 +2005,29 @@ async function saveWorkerEdit() {
   for(const b of bars) {
     const el = document.getElementById('dist-'+b.id);
     const mins = el && el.value ? parseInt(el.value) : null;
+    // Look up any existing row (active or inactive) so a soft-flagged row can
+    // be reactivated rather than duplicated. worker_bar_distances is operational
+    // substrate per CORE v5: never hard-deleted, only soft-flagged.
+    const existing = await sbGet('worker_bar_distances',
+      '?application_id=eq.'+editingWorkerId+'&bar_id=eq.'+b.id+'&select=id,active,walking_minutes');
+    const existingRow = existing && existing[0];
+
     if(mins) {
-      await sbDelete('worker_bar_distances', '?application_id=eq.'+editingWorkerId+'&bar_id=eq.'+b.id);
-      await sbPost('worker_bar_distances', { application_id: editingWorkerId, bar_id: b.id, walking_minutes: mins });
+      // User supplied a value. Ensure there's an active row at this value.
+      if(existingRow) {
+        if(existingRow.active !== true || existingRow.walking_minutes !== mins) {
+          await sbPatch('worker_bar_distances', '?id=eq.'+existingRow.id,
+            { active: true, walking_minutes: mins });
+        }
+      } else {
+        await sbPost('worker_bar_distances',
+          { application_id: editingWorkerId, bar_id: b.id, walking_minutes: mins, active: true });
+      }
+    } else {
+      // User cleared the input. Soft-flag the row if one is currently active.
+      if(existingRow && existingRow.active) {
+        await sbPatch('worker_bar_distances', '?id=eq.'+existingRow.id, { active: false });
+      }
     }
   }
 
@@ -2182,7 +2205,7 @@ async function tryRestoreSession() {
   const appIds = liveSessionOps.workers.map(w => w.applicationId).join(',');
   if(appIds) {
     try {
-      const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&select=application_id,bar_id,walking_minutes');
+      const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&active=eq.true&select=application_id,bar_id,walking_minutes');
       workerBarDistances = Array.isArray(dists) ? dists : [];
     } catch(e) { workerBarDistances = []; }
   }
@@ -3095,7 +3118,7 @@ async function renderLiveResponses() {
   const barIds = [...new Set(pending.map(r => r.bar_id).filter(Boolean))];
   const distByBar = {};
   for(const bid of barIds) {
-    const rows = await sbGet('worker_bar_distances', '?bar_id=eq.'+bid+'&select=application_id,walking_minutes');
+    const rows = await sbGet('worker_bar_distances', '?bar_id=eq.'+bid+'&active=eq.true&select=application_id,walking_minutes');
     const m = {};
     (rows || []).forEach(d => { m[Number(d.application_id)] = d.walking_minutes; });
     distByBar[bid] = m;
@@ -3501,7 +3524,7 @@ async function confirmDispatchBar() {
   // auto-fill ETA from worker bar distances (+3 min buffer)
   let etaValue = '';
   if(w.applicationId && barRecord.id) {
-    const distData = await sbGet('worker_bar_distances', `?application_id=eq.${w.applicationId}&bar_id=eq.${barRecord.id}&select=walking_minutes`);
+    const distData = await sbGet('worker_bar_distances', `?application_id=eq.${w.applicationId}&bar_id=eq.${barRecord.id}&active=eq.true&select=walking_minutes`);
     if(distData.length && distData[0].walking_minutes) {
       etaValue = distData[0].walking_minutes + 3;
       w.expectedArrivalMinutes = etaValue;
@@ -4649,20 +4672,15 @@ function startResponseWindow(requestId) {
   responseWindowSeconds = 60;
   if(responseWindowInterval) clearInterval(responseWindowInterval);
 
-  // Capture the round number at timer start. If the round changes before this
-  // timer expires (Sam manually recycled, dispatch happened, etc.) the expiry
-  // callback no-ops on the auto-recycle check.
-  const reqAtStart = liveSessionOps.requests.find(r => r.id === requestId);
-  const roundAtTimerStart = reqAtStart?.current_round || 1;
-
-  // The Live Responses section is shown by renderLiveResponses when there are
-  // responses to display. No more pre-show of an empty container.
-  responseWindowInterval = setInterval(async () => {
+  // Render-only ticker: on 60s expiry, render the close state. Per-worker
+  // window calculation lands in audit Section 4a step 5; until then every
+  // worker on this request shares this flat 60s timer. The 30-minute
+  // request-level auto-expiry runs separately on the per-card interval.
+  responseWindowInterval = setInterval(() => {
     responseWindowSeconds--;
     if(responseWindowSeconds <= 0) {
       clearInterval(responseWindowInterval);
       renderLiveResponses();
-      await maybeAutoRecycle(requestId, roundAtTimerStart);
     }
   }, 1000);
 }
@@ -4675,141 +4693,24 @@ const responseWindowTimers = new Map();
 function startResponseWindowFor(requestId, seconds) {
   if(responseWindowTimers.has(requestId)) return;
 
-  // Capture round at timer start so a stale recovery timer can't fire a
-  // recycle on a round that's already moved on (e.g. dispatch happened, Sam
-  // manually recycled in another tab).
-  const reqAtStart = liveSessionOps.requests.find(r => r.id === requestId);
-  const roundAtTimerStart = reqAtStart?.current_round || 1;
-
+  // Per-request render-only ticker (used by the bootstrap recovery path).
   let remaining = Math.max(1, Math.floor(seconds));
-  const handle = setInterval(async () => {
+  const handle = setInterval(() => {
     remaining--;
     if(remaining <= 0) {
       clearInterval(handle);
       responseWindowTimers.delete(requestId);
       renderLiveResponses();
-      await maybeAutoRecycle(requestId, roundAtTimerStart);
     }
   }, 1000);
   responseWindowTimers.set(requestId, handle);
 }
 
-// CORE v3 auto-recycle (Trigger 1): fired by both response-window timers on
-// expiry. Checks the round we started with is still live, then queries the
-// current round's shift_responses for any 'available' rows. Zero availables and
-// the round still matches => recycle.
-async function maybeAutoRecycle(requestId, roundAtTimerStart) {
-  const currentReq = liveSessionOps.requests.find(r => r.id === requestId);
-  if(!currentReq || currentReq.status !== 'pending') return;
-  if((currentReq.current_round || 1) !== roundAtTimerStart) return;
-  try {
-    const responses = await sbGet('shift_responses',
-      '?shift_request_id=eq.'+requestId+'&round_number=eq.'+roundAtTimerStart+'&select=response');
-    const hasAvailable = (responses || []).some(r => r.response === 'available');
-    if(!hasAvailable) {
-      const result = await recycleRequest(requestId, 'auto_no_availables');
-      if(!result?.ok) console.warn('[auto-recycle] skipped', result);
-    }
-  } catch(e) {
-    console.error('[auto-recycle] check failed', e);
-  }
-}
-
-// Shared helper for the three CORE v3 recycle triggers: auto-no-availables
-// (F-03), Sam-manual Resend (F-04), and cancellation (F-05). Increments
-// shift_requests.current_round, flips status back to pending, restarts the 60s
-// response window. NEVER touches posted_at; the 30-minute fulfilment cap
-// continues from original submission.
-//
-// Caller responsibilities:
-//   - auto_no_availables / sam_manual: confirm req.status === 'pending' before.
-//   - cancellation: write dispatch_cancellations row AND transition
-//     session_workers to 'left' BEFORE calling.
-//
-// reason is one of 'auto_no_availables', 'sam_manual', 'cancellation'.
-// Returns { ok: true, nextRound } on success, or
-// { ok: false, error, currentStatus? } on failure.
-async function recycleRequest(requestId, reason) {
-  let req = liveSessionOps.requests.find(r => r.id === requestId);
-  let currentRound = req?.current_round;
-  let observedStatus = req?.status;
-
-  if(currentRound == null || observedStatus == null) {
-    // Fallback: pull from DB if memory doesn't carry it yet.
-    try {
-      const rows = await sbGet('shift_requests', '?id=eq.'+requestId+'&select=current_round,status');
-      if(!rows?.length) return { ok: false, error: 'request_not_found' };
-      currentRound = rows[0].current_round || 1;
-      observedStatus = rows[0].status;
-    } catch(e) {
-      return { ok: false, error: 'fetch_failed' };
-    }
-  }
-
-  // Guard: never revive a request that has already settled. The cancellation
-  // path comes in with status='dispatched', which is fine; auto and manual come
-  // in with status='pending'.
-  if(observedStatus === 'expired' || observedStatus === 'completed' || observedStatus === 'cancelled') {
-    return { ok: false, error: 'not_recyclable', currentStatus: observedStatus };
-  }
-
-  const nextRound = (currentRound || 1) + 1;
-
-  // Conditional PATCH on the observed current_round so a concurrent dashboard
-  // tab racing the same recycle loses cleanly without double-incrementing.
-  try {
-    const resp = await fetch(SB + '/rest/v1/shift_requests?id=eq.'+requestId+'&current_round=eq.'+currentRound, {
-      method: 'PATCH',
-      headers: { ...H, 'Prefer': 'return=representation' },
-      body: JSON.stringify({ status: 'pending', current_round: nextRound })
-    });
-    if(!resp.ok) return { ok: false, error: 'patch_http_'+resp.status };
-    const patched = await resp.json();
-    if(!patched?.length) return { ok: false, error: 'race_lost', currentStatus: observedStatus };
-  } catch(e) {
-    return { ok: false, error: 'patch_failed' };
-  }
-
-  // Kill any in-flight response-window timers for this request (per-request and
-  // singleton paths both possible).
-  if(responseWindowTimers.has(requestId)) {
-    clearInterval(responseWindowTimers.get(requestId));
-    responseWindowTimers.delete(requestId);
-  }
-  if(responseWindowRequestId === requestId && responseWindowInterval) {
-    clearInterval(responseWindowInterval);
-    responseWindowInterval = null;
-    responseWindowRequestId = null;
-  }
-  // Drop old round's in-memory response cache; older-round shift_responses
-  // rows remain in the DB as audit.
-  liveSessionResponses.delete(requestId);
-
-  // Local state mutation, then start new round timer + emit.
-  if(!req) req = liveSessionOps.requests.find(r => r.id === requestId);
-  if(req) {
-    req.status = 'pending';
-    req.current_round = nextRound;
-  }
-  startResponseWindow(requestId);
-  liveSessionOps.emit('request:updated', { id: requestId, status: 'pending', current_round: nextRound, recycle_reason: reason });
-  console.log('[recycle] requestId='+requestId+' reason='+reason+' nextRound='+nextRound);
-  return { ok: true, nextRound };
-}
-
-// Light confirm wrapper for the Sam-manual recycle button. Native confirm() is
-// dismissible with Enter (defaults to OK), keeping friction without a custom
-// modal.
-function confirmResendRequest(requestId) {
-  const ok = window.confirm('Resend this request? Workers will see it fresh and can respond again.');
-  if(!ok) return;
-  recycleRequest(requestId, 'sam_manual').then(result => {
-    if(!result?.ok) {
-      console.error('[recycle] sam_manual failed', result);
-      alert('Resend failed: ' + (result?.error || 'unknown') + '. Check the console.');
-    }
-  });
-}
+// Recycle pattern retired in CORE v5. The maybeAutoRecycle, recycleRequest,
+// and confirmResendRequest helpers that lived here have been removed. The
+// shift_requests.current_round and shift_responses.round_number columns
+// remain in the schema as no-op decoration per CORE v5 explicit permission.
+// Per-worker response window calculation lands in audit Section 4a step 5.
 
 async function bootstrapPendingRequestTimers() {
   await syncResponsesForPendingRequests();
@@ -5056,6 +4957,7 @@ async function submitCancellation() {
     if(sessionWorkerId) {
       await sbPatch('session_workers', '?id=eq.'+sessionWorkerId, {
         status: newWorkerStatus,
+        left_reason: 'cancellation',
         bar_id: null,
         shift_request_id: null,
         shift_length_hours: null,
@@ -5066,19 +4968,19 @@ async function submitCancellation() {
       });
     }
 
-    // 4. Shared recycle: increments shift_requests.current_round, flips status
-    // back to pending, restarts the 60s response window, drops the old round's
-    // response cache, and emits 'request:updated'. posted_at is preserved so
-    // the 30-minute fulfilment cap continues from original submission per
-    // CORE v3. The dispatched-to-pending transition is licensed by the
-    // dispatch_cancellations row written in step 1.
+    // 4. shift_request returns to pending. CORE v5: dispatched-to-pending is
+    // licensed by the dispatch_cancellations row written in step 1. No round
+    // increment, no posted_at reset (recycle pattern retired in v5). Other
+    // workers' new behaviour after cancellation is parked for a future CORE
+    // revision; their state is unchanged here.
     if(requestId) {
-      const recycleResult = await recycleRequest(requestId, 'cancellation');
-      if(!recycleResult?.ok) console.error('[cancellation] recycle failed', recycleResult);
+      await sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'pending' });
+      const reqRow = liveSessionOps.requests.find(r => r.id === requestId);
+      if(reqRow) reqRow.status = 'pending';
+      liveSessionOps.emit('request:updated', { id: requestId, status: 'pending' });
     }
 
-    // 5. Optimistic local mutation for the cancelled worker. recycleRequest
-    // already mutated the request row and emitted 'request:updated'.
+    // 5. Optimistic local mutation for the cancelled worker.
     worker.status = newWorkerStatus;
     worker.bar = null;
     worker.barRecord = null;
@@ -5434,15 +5336,10 @@ function renderRequestCards() {
         +'</div>';
     }
 
-    const roundChip = (r.current_round && r.current_round > 1)
-      ? '<div style="font-size:9px;letter-spacing:1px;color:var(--ice);background:rgba(168,216,234,0.12);border:1px solid rgba(168,216,234,0.3);border-radius:4px;padding:2px 6px;font-weight:700;">ROUND '+r.current_round+'</div>'
-      : '';
-    const isPending = (r.status || 'pending') === 'pending';
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
       +'<div class="req-card-top">'
       +'<div class="req-card-bar">'+barName+'</div>'
       +'<div style="display:flex;align-items:center;gap:8px;">'
-      +roundChip
       +(windowSecs !== null ? '<div id="rwindow-'+r.id+'" style="font-size:13px;font-weight:700;color:'+(windowOpen?'var(--amber)':'var(--grey)')+';">'+(windowOpen ? windowSecs+'s' : 'Closed')+'</div>' : '')
       +'<div class="req-card-timer'+(urgent?' urgent':'')+'" id="rtimer-'+r.id+'">'+timerStr+'</div>'
       +'</div>'
@@ -5453,7 +5350,6 @@ function renderRequestCards() {
       +'<span class="status-badge badge-'+(r.status||'pending')+'">'+(r.status||'pending')+'</span>'
       +'</div>'
       +(!isDispatched?'<div style="display:flex;gap:6px;margin-top:8px;">'
-        +(isPending?'<button onclick="event.stopPropagation();confirmResendRequest('+r.id+')" style="background:none;border:1px solid rgba(168,216,234,0.4);color:var(--ice);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Resend</button>':'')
         +'<button onclick="event.stopPropagation();openAddNotes('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;flex:1;">'+(r.raw_message?'Edit Notes':'+ Add Notes')+'</button>'
         +'<button onclick="event.stopPropagation();removeRequest('+r.id+')" style="background:none;border:1px solid rgba(248,113,113,0.3);color:var(--red);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Remove</button>'
         +'</div>':'')
@@ -7147,7 +7043,7 @@ async function loadLiveSessionWorkers(sessionId) {
     const appIds = liveSessionOps.workers.map(w => w.applicationId).join(',');
     if(appIds) {
       try {
-        const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&select=application_id,bar_id,walking_minutes');
+        const dists = await sbGet('worker_bar_distances', '?application_id=in.('+appIds+')&active=eq.true&select=application_id,bar_id,walking_minutes');
         workerBarDistances = Array.isArray(dists) ? dists : [];
       } catch(e) { workerBarDistances = []; }
     }
