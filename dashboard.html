@@ -110,10 +110,13 @@
     .room-title { font-size: 18px; font-weight: 500; }
     .room-meta { font-size: 11px; color: var(--grey);  margin-top: 2px; }
     .session-time {  font-size: 12px; color: var(--ice); }
-    .worker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .worker-grid { display: flex; flex-direction: column; gap: 10px; }
 
-    /* WORKER CARDS */
-    .worker-card { background: var(--navy-mid); border: 2px solid var(--border); border-radius: 16px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
+    /* WORKER CARDS — round 3: vertical-list compact mode. Two-zone horizontal split:
+       left = identity (name, postcode/tier/reliability), right = state (per-request
+       state rows or idle 'Available' marker). Card grows vertically with multi-request
+       state stacks. */
+    .worker-card { display: flex; align-items: stretch; gap: 16px; background: var(--navy-mid); border: 2px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer; transition: all 0.2s; position: relative; }
     .worker-card:hover { border-color: var(--ice); transform: translateY(-1px); }
     .worker-card.available { border-color: var(--border); }
     .worker-card.available.worker-selected { border-color: var(--green); background: var(--green-dim); }
@@ -121,10 +124,16 @@
     .worker-card.left:hover { transform: none; border-color: var(--border); }
     .worker-card.dispatched { border-color: var(--amber); background: var(--amber-dim); cursor: default; }
     .worker-card.dispatched:hover { transform: none; }
-    .wc-status-dot { width: 8px; height: 8px; border-radius: 50%; position: absolute; top: 14px; right: 14px; background: var(--green); }
+    .wc-status-dot { width: 8px; height: 8px; border-radius: 50%; position: absolute; top: 12px; right: 12px; background: var(--green); }
     .worker-card.left .wc-status-dot { background: var(--grey); }
     .worker-card.dispatched .wc-status-dot { background: var(--amber); }
-    .wc-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; padding-right: 16px; }
+    .wc-left { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding-right: 14px; }
+    .wc-right { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+    .wc-name { font-size: 14px; font-weight: 600; color: var(--white); padding-right: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wc-meta { font-size: 11px; color: var(--grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wc-meta .wc-meta-rel { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    .wc-idle { font-size: 11px; color: var(--green); text-align: right; letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; }
+    /* Legacy classes retained for non-compact-card surfaces (manager portal etc). */
     .wc-phone { font-size: 11px; color: var(--grey);  margin-bottom: 3px; }
     .wc-postcode { font-size: 10px; color: var(--grey);  margin-bottom: 10px; }
     .wc-status-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase;  color: var(--green); }
@@ -139,18 +148,50 @@
     .wc-btn-restore { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.3); font-size: 10px; }
 
     /* CORE v6 F-03 supplemental: per-card state row. One row per active in-range
-       request relevant to this worker. Window remaining ticks per second; on
+       request relevant to this worker. Round 3: bar name on top, state on bottom,
+       optional DISPATCH button on the right. Window remaining ticks per second; on
        response (available) the DISPATCH button surfaces. */
-    .wc-state-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: rgba(168,216,234,0.05); border: 1px solid rgba(168,216,234,0.2); border-radius: 6px; font-size: 11px; }
-    .wc-state-row-bar { flex: 0 0 auto; color: var(--ice); font-weight: 600; letter-spacing: 0.5px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .wc-state-row-state { flex: 1 1 auto; color: var(--grey); font-weight: 600; font-family: 'JetBrains Mono', monospace; text-align: right; }
+    .wc-state-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(168,216,234,0.05); border: 1px solid rgba(168,216,234,0.2); border-radius: 6px; font-size: 11px; }
+    .wc-state-row-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .wc-state-row-bar { color: var(--ice); font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wc-state-row-state { color: var(--grey); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
     .wc-state-row-state.is-available { color: var(--green); }
     .wc-state-row-state.is-passed { color: var(--amber); }
     .wc-state-row-state.is-noresponse { color: var(--grey); }
     .wc-state-row-state.is-expired { color: var(--red); }
     .wc-state-row-state.is-urgent { color: var(--amber); }
-    .wc-state-row-dispatch { background: var(--ice); color: var(--navy); border: none; border-radius: 4px; padding: 4px 10px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; letter-spacing: 0.5px; }
+    .wc-state-row-dispatch { flex: 0 0 auto; background: var(--ice); color: var(--navy); border: none; border-radius: 4px; padding: 5px 12px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; letter-spacing: 0.5px; }
     .wc-state-row-dispatch:hover { opacity: 0.85; }
+
+    /* CORE v6 F-03 supplemental round 3: 3-column live console grid.
+       Sessions selector header sits above (full width). Grid below: requests col
+       (2fr) + 1px divider + workers col (1fr). No responsive collapse — desktop only. */
+    .live-console-grid { display: grid; grid-template-columns: minmax(0, 2fr) 1px minmax(0, 1fr); gap: 24px; align-items: start; }
+    .lc-divider { background: var(--border); width: 1px; align-self: stretch; min-height: 240px; }
+    .lc-requests-col, .lc-workers-col { min-width: 0; }
+    .lc-workers-col #invited-section { margin-top: 24px; }
+
+    /* Paired dispatch: request card + chain connector + worker card, side by side.
+       Cards meet visually via removed inner borders + connector top/bottom borders.
+       Chain motif is a 4px-on/4px-off ice-blue repeating-linear-gradient against navy. */
+    .dispatch-pair { display: flex; align-items: stretch; margin-bottom: 12px; }
+    .dispatch-pair-request { flex: 1 1 0; min-width: 0; background: var(--navy-mid); border: 1px solid rgba(74,222,128,0.3); border-right: none; border-radius: 12px 0 0 12px; padding: 16px; }
+    .dispatch-pair-connector {
+      flex: 0 0 36px;
+      align-self: stretch;
+      border-top: 1px solid rgba(74,222,128,0.3);
+      border-bottom: 1px solid rgba(74,222,128,0.3);
+      background:
+        repeating-linear-gradient(
+          90deg,
+          transparent 0px,
+          transparent 4px,
+          rgba(168,216,234,0.55) 4px,
+          rgba(168,216,234,0.55) 8px
+        ),
+        var(--navy);
+    }
+    .dispatch-pair-worker { flex: 1 1 0; min-width: 0; background: var(--navy-mid); border: 1px solid rgba(74,222,128,0.3); border-left: none; border-radius: 0 12px 12px 0; padding: 16px; }
 
     /* ON SHIFT VIEW */
     .onshift-view { flex: 1; overflow-y: auto; padding: 24px; }
@@ -757,21 +798,19 @@
         </div>
         <button class="ghost-btn" onclick="openAddWorkerToSession()">+ Add Worker</button>
       </div>
-      <!-- Request section -->
+      <!-- Request section (legacy template, unreachable) -->
       <div id="request-section">
         <div class="req-no-request" id="req-empty-state">
-          <button class="req-big-btn" onclick="openRequestReceived()">+ Request Received</button>
           <div style="margin-top:12px;font-size:12px;color:var(--grey);">Waiting for a request from a bar manager</div>
         </div>
         <div id="request-cards-container" style="display:none;">
-          <div class="request-section-label">Requests â€” select one to dispatch against</div>
+          <div class="request-section-label">Requests</div>
           <div id="request-cards"></div>
-          <button class="ghost-btn" style="margin-bottom:20px;" onclick="openRequestReceived()">+ New Request</button>
         </div>
       </div>
       <!-- Available workers -->
       <div id="available-section">
-        <div class="request-section-label" id="workers-label">Workers in Session</div>
+        <div class="request-section-label" id="workers-label-legacy">Workers in Session</div>
         <div class="worker-grid" id="worker-grid"></div>
       </div>
       <!-- Invited workers -->
@@ -828,32 +867,6 @@
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('add-session-worker')">Cancel</button>
       <button class="confirm-btn" onclick="addWorkerMidSession()">Add to Session</button>
-    </div>
-  </div>
-</div>
-
-<!-- OVERLAY: REQUEST RECEIVED -->
-<div class="overlay" id="ov-request">
-  <div class="modal">
-    <div class="modal-title">Request Received</div>
-    <div class="modal-sub" id="req-timestamp"></div>
-    <label>Venue</label>
-    <select class="field" id="req-venue"></select>
-    <label>Shift Length</label>
-    <select class="field" id="req-shift-length">
-      <option value="1">1 hour</option>
-      <option value="1.5">1.5 hours</option>
-      <option value="2">2 hours</option>
-      <option value="2.5">2.5 hours</option>
-      <option value="3" selected>3 hours</option>
-      <option value="3.5">3.5 hours</option>
-      <option value="4">4 hours</option>
-    </select>
-    <label>Time of Request</label>
-    <input class="field" type="time" id="req-time" />
-    <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeOv('request')">Cancel</button>
-      <button class="confirm-btn" onclick="saveShiftRequest()">Post to Session</button>
     </div>
   </div>
 </div>
@@ -3213,31 +3226,40 @@ function renderRoom() {
       stateClass = 'is-expired';
     }
     return '<div class="wc-state-row" data-req-id="' + reqId + '" data-app-id="' + appId + '">'
+      + '<div class="wc-state-row-info">'
       + '<div class="wc-state-row-bar">' + barName + '</div>'
       + '<span class="wc-state-row-state ' + stateClass + '" id="wc-state-' + appId + '-' + reqId + '">' + stateLabel + '</span>'
-      + '<button class="wc-state-row-dispatch" onclick="event.stopPropagation();dispatchWorker(' + appId + ',' + reqId + ')"'
-      + (showDispatch ? '' : ' style="display:none"') + '>DISPATCH</button>'
+      + '</div>'
+      + (showDispatch
+          ? '<button class="wc-state-row-dispatch" onclick="event.stopPropagation();dispatchWorker(' + appId + ',' + reqId + ')">DISPATCH</button>'
+          : '')
       + '</div>';
+  }
+
+  function renderIdleState(w) {
+    const rel = (w.reliability_score != null) ? Math.round(w.reliability_score) + '%' : '—';
+    return '<div class="wc-idle">AVAILABLE Â· ' + rel + '</div>';
   }
 
   // Available section -- workers who joined via portal
   if(!available.length) {
-    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">No workers in the session yet. Workers will appear here as they join via the portal.</div>';
+    grid.innerHTML='<div class="empty">No workers in the session yet. Workers will appear here as they join via the portal.</div>';
   } else {
     grid.innerHTML=available.map(w=>{
       const isSelected=w.id===selectedWorkerId;
       const selectedClass=isSelected?' worker-selected':'';
       const stateRows = pendingInRangeFor(w).map(entry => renderStateRow(w, entry)).join('');
+      const rightZone = stateRows || renderIdleState(w);
+      const tier = w.tier != null ? 'T' + w.tier : '';
+      const rel = w.reliability_score != null ? Math.round(w.reliability_score) + '%' : '';
+      const metaParts = [w.postcode_full || '', tier, rel].filter(Boolean).join(' Â· ');
       return '<div class="worker-card '+w.status+selectedClass+'" id="wc-'+w.id+'" onclick="selectWorker(\''+w.id+'\')">'+
         '<div class="wc-status-dot"></div>'+
-        '<div class="wc-name">'+w.name+'</div>'+
-        '<div class="wc-phone">'+(w.phone||'')+'</div>'+
-        '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
-        '<div class="wc-status-label">Available</div>'+
-        (w.reliability_score!=null?scorebadge(w.reliability_score):'')+
+        '<div class="wc-left">'+
+          '<div class="wc-name">'+w.name+'</div>'+
+          '<div class="wc-meta">'+metaParts+'</div>'+
         '</div>'+
-        '<div class="wc-actions">' + stateRows + '</div>'+
+        '<div class="wc-right">' + rightZone + '</div>'+
         '</div>';
     }).join('');
   }
@@ -3248,11 +3270,17 @@ function renderRoom() {
   } else {
     invitedSection.style.display='block';
     invitedGrid.innerHTML=invited.map(w=>{
+      const tier = w.tier != null ? 'T' + w.tier : '';
+      const metaParts = [w.postcode_full || '', tier].filter(Boolean).join(' Â· ');
       return '<div class="worker-card" style="border-color:var(--amber);opacity:0.8;" id="wc-'+w.id+'">'+
         '<div class="wc-status-dot" style="background:var(--amber);"></div>'+
-        '<div class="wc-name">'+w.name+'</div>'+
-        '<div class="wc-postcode">'+(w.postcode_full||'')+'</div>'+
-        '<div class="wc-status-label" style="color:var(--amber);margin-top:6px;">Expected tonight</div>'+
+        '<div class="wc-left">'+
+          '<div class="wc-name">'+w.name+'</div>'+
+          '<div class="wc-meta">'+metaParts+'</div>'+
+        '</div>'+
+        '<div class="wc-right">'+
+          '<div class="wc-idle" style="color:var(--amber);">EXPECTED</div>'+
+        '</div>'+
         '</div>';
     }).join('');
   }
@@ -4499,89 +4527,13 @@ let loggingResponseForWorkerId = null;
 
 
 
-// REQUEST RECEIVED
-// liveSessionOps.requests is owned by liveSessionOps.requests.
-let currentRequestId = null;
+// Request creation surface removed (CORE v6 F-03 supplemental round 3): requests
+// originate from the manager portal only. Sam-side openRequestReceived /
+// saveShiftRequest / buildZoomPost / copyZoomPost / currentRequestId all retired.
+// Manager-portal POST → realtime INSERT → liveSessionOps populates requests.
 let selectedRequestId = null;
 let selectedWorkerId = null;
 let requestTimerInterval = null;
-
-function openRequestReceived() {
-  currentRequestId = null;
-  document.getElementById('req-time').value = nowT();
-  document.getElementById('req-timestamp').textContent = 'Received at ' + nowT();
-
-  // populate venue dropdown -- bars in this zone only
-  const zoneBars = bars.filter(b => String(b.zone_id) === String(activeZone?.dbId) && (b.status === 'active' || b.status === 'trial'));
-  const venueSelect = document.getElementById('req-venue');
-  if(zoneBars.length) {
-    venueSelect.innerHTML = zoneBars.map(b => '<option value="'+b.id+'">'+b.name+'</option>').join('');
-  } else {
-    venueSelect.innerHTML = '<option value="">No active bars in this zone</option>';
-  }
-
-  openOv('request');
-}
-
-function buildZoomPost() {
-  const venueEl = document.getElementById('req-venue');
-  const barId = parseInt(venueEl.value);
-  const venueName = venueEl.options[venueEl.selectedIndex]?.text || '';
-  const length = document.getElementById('req-shift-length').value;
-  const barRecord = bars.find(b => b.id === barId);
-  const keyword = barRecord?.zoom_keyword || venueName.split(' ').find(w => w.length > 2)?.toUpperCase() || venueName.split(' ')[0].toUpperCase();
-  const post = venueName ? `SHIFT AVAILABLE â€” ${venueName}\nLength: ${length}hr\nReply ${keyword} to accept` : '';
-  document.getElementById('req-zoom-post').textContent = post;
-}
-
-let zoomPostCopied = false;
-
-function copyZoomPost(btn) {
-  const text = document.getElementById('req-zoom-post').textContent;
-  if(!text) return;
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = 'Copied!';
-    btn.style.background = 'rgba(34,197,94,0.2)';
-    btn.style.borderColor = 'rgba(34,197,94,0.4)';
-    btn.style.color = 'var(--green)';
-    setTimeout(() => btn.textContent = 'Copied to Zoom', 1500);
-  });
-  zoomPostCopied = true;
-  window._zoomPostedAt = new Date().toISOString();
-}
-
-async function saveShiftRequest() {
-  const venueEl = document.getElementById('req-venue');
-  const barId = venueEl.value;
-  const requestTime = document.getElementById('req-time').value;
-  const shiftLength = document.getElementById('req-shift-length').value;
-  if(!barId || !requestTime) {
-    alert('Please select a venue and confirm the request time.');
-    return;
-  }
-
-  const result = await sbPost('shift_requests', {
-    session_id: liveSessionOps.sessionId,
-    bar_id: parseInt(barId),
-    raw_message: null,
-    request_time: toISO(requestTime),
-    posted_at: new Date().toISOString(),
-    shift_length_hours: parseFloat(shiftLength),
-    status: 'pending'
-  });
-
-  if(result && result[0]?.id) {
-    currentRequestId = result[0].id;
-    result[0]._barName = venueEl.options[venueEl.selectedIndex]?.text || '';
-    liveSessionOps.requests.push(result[0]);
-    // Start 60 second response window
-    startResponseWindow(result[0].id);
-  }
-
-  closeOv('request');
-  renderRequestCards();
-  renderRoom();
-}
 
 // CORE v6 F-03: legacy 60-second flat timer + per-request bootstrap timer
 // retired. Per-worker response windows are derived from worker_bar_distances
@@ -5112,18 +5064,19 @@ function renderRequestCards() {
   const empty = document.getElementById('req-empty-state');
   const container = document.getElementById('request-cards-container');
   const cardsEl = document.getElementById('request-cards');
-  const workersLabel = document.getElementById('workers-label');
+
+  // workers-label visibility no longer toggled here. Round 3: the label is the
+  // header of the right column ("In the session"); it stays visible regardless
+  // of request state.
 
   if(!liveSessionOps.requests.length) {
     empty.style.display = 'block';
     container.style.display = 'none';
-    workersLabel.style.display = 'none';
     return;
   }
 
   empty.style.display = 'none';
   container.style.display = 'block';
-  workersLabel.style.display = 'block';
 
   cardsEl.innerHTML = liveSessionOps.requests.filter(r => r.status !== 'completed').map(r => {
     const barName = r._barName || bars.find(b => b.id === r.bar_id)?.name || 'Unknown';
@@ -5145,61 +5098,90 @@ function renderRequestCards() {
 
     if(isDispatched) {
       // Find the dispatched worker for this request
-      const dispWorker = liveSessionOps.workers.find(w => 
-        (w.status === 'dispatched' || w.status === 'onshift') && 
+      const dispWorker = liveSessionOps.workers.find(w =>
+        (w.status === 'dispatched' || w.status === 'onshift') &&
         (w.shiftRequestId === r.id || Number(w.shiftRequestId) === Number(r.id))
       ) || liveSessionOps.workers.find(w => w.status === 'dispatched' || w.status === 'onshift');
       const distData = dispWorker ? workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id) : null;
       const walkMins = distData ? distData.walking_minutes : null;
-      const dispatchedAt = dispWorker?.dispatchedAt ? new Date(dispWorker.dispatchedAt) : null;
-      const elapsedMins = dispatchedAt ? Math.floor((Date.now() - dispatchedAt.getTime()) / 60000) : 0;
-      const etaMins = walkMins !== null ? Math.max(0, walkMins - elapsedMins) : null;
 
-      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:12px;" id="rcard-'+r.id+'">'
-        // Left -- request card
-        +'<div style="background:var(--navy-mid);border:1px solid rgba(74,222,128,0.2);border-right:none;border-radius:10px 0 0 10px;padding:16px;">'
-        +'<div style="font-size:10px;letter-spacing:2px;color:var(--green);font-weight:600;margin-bottom:6px;">DISPATCHED</div>'
-        +'<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">'+barName+'</div>'
+      // CORE v6 F-03 supplemental round 3: state transitions on the EXPANDED
+      // worker card.
+      //   DISPATCHED      = status='dispatched' AND !departed_at  (awaiting "I'm leaving now")
+      //   CONFIRMED EN ROUTE = status='dispatched' AND departed_at  (worker has tapped, ETA ticks)
+      //   ON SHIFT        = status='onshift' OR clock_in_at set
+      // The request-card status badge mirrors at clock-in:
+      //   pending dispatch -> "DISPATCHED"
+      //   worker has clocked in -> "GLASI CLOCKED IN"
+      const isOnShift = dispWorker && (dispWorker.status === 'onshift' || dispWorker.clockInAt);
+      const isEnRoute = dispWorker && dispWorker.status === 'dispatched' && dispWorker.departedAt;
+      const departedAtMs = dispWorker?.departedAt ? new Date(dispWorker.departedAt).getTime() : null;
+      const dispatchedAt = dispWorker?.dispatchedAt ? new Date(dispWorker.dispatchedAt) : null;
+      // ETA: while DISPATCHED (no departed_at), show full walking ETA. Once
+      // departed, count down from departure.
+      let etaMins = null;
+      if(walkMins !== null) {
+        if(departedAtMs) {
+          const elapsedMins = Math.floor((Date.now() - departedAtMs) / 60000);
+          etaMins = Math.max(0, walkMins - elapsedMins);
+        } else if(dispatchedAt) {
+          // Pre-departure: show walking estimate, no decrement.
+          etaMins = walkMins;
+        }
+      }
+
+      const reqBadgeLabel = isOnShift ? 'GLASI CLOCKED IN' : 'DISPATCHED';
+
+      return '<div class="dispatch-pair" id="rcard-'+r.id+'">'
+        // LEFT — request card
+        +'<div class="dispatch-pair-request">'
+        +'<div style="font-size:10px;letter-spacing:2px;color:var(--green);font-weight:700;margin-bottom:8px;" id="rbadge-'+r.id+'">'+reqBadgeLabel+'</div>'
+        +'<div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px;">'+barName+'</div>'
         +'<div style="font-size:12px;color:var(--grey);">'+parseFloat(r.shift_length_hours||0)+'hr shift</div>'
-        +(r.raw_message?'<div style="font-size:11px;color:var(--grey);margin-top:8px;line-height:1.5;">'+r.raw_message+'</div>':'')
+        +(r.raw_message?'<div style="font-size:11px;color:var(--grey);margin-top:10px;line-height:1.5;">'+r.raw_message+'</div>':'')
         +'</div>'
-        // Connector
-        +'<div style="display:flex;align-items:center;justify-content:center;background:rgba(74,222,128,0.05);border-top:1px solid rgba(74,222,128,0.2);border-bottom:1px solid rgba(74,222,128,0.2);width:0;overflow:visible;z-index:1;">'
-        +'<div style="width:20px;height:2px;background:rgba(74,222,128,0.3);"></div>'
-        +'</div>'
-        // Right -- worker card
-        +'<div style="background:var(--navy-mid);border:1px solid rgba(74,222,128,0.2);border-left:none;border-radius:0 10px 10px 0;padding:16px;">'
-        +(dispWorker?
-          '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
-          +'<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Tier '+dispWorker.tier+' &nbsp;Â·&nbsp; '+(dispWorker.postcode_full||'')+'</div>'
-          +'<div style="font-size:11px;color:var(--grey);margin-top:4px;">'+(dispWorker.gsRef||'')+'</div>'
-          +(dispWorker.status === 'completed'
-            ? '<div style="font-size:12px;color:var(--grey);font-weight:600;margin-top:4px;">Shift complete'+(dispWorker.totalEarned ? ' Â· Â£'+parseFloat(dispWorker.totalEarned).toFixed(2)+' earned' : '')+'</div>'
-            : dispWorker.status === 'onshift'
-              ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">On shift</div>'
-              : dispWorker.departedAt
-                ? '<div style="font-size:12px;color:var(--green);margin-top:4px;font-weight:600;">En route</div>'
-                : '<div style="font-size:12px;color:var(--amber);margin-top:4px;">Awaiting departure confirmation</div>')
-          +(dispWorker.clockInCode ? '<div style="font-size:11px;color:var(--grey);margin-top:6px;">Clock-in code: <span style="color:var(--white);font-weight:600;letter-spacing:2px;">'+dispWorker.clockInCode+'</span></div>' : '')
-          +(etaMins !== null
-            ?'<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';" id="eta-'+r.id+'">'+( etaMins>0?'ETA: '+etaMins+' min':'Should have arrived')+'</div>'
-            :'<div style="font-size:12px;color:var(--grey);">Distance unknown</div>')
-          +(dispWorker.status !== 'onshift' ? 
-            '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">'
-            +'<div style="font-size:10px;letter-spacing:1px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Clock-in Code</div>'
-            +'<div style="display:flex;gap:6px;">'
-            +'<input type="text" id="clockin-'+r.id+'" maxlength="6" placeholder="Enter code" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--white);font-family:Inter,sans-serif;outline:none;">'
-            +'<button onclick="event.stopPropagation();confirmClockIn('+r.id+','+dispWorker.applicationId+')" style="background:var(--green);color:var(--navy);border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">Confirm</button>'
-            +'</div>'
-            +'</div>'
-          : '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">'
-            +'<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:6px;">Clocked in Â· '+(dispWorker.clockInAt ? new Date(dispWorker.clockInAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : '')+'</div>'
-            +'<div style="font-size:13px;color:var(--amber);font-weight:600;margin-bottom:10px;" id="shift-countdown-'+r.id+'">Calculating...</div>'
-            +'<div id="clockout-section-'+r.id+'">'
-            +'<button onclick="event.stopPropagation();revealClockOutCode('+r.id+',\''+dispWorker.clockOutCode+'\')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">Reveal clock-out code</button>'
-            +'</div>'
-            +'</div>')
-        :'<div style="font-size:12px;color:var(--grey);">Worker not found</div>')
+        // CONNECTOR — chain motif
+        +'<div class="dispatch-pair-connector"></div>'
+        // RIGHT — expanded worker card
+        +'<div class="dispatch-pair-worker">'
+        +(dispWorker
+          ? '<div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:2px;">'+dispWorker.name+'</div>'
+            +'<div style="font-size:11px;color:var(--grey);margin-bottom:12px;">Tier '+dispWorker.tier+' Â· '+(dispWorker.postcode_full||'')+'</div>'
+
+            // STATE LINE
+            +(isOnShift
+              ? '<div style="font-size:13px;color:var(--green);font-weight:700;margin-bottom:8px;">On shift Â· started '+(dispWorker.clockInAt ? new Date(dispWorker.clockInAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : '')+'</div>'
+              : isEnRoute
+                ? '<div style="font-size:13px;color:var(--green);font-weight:700;margin-bottom:8px;">Confirmed en route'+(dispWorker.departedAt?' Â· '+new Date(dispWorker.departedAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):'')+'</div>'
+                : '<div style="font-size:13px;color:var(--amber);font-weight:700;margin-bottom:8px;">Awaiting departure confirmation</div>')
+
+            // ETA / shift end
+            +(isOnShift
+              ? '<div style="font-size:12px;color:var(--amber);font-weight:600;margin-bottom:10px;" id="shift-countdown-'+r.id+'">Calculating...</div>'
+              : (etaMins !== null
+                  ? '<div style="font-size:12px;color:'+(etaMins<=2?'var(--green)':'var(--amber)')+';margin-bottom:8px;" id="eta-'+r.id+'">ETA: '+etaMins+' min</div>'
+                  : '<div style="font-size:12px;color:var(--grey);margin-bottom:8px;">Distance unknown</div>'))
+
+            // Clock-in code (display): visible until shift starts
+            +(!isOnShift && dispWorker.clockInCode
+              ? '<div style="font-size:11px;color:var(--grey);margin-bottom:10px;">Clock-in code: <span style="color:var(--white);font-weight:700;letter-spacing:2px;font-family:JetBrains Mono,monospace;">'+dispWorker.clockInCode+'</span></div>'
+              : '')
+
+            // Clock-in input (Sam-side fallback) OR clock-out reveal (on shift)
+            +(!isOnShift
+              ? '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">'
+                +'<div style="font-size:10px;letter-spacing:1px;color:var(--grey);text-transform:uppercase;margin-bottom:6px;">Confirm Clock-in</div>'
+                +'<div style="display:flex;gap:6px;">'
+                +'<input type="text" id="clockin-'+r.id+'" maxlength="6" placeholder="Enter code" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--white);font-family:Inter,sans-serif;outline:none;">'
+                +'<button onclick="event.stopPropagation();confirmClockIn('+r.id+','+dispWorker.applicationId+')" style="background:var(--green);color:var(--navy);border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">Confirm</button>'
+                +'</div>'
+                +'</div>'
+              : '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">'
+                +'<div id="clockout-section-'+r.id+'">'
+                +'<button onclick="event.stopPropagation();revealClockOutCode('+r.id+',\''+dispWorker.clockOutCode+'\')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;">Reveal clock-out code</button>'
+                +'</div>'
+                +'</div>')
+          : '<div style="font-size:12px;color:var(--grey);">Worker not found</div>')
         +'</div>'
         +'</div>';
     }
@@ -6673,7 +6655,7 @@ function renderLiveRoom() {
   const sessionDate = new Date().toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
 
   room.innerHTML = `
-    <!-- Session header -->
+    <!-- Session header (full-width selector at top of live console) -->
     <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div style="display:flex;align-items:center;gap:12px;">
@@ -6685,37 +6667,44 @@ function renderLiveRoom() {
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="font-size:12px;color:var(--ice);" id="live-session-elapsed">00:00</div>
-          <button class="ghost-btn" onclick="openRequestReceived()">+ Request Received</button>
           <button class="ghost-btn" style="color:var(--red);border-color:rgba(248,113,113,0.3);" onclick="confirmCloseSession()">Close</button>
         </div>
       </div>
     </div>
 
-    <!-- Request section -->
-    <div id="request-section">
-      <div class="req-no-request" id="req-empty-state">
-        <button class="req-big-btn" onclick="openRequestReceived()">+ Request Received</button>
-        <div style="margin-top:12px;font-size:12px;color:var(--grey);">Waiting for a request from a bar manager</div>
+    <!-- 3-column live console: requests (left+middle) | divider | workers (right) -->
+    <div class="live-console-grid">
+      <!-- LEFT + MIDDLE: Requests -->
+      <div class="lc-requests-col">
+        <div id="request-section">
+          <div class="req-no-request" id="req-empty-state" style="text-align:center;padding:32px 20px;">
+            <div style="font-size:13px;color:var(--grey);">Waiting for a request from a bar manager</div>
+          </div>
+          <div id="request-cards-container" style="display:none;">
+            <div class="request-section-label">Requests</div>
+            <div id="request-cards"></div>
+          </div>
+        </div>
       </div>
-      <div id="request-cards-container" style="display:none;">
-        <div class="request-section-label">Requests</div>
-        <div id="request-cards"></div>
-        <button class="ghost-btn" style="margin-bottom:20px;" onclick="openRequestReceived()">+ New Request</button>
+
+      <!-- DIVIDER -->
+      <div class="lc-divider"></div>
+
+      <!-- RIGHT: Workers -->
+      <div class="lc-workers-col">
+        <!-- In the session -->
+        <div id="available-section">
+          <div class="request-section-label" id="workers-label">In the session</div>
+          <div class="worker-grid" id="worker-grid"></div>
+        </div>
+
+        <!-- Expected but not joined -->
+        <div id="invited-section">
+          <div class="request-section-label" style="color:var(--amber);">Expected Tonight</div>
+          <div class="worker-grid" id="invited-grid"></div>
+        </div>
       </div>
     </div>
-
-    <!-- In the session -->
-    <div id="available-section" style="margin-bottom:24px;">
-      <div class="request-section-label" id="workers-label">In the session</div>
-      <div class="worker-grid" id="worker-grid"></div>
-    </div>
-
-    <!-- Expected but not joined -->
-    <div id="invited-section">
-      <div class="request-section-label" style="color:var(--amber);">Expected Tonight</div>
-      <div class="worker-grid" id="invited-grid"></div>
-    </div>
-
   `;
 
   // Start elapsed timer
