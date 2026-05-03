@@ -1427,6 +1427,118 @@
       font-style: italic;
     }
 
+    /* CORE v6 F-03: constant-speed visual indicator on the shift-post card.
+       The animated border sweeps at a fixed 4-second period, identical for
+       every worker on every request, regardless of their personal window.
+       Per CORE v6: "the urgency is the same: respond now." */
+    .shift-post-card-v6 {
+      position: relative;
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .shift-post-card-v6.is-open::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: 14px;
+      padding: 1px;
+      background: conic-gradient(
+        from 0deg,
+        rgba(168,216,234,0.0) 0deg,
+        rgba(168,216,234,0.9) 90deg,
+        rgba(168,216,234,0.0) 180deg,
+        rgba(168,216,234,0.0) 360deg
+      );
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      animation: shift-post-sweep 4s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes shift-post-sweep {
+      to { transform: rotate(360deg); }
+    }
+    .shift-post-card-v6 .spc-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .shift-post-card-v6 .spc-venue {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .shift-post-card-v6 .spc-detail {
+      font-size: 13px;
+      color: var(--grey);
+      margin-bottom: 10px;
+    }
+    .shift-post-card-v6 .spc-eta {
+      font-size: 12px;
+      color: var(--white);
+      background: rgba(168,216,234,0.08);
+      border: 1px solid rgba(168,216,234,0.25);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      font-family: 'Inter', sans-serif;
+    }
+    .shift-post-card-v6 .spc-disclaimer {
+      font-size: 11px;
+      color: var(--grey);
+      line-height: 1.5;
+      margin-bottom: 14px;
+      font-style: italic;
+    }
+    .shift-post-card-v6 .spc-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .shift-post-card-v6 .spc-buttons button {
+      flex: 1;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+    }
+    .shift-post-card-v6 .spc-available {
+      background: var(--green);
+      color: var(--navy);
+    }
+    .shift-post-card-v6 .spc-pass {
+      background: transparent;
+      color: var(--grey);
+      border: 1px solid var(--border) !important;
+    }
+    .shift-post-card-v6.is-responded .spc-buttons,
+    .shift-post-card-v6.is-closed .spc-buttons,
+    .shift-post-card-v6.is-responded::before,
+    .shift-post-card-v6.is-closed::before {
+      display: none;
+    }
+    .shift-post-card-v6 .spc-status-msg {
+      display: none;
+      font-size: 13px;
+      color: var(--grey);
+      line-height: 1.6;
+      margin-top: 4px;
+    }
+    .shift-post-card-v6.is-responded .spc-status-msg,
+    .shift-post-card-v6.is-closed .spc-status-msg {
+      display: block;
+    }
+
     .shift-buttons {
       display: flex;
       gap: 10px;
@@ -2115,20 +2227,13 @@
           </div>
         </div>
 
-        <!-- Shift post (shown when a shift is available) -->
-        <div id="live-shift-post" style="display:none;">
-          <div class="shift-post-card">
-            <div class="shift-post-label">Shift Available</div>
-            <div class="shift-post-venue" id="shift-venue">The Woolhouse</div>
-            <div class="shift-post-detail" id="shift-detail">Dancing Man Brewery · 2 hours</div>
-            <div class="shift-timer" id="shift-timer">Respond within 60 seconds</div>
-            <div class="shift-disclaimer">Responding does not guarantee you will be selected. We will notify you immediately if you are chosen.</div>
-            <div class="shift-buttons">
-              <button id="response-available-btn" class="available-btn" onclick="handleAvailable()">I'm available</button>
-              <button id="response-pass-btn" class="pass-btn" onclick="handlePass()">I'll pass</button>
-            </div>
-          </div>
-        </div>
+        <!-- CORE v6 F-03: dynamic container for one-or-more concurrent shift-post
+             cards. Each card is a self-contained instance with its own internal
+             timer, audio cadence registration, and visual indicator. Workers may
+             see multiple concurrent active requests. Once dispatched to one,
+             the others silently close. -->
+        <div id="live-shift-posts-container"></div>
+        <audio id="ping-audio" preload="auto" src="assets/sounds/request-ping.mp3"></audio>
 
         <!-- Responded but not dispatched -->
         <div id="live-responded" style="display:none;">
@@ -3908,6 +4013,28 @@
     // Use Supabase real-time WebSocket
     subscribeToShiftRequests(sessionId);
     subscribeToSessionWorkers(sessionId);
+    // CORE v6 F-03 follow-up: bootstrap fetch of any pending requests already
+    // posted before this worker subscribed. Covers late-join, reconnect, and
+    // hard-refresh scenarios where realtime INSERT events may have been missed.
+    bootstrapPendingShiftPosts(sessionId);
+  }
+
+  // Fetch any currently-pending shift_requests for this session and render
+  // each via showShiftPost. Idempotent: showShiftPost's eligibility checks
+  // (already-responded, already-dispatched-elsewhere, in-range) prevent
+  // double-render. Window remaining is computed from posted_at, so a request
+  // that's been pending for 4 minutes shows the correct remaining window.
+  async function bootstrapPendingShiftPosts(sessionId) {
+    if(!sessionId || !currentWorker) return;
+    try {
+      const rows = await fetch(SUPABASE_URL + '/rest/v1/shift_requests?session_id=eq.' + sessionId + '&status=eq.pending&select=id,bar_id,posted_at,shift_length_hours,session_id,raw_message', { headers: H }).then(r => r.json());
+      if(!Array.isArray(rows) || !rows.length) return;
+      for(const row of rows) {
+        await showShiftPost(row);
+      }
+    } catch(e) {
+      console.error('[bootstrapPendingShiftPosts] failed', e);
+    }
   }
 
   function subscribeToShiftRequests(sessionId) {
@@ -4012,6 +4139,12 @@
         // which carry status='dispatched'. Each helper is idempotent so a
         // realtime echo that re-fires the same state is harmless.
         if(record.status === 'dispatched') {
+          // CORE v6 F-03 concurrent-dispatch rule: silently close every OTHER
+          // active shift-post card. The dispatched request's UI is handled by
+          // renderDispatchedFresh / renderEnRoute below.
+          if(typeof handleSelfDispatched === 'function') {
+            handleSelfDispatched(record.shift_request_id);
+          }
           if(record.departed_at) await renderEnRoute(record);
           else await renderDispatchedFresh(record);
         } else if(record.status === 'onshift') {
@@ -4099,6 +4232,7 @@
     // CORE v3 dispatched-to-left transition. Sam cancelled this worker's dispatch;
     // they are out of the session entirely. Same teardown as session-close, but
     // a different empty-state copy so the worker knows what happened.
+    if(typeof clearAllShiftPostCards === 'function') clearAllShiftPostCards();
     if(shiftTimerInterval) clearInterval(shiftTimerInterval);
     if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
     if(elapsedInterval) clearInterval(elapsedInterval);
@@ -4133,6 +4267,7 @@
   function tearDownSessionAfterClose() {
     // Session closed by Sam. Clear all the session-tab state, leave the worker
     // on the idle "No active session" view so they know it's done.
+    if(typeof clearAllShiftPostCards === 'function') clearAllShiftPostCards();
     if(shiftTimerInterval) clearInterval(shiftTimerInterval);
     if(shiftCountdownInterval) clearInterval(shiftCountdownInterval);
     if(elapsedInterval) clearInterval(elapsedInterval);
@@ -4164,6 +4299,78 @@
     }
   }
 
+  // CORE v6 F-03: multi-request shift-post system. Each active request gets
+  // its own card with internal timer, audio cadence, visual indicator, and
+  // response state. Workers may have multiple concurrent active requests
+  // visible. Once dispatched to one, the others silently close.
+  const activeRequests = new Map();
+  // request_id → { record, cardEl, walkingMinutes, windowSeconds, postedAtMs,
+  //                timerHandle, pingHandle, hasResponded }
+
+  let _audioCtx = null;
+
+  function playPing() {
+    // Try the asset first (glasi_dashboard/assets/sounds/request-ping.mp3),
+    // fall back to a Web Audio oscillator if the asset is unavailable or
+    // rejected by browser policy.
+    const el = document.getElementById('ping-audio');
+    if(el) {
+      try {
+        el.currentTime = 0;
+        const p = el.play();
+        if(p && typeof p.then === 'function') {
+          p.catch(() => playOscillatorPing());
+        }
+        return;
+      } catch(e) { /* fall through */ }
+    }
+    playOscillatorPing();
+  }
+
+  function playOscillatorPing() {
+    try {
+      if(!_audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        _audioCtx = new Ctx();
+      }
+      const osc = _audioCtx.createOscillator();
+      const gain = _audioCtx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.18, _audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.25);
+      osc.connect(gain).connect(_audioCtx.destination);
+      osc.start();
+      osc.stop(_audioCtx.currentTime + 0.25);
+    } catch(e) { /* audio is decoration; silent failure is acceptable */ }
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  function renderShiftPostCard(record, walkingMinutes, barName, barAddress) {
+    const card = document.createElement('div');
+    card.className = 'shift-post-card-v6 is-open';
+    card.dataset.requestId = String(record.id);
+    card.innerHTML =
+        '<div class="spc-label">Shift Available</div>'
+      + '<div class="spc-venue">' + escapeHtml(barName || 'Venue') + '</div>'
+      + '<div class="spc-detail">' + escapeHtml(barAddress || '') + (barAddress ? ' · ' : '') + (record.shift_length_hours || 2) + ' hours</div>'
+      + '<div class="spc-eta">Your walk: ' + walkingMinutes + ' min from your address</div>'
+      + '<div class="spc-disclaimer">Responding does not guarantee you will be selected. We will notify you immediately if you are chosen.</div>'
+      + '<div class="spc-buttons">'
+      + '<button class="spc-available">I\'m available</button>'
+      + '<button class="spc-pass">I\'ll pass</button>'
+      + '</div>'
+      + '<div class="spc-status-msg"></div>';
+    card.querySelector('.spc-available').addEventListener('click', () => handleAvailable(record.id));
+    card.querySelector('.spc-pass').addEventListener('click', () => handlePass(record.id));
+    return card;
+  }
+
   async function showShiftPost(record) {
     // The shift_requests WS stays open through the dispatch lifecycle, so
     // INSERT events for fresh shift posts can still arrive after this worker
@@ -4174,28 +4381,42 @@
     const completed = document.getElementById('portal-shift-complete');
     if(completed && completed.style.display === 'block') return;
 
-    activeShiftRequestId = record.id;
-    shiftPostedAt = record.posted_at ? new Date(record.posted_at).getTime() : Date.now();
-    hasRespondedToCurrentShift = false;
-    if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
+    // Idempotent: if a card is already on screen for this request, an INSERT
+    // re-fire (or a stale realtime echo) does not duplicate the card.
+    if(activeRequests.has(record.id)) return;
 
-    // Reset the live-responded sub-states so a stale "Selecting a Glasi..." or
-    // "Time expired" panel from a previous shift doesn't leak across.
-    const winState = document.getElementById('responded-window-state');
-    const selecting = document.getElementById('responded-selecting');
-    if(winState) winState.style.display = 'block';
-    if(selecting) selecting.style.display = 'none';
-    const timerColor = document.getElementById('shift-timer');
-    if(timerColor) timerColor.style.color = 'var(--amber)';
+    // Eligibility (b) — already dispatched elsewhere. The self-dispatch
+    // handler closes other cards, but this is a defensive backstop for late
+    // INSERTs arriving after dispatch.
+    if(currentSessionWorkerId) {
+      try {
+        const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=status', { headers: H }).then(r => r.json());
+        if(swRows && swRows[0] && swRows[0].status === 'dispatched') return;
+      } catch(e) {}
+    }
 
-    // Re-enable the response buttons (handleAvailable/handlePass disable
-    // them on submit; this fresh shift gets fresh buttons).
-    const aBtn = document.getElementById('response-available-btn');
-    const pBtn = document.getElementById('response-pass-btn');
-    if(aBtn) aBtn.disabled = false;
-    if(pBtn) pBtn.disabled = false;
+    // Eligibility (c) — already responded to this request. No double-respond.
+    try {
+      const existing = await fetch(SUPABASE_URL + '/rest/v1/shift_responses?shift_request_id=eq.' + record.id + '&application_id=eq.' + currentWorker.id + '&select=id', { headers: H }).then(r => r.json());
+      if(existing && existing.length > 0) return;
+    } catch(e) {}
 
-    // Fetch bar details
+    // Eligibility (a) — walking_minutes < 30 from signup postcode. Workers
+    // beyond 30 minutes silently ignore the request per CORE v6 SLA.
+    let walkingMinutes = null;
+    try {
+      const dist = await fetch(SUPABASE_URL + '/rest/v1/worker_bar_distances?application_id=eq.' + currentWorker.id + '&bar_id=eq.' + record.bar_id + '&active=eq.true&select=walking_minutes', { headers: H }).then(r => r.json());
+      if(dist && dist[0] && dist[0].walking_minutes != null) {
+        walkingMinutes = dist[0].walking_minutes;
+      }
+    } catch(e) {}
+    if(walkingMinutes == null || walkingMinutes >= 30) return;
+
+    const windowSeconds = (30 - walkingMinutes) * 60;
+    const postedAtMs = record.posted_at ? new Date(record.posted_at).getTime() : Date.now();
+    const elapsedSecs = Math.floor((Date.now() - postedAtMs) / 1000);
+    const remainingSecs = Math.max(1, windowSeconds - elapsedSecs);
+
     let barName = 'Venue';
     let barAddress = '';
     try {
@@ -4203,80 +4424,119 @@
       if(bars && bars[0]) { barName = bars[0].name; barAddress = bars[0].address || ''; }
     } catch(e) {}
 
-    document.getElementById('shift-venue').textContent = barName;
-    document.getElementById('shift-detail').textContent = barAddress + ' · ' + (record.shift_length_hours || 2) + ' hours';
+    const cardEl = renderShiftPostCard(record, walkingMinutes, barName, barAddress);
+    const container = document.getElementById('live-shift-posts-container');
+    if(!container) return;
+    container.appendChild(cardEl);
 
-    // Show shift post
-    document.getElementById('live-waiting').style.display = 'none';
-    document.getElementById('live-responded').style.display = 'none';
-    document.getElementById('live-filled').style.display = 'none';
-    document.getElementById('live-shift-post').style.display = 'block';
+    // Hide the live-waiting block while at least one card is on screen.
+    const waiting = document.getElementById('live-waiting');
+    if(waiting) waiting.style.display = 'none';
 
-    // Start countdown timer. Use posted_at if available so a portal that joins
-    // mid-window picks up the correct remaining time.
-    const elapsedSecs = Math.floor((Date.now() - shiftPostedAt) / 1000);
-    const remainingSecs = Math.max(1, 60 - elapsedSecs);
-    startShiftTimer(remainingSecs);
+    const ctx = {
+      record, cardEl, walkingMinutes, windowSeconds, postedAtMs,
+      timerHandle: null, pingHandle: null, hasResponded: false
+    };
+    activeRequests.set(record.id, ctx);
+
+    startCardTimer(ctx, remainingSecs);
+    startCardPings(ctx);
   }
 
-  function startShiftTimer(seconds) {
-    if(shiftTimerInterval) clearInterval(shiftTimerInterval);
+  function startCardTimer(ctx, seconds) {
+    // Internal timer: drives the closing transition. The countdown is NOT
+    // shown to the worker per CORE v6 invariant. The worker experiences the
+    // visual indicator + audio pings; the timer length is internal mechanics.
     let remaining = seconds;
-    updateTimerDisplay(remaining);
-    shiftTimerInterval = setInterval(() => {
+    ctx.timerHandle = setInterval(() => {
       remaining--;
-      updateTimerDisplay(remaining);
       if(remaining <= 0) {
-        clearInterval(shiftTimerInterval);
-        if(hasRespondedToCurrentShift) {
-          // Worker responded; swap from the live countdown to the
-          // "Selecting a Glasi..." state. Persists until either the worker
-          // is dispatched (renderDispatchedFresh via session_workers UPDATE)
-          // or the request resolves elsewhere (handleActiveRequestUpdate).
-          const winState = document.getElementById('responded-window-state');
-          const selecting = document.getElementById('responded-selecting');
-          if(winState) winState.style.display = 'none';
-          if(selecting) selecting.style.display = 'block';
-        } else {
-          // Worker did not respond. Record no_response, surface the timeout
-          // state. Shift post is still visible -- swap to live-responded.
-          recordResponse('no_response');
-          document.getElementById('live-shift-post').style.display = 'none';
-          document.getElementById('live-responded').style.display = 'block';
-          const label = document.getElementById('live-responded-label');
-          const msg = document.getElementById('live-responded-msg');
-          const winState = document.getElementById('responded-window-state');
-          const selecting = document.getElementById('responded-selecting');
-          if(label) label.textContent = 'No Response';
-          if(msg) msg.textContent = 'Time expired. Stand by for the next shift post.';
-          if(winState) winState.style.display = 'none';
-          if(selecting) selecting.style.display = 'none';
+        clearInterval(ctx.timerHandle);
+        ctx.timerHandle = null;
+        stopCardPings(ctx);
+        if(!ctx.hasResponded) {
+          // Worker did not take a final action. F-04 will write the no_response
+          // row + penalty when the request closes server-side. F-03 just
+          // transitions UX to the closing state.
+          transitionCardToClosed(ctx, 'expired');
         }
+        // If the worker had already responded, the card is in the responded
+        // state already; no further UX change here.
       }
     }, 1000);
   }
 
-  function updateTimerDisplay(secs) {
-    // Pre-response timer in live-shift-post.
-    const el = document.getElementById('shift-timer');
-    if(el) {
-      el.textContent = 'Respond within ' + secs + ' second' + (secs !== 1 ? 's' : '');
-      el.style.color = secs <= 10 ? 'var(--red)' : 'var(--amber)';
-    }
-    // Post-response mirror in live-responded. Same countdown, different home.
-    const secsEl = document.getElementById('responded-timer-secs');
-    if(secsEl) secsEl.textContent = secs;
+  function startCardPings(ctx) {
+    playPing();
+    ctx.pingHandle = setInterval(playPing, 30000);
   }
 
-  async function recordResponse(type) {
-    if(!activeShiftRequestId || !currentWorker) return;
-    const responseSecs = shiftPostedAt ? Math.round((Date.now() - shiftPostedAt) / 1000) : null;
+  function stopCardPings(ctx) {
+    if(ctx.pingHandle) { clearInterval(ctx.pingHandle); ctx.pingHandle = null; }
+  }
+
+  function transitionCardToResponded(ctx, type) {
+    if(!ctx.cardEl) return;
+    ctx.cardEl.classList.remove('is-open');
+    ctx.cardEl.classList.add('is-responded');
+    const msg = ctx.cardEl.querySelector('.spc-status-msg');
+    if(msg) {
+      if(type === 'available') {
+        msg.textContent = "Thanks for saying you're available. We will let you know who we have selected very shortly.";
+      } else if(type === 'pass') {
+        msg.textContent = "Thanks for letting us know. You're still in the session for the next request.";
+      }
+    }
+  }
+
+  function transitionCardToClosed(ctx, reason) {
+    if(!ctx.cardEl) return;
+    ctx.cardEl.classList.remove('is-open');
+    ctx.cardEl.classList.add('is-closed');
+    const msg = ctx.cardEl.querySelector('.spc-status-msg');
+    if(msg) {
+      if(reason === 'filled') {
+        msg.textContent = 'Someone else got the shift, thanks for responding, your points have been awarded.';
+      } else {
+        // expired / ended / closed — single closing copy per CORE v6.
+        msg.textContent = 'Request ended, no one was available. We need to do better!';
+      }
+    }
+  }
+
+  function closeCard(requestId, mode) {
+    // mode: 'silent' (remove card immediately, used on self-dispatch close-others),
+    // 'filled' (someone else got it), 'expired' (request closed without dispatch).
+    const ctx = activeRequests.get(requestId);
+    if(!ctx) return;
+    if(ctx.timerHandle) { clearInterval(ctx.timerHandle); ctx.timerHandle = null; }
+    stopCardPings(ctx);
+    if(mode === 'silent') {
+      if(ctx.cardEl && ctx.cardEl.parentNode) ctx.cardEl.parentNode.removeChild(ctx.cardEl);
+      activeRequests.delete(requestId);
+    } else {
+      transitionCardToClosed(ctx, mode || 'expired');
+    }
+    if(activeRequests.size === 0) {
+      const liveSessions = document.getElementById('sessions-live');
+      const waiting = document.getElementById('live-waiting');
+      if(waiting && liveSessions && liveSessions.style.display === 'block') {
+        waiting.style.display = 'block';
+      }
+    }
+  }
+
+  async function recordResponse(requestId, type) {
+    if(!requestId || !currentWorker) return;
+    const ctx = activeRequests.get(requestId);
+    const postedAtMs = ctx ? ctx.postedAtMs : null;
+    const responseSecs = postedAtMs ? Math.round((Date.now() - postedAtMs) / 1000) : null;
     try {
       await fetch(SUPABASE_URL + '/rest/v1/shift_responses', {
         method: 'POST',
         headers: { ...H, 'Prefer': 'return=minimal' },
         body: JSON.stringify({
-          shift_request_id: activeShiftRequestId,
+          shift_request_id: requestId,
           application_id: currentWorker.id,
           response: type,
           responded_at: new Date().toISOString(),
@@ -4286,89 +4546,100 @@
     } catch(e) {}
   }
 
-  async function handleAvailable() {
-    // Lock both response buttons immediately so a fast user can't double-tap
-    // or change their answer mid-flight. The buttons are inside live-shift-post
-    // which is hidden below, but the disabled flag also prevents the keyboard
-    // re-firing the click while the PATCH is in flight.
-    const aBtn = document.getElementById('response-available-btn');
-    const pBtn = document.getElementById('response-pass-btn');
-    if(aBtn) aBtn.disabled = true;
-    if(pBtn) pBtn.disabled = true;
-    // Don't clear shiftTimerInterval -- the response window keeps counting
-    // down visibly in the live-responded panel until it hits 0.
-    hasRespondedToCurrentShift = true;
-    await recordResponse('available');
-    document.getElementById('live-shift-post').style.display = 'none';
-    document.getElementById('live-responded').style.display = 'block';
-    const label = document.getElementById('live-responded-label');
-    const msg = document.getElementById('live-responded-msg');
-    const winState = document.getElementById('responded-window-state');
-    const selecting = document.getElementById('responded-selecting');
-    if(label) label.textContent = 'Response Recorded';
-    if(msg) msg.textContent = 'You said yes. Stand by while we close the response window. You cannot change your answer.';
-    if(winState) winState.style.display = 'block';
-    if(selecting) selecting.style.display = 'none';
+  async function handleAvailable(requestId) {
+    const ctx = activeRequests.get(requestId);
+    if(!ctx || ctx.hasResponded) return;
+    ctx.hasResponded = true;
+    if(ctx.cardEl) {
+      ctx.cardEl.querySelectorAll('button').forEach(b => b.disabled = true);
+    }
+    // Stop pings + timer on response (visual indicator stops via the
+    // is-responded class which hides ::before). F-01 v6 hold-to-confirm will
+    // re-shape this into a two-step commitment; today it's still single-tap.
+    stopCardPings(ctx);
+    if(ctx.timerHandle) { clearInterval(ctx.timerHandle); ctx.timerHandle = null; }
+    await recordResponse(requestId, 'available');
+    transitionCardToResponded(ctx, 'available');
 
-    // Award +10 points for responding (legacy direct-write pattern, flagged
-    // for awardPoints-on-portal refactor in BUILD_STATE item 14).
+    // Award +10 points for responding (legacy direct-write; F-01 v6 will
+    // re-shape the points award alongside hold-to-confirm).
     if(currentWorker) {
       const newPoints = (currentWorker.total_points || 0) + 10;
-      await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
-        method: 'PATCH',
-        headers: { ...H, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ total_points: newPoints })
-      });
-      currentWorker.total_points = newPoints;
+      try {
+        await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
+          method: 'PATCH',
+          headers: { ...H, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ total_points: newPoints })
+        });
+        currentWorker.total_points = newPoints;
+      } catch(e) {}
     }
   }
 
-  async function handlePass() {
-    const aBtn = document.getElementById('response-available-btn');
-    const pBtn = document.getElementById('response-pass-btn');
-    if(aBtn) aBtn.disabled = true;
-    if(pBtn) pBtn.disabled = true;
-    // Same as handleAvailable: keep the timer running so the worker sees the
-    // window close. They still can't change their answer.
-    hasRespondedToCurrentShift = true;
-    await recordResponse('pass');
-    document.getElementById('live-shift-post').style.display = 'none';
-    document.getElementById('live-responded').style.display = 'block';
-    const label = document.getElementById('live-responded-label');
-    const msg = document.getElementById('live-responded-msg');
-    const winState = document.getElementById('responded-window-state');
-    const selecting = document.getElementById('responded-selecting');
-    if(label) label.textContent = 'Response Recorded';
-    if(msg) msg.textContent = 'You passed. Stand by for the next shift post.';
-    if(winState) winState.style.display = 'block';
-    if(selecting) selecting.style.display = 'none';
+  async function handlePass(requestId) {
+    const ctx = activeRequests.get(requestId);
+    if(!ctx || ctx.hasResponded) return;
+    ctx.hasResponded = true;
+    if(ctx.cardEl) {
+      ctx.cardEl.querySelectorAll('button').forEach(b => b.disabled = true);
+    }
+    stopCardPings(ctx);
+    if(ctx.timerHandle) { clearInterval(ctx.timerHandle); ctx.timerHandle = null; }
+    await recordResponse(requestId, 'pass');
+    transitionCardToResponded(ctx, 'pass');
   }
 
-  // Drives the transition out of "Selecting a Glasi..." when the active
-  // request resolves on the realtime shift_requests UPDATE feed. If our
-  // session_workers status flips to 'dispatched' first, renderDispatchedFresh cancels
-  // this and takes over.
+  // Drives the per-card transition when a shift_request UPDATE arrives.
+  // Routes by request_id, not a singleton. If the worker is dispatched to
+  // this request, the session_workers UPDATE handler closes ALL other cards
+  // via handleSelfDispatched and renderDispatchedFresh takes over for THIS
+  // request.
   function handleActiveRequestUpdate(record) {
-    if(!record || record.id !== activeShiftRequestId) return;
+    if(!record) return;
+    const ctx = activeRequests.get(record.id);
+    if(!ctx) return;
     if(record.status === 'dispatched') {
-      if(awaitingDispatchConfirmation) clearTimeout(awaitingDispatchConfirmation);
-      awaitingDispatchConfirmation = setTimeout(() => {
-        // No self-dispatch UPDATE arrived -- someone else got the shift.
-        returnToWaitingRoom('Shift filled. Stand by for the next one.');
-      }, 3000);
+      // Someone got the shift. If it was us, the self-dispatch path runs in
+      // parallel via the session_workers UPDATE. Until that disambiguates,
+      // mark this card as filled; if we ARE the dispatched worker, the
+      // self-dispatch path will silently remove this card and renderDispatchedFresh
+      // takes over.
+      transitionCardToClosed(ctx, 'filled');
     } else if(record.status === 'expired' || record.status === 'cancelled') {
-      if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
-      returnToWaitingRoom(record.status === 'expired'
-        ? 'That request expired. Stand by for the next one.'
-        : 'That request was cancelled. Stand by for the next one.');
+      closeCard(record.id, 'expired');
     }
+  }
+
+  // Self-dispatched: silently close every OTHER active card. Called from the
+  // session_workers UPDATE handler when our own status flips to 'dispatched'.
+  // The dispatched request's UI is handled by renderDispatchedFresh; this
+  // function only takes care of the OTHER concurrent requests.
+  function handleSelfDispatched(dispatchedRequestId) {
+    const ids = Array.from(activeRequests.keys());
+    for(const id of ids) {
+      if(Number(id) === Number(dispatchedRequestId)) {
+        // Also remove the dispatched request's card; renderDispatchedFresh
+        // owns the dispatched UI from here.
+        closeCard(id, 'silent');
+      } else {
+        closeCard(id, 'silent');
+      }
+    }
+  }
+
+  // Helper used by teardown paths (returnToWaitingRoom, exitSessionAfterCancellation,
+  // tearDownSessionAfterClose). Clears every card with no animation.
+  function clearAllShiftPostCards() {
+    const ids = Array.from(activeRequests.keys());
+    for(const id of ids) closeCard(id, 'silent');
   }
 
   function returnToWaitingRoom(tickerMsg) {
+    if(typeof clearAllShiftPostCards === 'function') clearAllShiftPostCards();
     if(shiftTimerInterval) { clearInterval(shiftTimerInterval); shiftTimerInterval = null; }
     if(shiftCountdownInterval) { clearInterval(shiftCountdownInterval); shiftCountdownInterval = null; }
     if(awaitingDispatchConfirmation) { clearTimeout(awaitingDispatchConfirmation); awaitingDispatchConfirmation = null; }
-    ['live-shift-post','live-responded','live-filled','live-dispatched'].forEach(id => {
+    ['live-responded','live-filled','live-dispatched'].forEach(id => {
       const el = document.getElementById(id); if(el) el.style.display = 'none';
     });
     const empty = document.getElementById('sessions-empty'); if(empty) empty.style.display = 'none';
@@ -4532,7 +4803,7 @@
     document.getElementById('sessions-prejoin').style.display = 'none';
     document.getElementById('sessions-live').style.display = 'block';
     document.getElementById('live-waiting').style.display = 'none';
-    document.getElementById('live-shift-post').style.display = 'none';
+    if(typeof clearAllShiftPostCards === 'function') clearAllShiftPostCards();
     document.getElementById('live-responded').style.display = 'none';
     document.getElementById('live-dispatched').style.display = 'block';
     document.getElementById('clockin-confirmed-section').style.display = 'block';
