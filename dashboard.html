@@ -193,6 +193,68 @@
     }
     .dispatch-pair-worker { flex: 1 1 0; min-width: 0; background: var(--navy-mid); border: 1px solid rgba(74,222,128,0.3); border-left: none; border-radius: 0 12px 12px 0; padding: 16px; }
 
+    /* CORE v6 F-03 supplemental round 4: session card summary stats. Two
+       clickable pills under the zone/session line in the session header.
+       Click opens the ov-invite-list modal (filtered by all/confirmed). */
+    .session-stats-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .session-stat-pill {
+      background: rgba(168,216,234,0.08);
+      border: 1px solid rgba(168,216,234,0.2);
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      font-family: 'Inter', sans-serif;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .session-stat-pill:hover {
+      background: rgba(168,216,234,0.14);
+      border-color: rgba(168,216,234,0.35);
+    }
+    .session-stat-pill .session-stat-label {
+      color: var(--grey); letter-spacing: 1px; text-transform: uppercase;
+      font-size: 9px; font-weight: 600;
+    }
+    .session-stat-pill .session-stat-value {
+      color: var(--white); font-weight: 700;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    }
+
+    /* Invite list modal rows */
+    .invite-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 6px;
+    }
+    .invite-row-name { font-size: 13px; font-weight: 600; color: var(--white); }
+    .invite-row-meta { font-size: 11px; color: var(--grey); margin-top: 2px; word-break: break-word; }
+    .invite-row-status-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 9px; letter-spacing: 1px; font-weight: 700;
+      text-transform: uppercase; font-family: 'Inter', sans-serif;
+    }
+    .invite-row-status-pill.is-confirmed { background: rgba(34,197,94,0.15); color: var(--green); }
+    .invite-row-status-pill.is-declined  { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .invite-row-status-pill.is-pending   { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .invite-row-times { font-size: 11px; line-height: 1.55; }
+    .invite-row-times-label { color: var(--grey); }
+    .invite-row-times-value { color: var(--white); font-family: 'JetBrains Mono', monospace; }
+    .invite-row-reinvite {
+      background: var(--ice); color: var(--navy); border: none;
+      border-radius: 6px; padding: 7px 14px; font-size: 11px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif; letter-spacing: 0.5px;
+    }
+    .invite-row-reinvite:disabled { opacity: 0.6; cursor: default; }
+    .invite-row-reinvite.is-success { background: var(--green); color: var(--navy); }
+    .invite-row-error { font-size: 11px; color: var(--red); margin-top: 4px; }
+    .invite-list-empty { font-size: 13px; color: var(--grey); padding: 24px 0; text-align: center; }
+
     /* ON SHIFT VIEW */
     .onshift-view { flex: 1; overflow-y: auto; padding: 24px; }
     .shift-active-card { background: var(--navy-mid); border: 1px solid var(--amber); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; }
@@ -867,6 +929,20 @@
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('add-session-worker')">Cancel</button>
       <button class="confirm-btn" onclick="addWorkerMidSession()">Add to Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: INVITE LIST (round 4) -->
+<div class="overlay" id="ov-invite-list">
+  <div class="modal" style="max-width:760px;width:92%;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;">
+      <div class="modal-title" id="invite-list-title" style="margin:0;">Invited Workers</div>
+      <button class="cancel-btn" onclick="closeOv('invite-list')" style="margin:0;">Close</button>
+    </div>
+    <div class="modal-sub" id="invite-list-sub">—</div>
+    <div id="invite-list-body" style="margin-top:14px;max-height:60vh;overflow-y:auto;">
+      <!-- rows injected by renderInviteList() -->
     </div>
   </div>
 </div>
@@ -2801,6 +2877,7 @@ const liveSessionOps = {
   sessionId: null,
   workers: [],
   requests: [],
+  invites: [], // round 4: cached session_invites with FK-joined applications
 
   // realtime + pub/sub
   _subs: [],
@@ -2819,13 +2896,67 @@ const liveSessionOps = {
     if(this._subs.length) await this.stop();
     this.sessionId = sessionId;
 
+    // Round 4: bootstrap invites cache before realtime sub registers (avoids
+    // INSERT/UPDATE race against the initial fetch). Joined applications
+    // fields the modal needs: name, phone, email, postcode_full.
+    try {
+      const inviteRows = await sbGet('session_invites',
+        '?session_id=eq.' + sessionId
+        + '&select=id,session_id,application_id,attendance_confirmed,attendance_confirmed_at,joined_at,left_at,last_invite_sent_at,created_at,applications(id,name,phone,email,postcode_full)'
+      );
+      this.invites = inviteRows || [];
+    } catch(e) {
+      console.error('[liveSessionOps.start] invites bootstrap failed', e);
+      this.invites = [];
+    }
+
     this._addSub('invites', () => makeRealtimeWs(
       'realtime:public:session_invites',
-      [{ event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId }],
+      [
+        { event: 'INSERT', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId },
+        { event: 'UPDATE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId },
+        { event: 'DELETE', schema: 'public', table: 'session_invites', filter: 'session_id=eq.' + sessionId }
+      ],
       async (record, type) => {
-        if(type !== 'UPDATE') return;
-        if(record.joined_at && !record.left_at) { await handleWorkerPortalJoin(record); this.emit('worker:joined', record); }
-        else if(record.left_at) { await handleWorkerPortalLeave(record); this.emit('worker:left', record); }
+        if(type === 'INSERT') {
+          // Realtime payload doesn't include FK-joined applications; fetch
+          // the application fields the modal needs.
+          let app = null;
+          try {
+            const apps = await sbGet('applications',
+              '?id=eq.' + record.application_id + '&select=id,name,phone,email,postcode_full');
+            app = apps?.[0] || null;
+          } catch(e) { /* leave applications null; modal handles missing */ }
+          record.applications = app;
+          this.invites.push(record);
+          this.emit('invite:added', record);
+        } else if(type === 'UPDATE') {
+          const existing = this.invites.find(i => i.id === record.id);
+          if(existing) {
+            // Defensive: preserve nested applications object across the patch
+            // in case a future Supabase realtime payload starts including
+            // FK-joined data. Today the realtime payload has no .applications,
+            // so this is a no-op safety net.
+            const nested = existing.applications;
+            Object.assign(existing, record);
+            existing.applications = nested;
+          } else {
+            // Race: UPDATE arrived for a row not in cache. Bootstrap-fetch.
+            try {
+              const refreshed = await sbGet('session_invites',
+                '?id=eq.' + record.id + '&select=id,session_id,application_id,attendance_confirmed,attendance_confirmed_at,joined_at,left_at,last_invite_sent_at,created_at,applications(id,name,phone,email,postcode_full)');
+              if(refreshed?.[0]) this.invites.push(refreshed[0]);
+            } catch(e) { /* skip; next bootstrap will reconcile */ }
+          }
+          // Existing worker portal join/leave handlers (unchanged behaviour).
+          if(record.joined_at && !record.left_at) { await handleWorkerPortalJoin(record); this.emit('worker:joined', record); }
+          else if(record.left_at) { await handleWorkerPortalLeave(record); this.emit('worker:left', record); }
+          this.emit('invite:updated', record);
+        } else if(type === 'DELETE') {
+          const idx = this.invites.findIndex(i => i.id === record.id);
+          if(idx >= 0) this.invites.splice(idx, 1);
+          this.emit('invite:removed', record);
+        }
       },
       () => this._onSubDrop('invites')
     ));
@@ -2906,7 +3037,10 @@ const liveSessionOps = {
     if(typeof liveSessionResponses !== 'undefined') liveSessionResponses.clear();
     this.workers.length = 0;
     this.requests.length = 0;
+    this.invites.length = 0; // round 4: clear invites cache on session end
     this._dirty.clear();
+    // Round 4: close the invite-list modal if open — stale data when session ends.
+    if(typeof isInviteModalOpen === 'function' && isInviteModalOpen()) closeOv('invite-list');
     const wasSessionId = this.sessionId;
     this.sessionId = null;
     if(wasSessionId) this.emit('session:stopped', { sessionId: wasSessionId });
@@ -3039,10 +3173,182 @@ function setupLiveViewListeners() {
   liveSessionOps.on('state:resynced', renderOrDirty);
   liveSessionOps.on('session:started', renderOrDirty);
   liveSessionOps.on('session:resumed', renderOrDirty);
+
+  // Round 4: invites cache events update session-card stats and the modal
+  // when open. Cache mutations already happened in the realtime handler
+  // before emit, so renderInviteList reads from a fresh cache.
+  const onInviteChange = () => {
+    if(typeof renderSessionStats === 'function') renderSessionStats();
+    if(typeof isInviteModalOpen === 'function' && isInviteModalOpen()
+       && typeof renderInviteList === 'function') renderInviteList();
+  };
+  liveSessionOps.on('invite:added', onInviteChange);
+  liveSessionOps.on('invite:updated', onInviteChange);
+  liveSessionOps.on('invite:removed', onInviteChange);
+  liveSessionOps.on('state:resynced', () => { if(typeof renderSessionStats === 'function') renderSessionStats(); });
+  liveSessionOps.on('session:started', () => { if(typeof renderSessionStats === 'function') renderSessionStats(); });
+  liveSessionOps.on('session:resumed', () => { if(typeof renderSessionStats === 'function') renderSessionStats(); });
+
   // session:stopped intentionally has no auto-render. Close-session and logout
   // flows do their own UI transitions.
 }
 setupLiveViewListeners();
+
+// CORE v6 F-03 supplemental round 4: invite-list modal helpers + session-card
+// stats renderer. State source = liveSessionOps.invites (populated at
+// liveSessionOps.start, maintained via realtime INSERT/UPDATE/DELETE).
+
+let inviteListFilter = 'all'; // 'all' | 'confirmed'
+
+function isInviteModalOpen() {
+  const el = document.getElementById('ov-invite-list');
+  return !!(el && el.classList.contains('open'));
+}
+
+function formatInviteTime(iso) {
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+}
+
+function renderSessionStats() {
+  const invitedEl = document.getElementById('session-stat-invited');
+  const confirmedEl = document.getElementById('session-stat-confirmed');
+  if(!invitedEl || !confirmedEl) return; // session card not in DOM (silent no-op)
+  const all = liveSessionOps.invites || [];
+  invitedEl.textContent = String(all.length);
+  confirmedEl.textContent = String(all.filter(i => i.attendance_confirmed === 'confirmed').length);
+}
+
+function openInviteListModal(filter) {
+  inviteListFilter = (filter === 'confirmed') ? 'confirmed' : 'all';
+  const titleEl = document.getElementById('invite-list-title');
+  if(titleEl) titleEl.textContent = inviteListFilter === 'confirmed' ? 'Confirmed Workers' : 'Invited Workers';
+  renderInviteList();
+  openOv('invite-list');
+}
+
+function renderInviteList() {
+  const body = document.getElementById('invite-list-body');
+  const subEl = document.getElementById('invite-list-sub');
+  if(!body || !subEl) return;
+
+  const all = liveSessionOps.invites || [];
+  const filtered = inviteListFilter === 'confirmed'
+    ? all.filter(i => i.attendance_confirmed === 'confirmed')
+    : all;
+
+  if(!filtered.length) {
+    subEl.textContent = inviteListFilter === 'confirmed' ? 'No confirmed workers yet.' : 'No workers invited to this session yet.';
+    body.innerHTML = '<div class="invite-list-empty">' + subEl.textContent + '</div>';
+    return;
+  }
+
+  subEl.textContent = filtered.length + ' worker' + (filtered.length === 1 ? '' : 's');
+
+  body.innerHTML = filtered.map(inv => {
+    const app = inv.applications || {};
+    const status = inv.attendance_confirmed || 'pending';
+    const statusLabel = status === 'confirmed' ? 'Confirmed'
+                      : status === 'declined'  ? 'Declined'
+                      : 'Pending';
+    const statusClass = 'is-' + status;
+
+    const invitedAtStr = formatInviteTime(inv.created_at);
+    const respondedAtStr = formatInviteTime(inv.attendance_confirmed_at);
+    const respondedLabel = status === 'confirmed' ? 'Confirmed at'
+                         : status === 'declined'  ? 'Declined at'
+                         : '';
+
+    const lastSentStr = formatInviteTime(inv.last_invite_sent_at);
+    const showReinvite = status !== 'declined';
+
+    const metaParts = [app.postcode_full || '', app.email || '', app.phone || ''].filter(Boolean).join(' Â· ');
+
+    return ''
+      + '<div class="invite-row" id="invite-row-' + inv.id + '">'
+      +   '<div>'
+      +     '<div class="invite-row-name">' + (app.name || '(unknown)') + '</div>'
+      +     '<div class="invite-row-meta">' + metaParts + '</div>'
+      +   '</div>'
+      +   '<div>'
+      +     '<span class="invite-row-status-pill ' + statusClass + '">' + statusLabel + '</span>'
+      +   '</div>'
+      +   '<div class="invite-row-times">'
+      +     '<div><span class="invite-row-times-label">Invited:</span> <span class="invite-row-times-value">' + (invitedAtStr || '—') + '</span></div>'
+      +     (respondedLabel
+            ? '<div><span class="invite-row-times-label">' + respondedLabel + ':</span> <span class="invite-row-times-value">' + (respondedAtStr || '—') + '</span></div>'
+            : '')
+      +     (lastSentStr
+            ? '<div><span class="invite-row-times-label">Last sent:</span> <span class="invite-row-times-value">' + lastSentStr + '</span></div>'
+            : '')
+      +   '</div>'
+      +   '<div>'
+      +     (showReinvite
+            ? '<button class="invite-row-reinvite" id="reinvite-btn-' + inv.id + '" onclick="reInviteWorker(' + inv.id + ')">Re-invite</button>'
+              + '<div class="invite-row-error" id="reinvite-err-' + inv.id + '" style="display:none;"></div>'
+            : '')
+      +   '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function reInviteWorker(sessionInviteId) {
+  const inv = (liveSessionOps.invites || []).find(i => i.id === sessionInviteId);
+  if(!inv) return;
+  const btn = document.getElementById('reinvite-btn-' + sessionInviteId);
+  const errEl = document.getElementById('reinvite-err-' + sessionInviteId);
+  if(errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  if(btn) { btn.disabled = true; btn.textContent = 'Re-sending...'; btn.classList.remove('is-success'); }
+
+  try {
+    const payload = await buildInvitePayload(inv.session_id, inv.application_id, inv.id);
+    if(!payload) throw new Error('Could not build invite payload');
+    if(!payload.to_email) throw new Error('Worker has no email on record');
+
+    const resp = await fetch(SB + '/functions/v1/send-invite-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY },
+      body: JSON.stringify(payload)
+    });
+    if(!resp.ok) {
+      const t = await resp.text().catch(() => '');
+      throw new Error('Edge Function HTTP ' + resp.status + ': ' + t);
+    }
+    const result = await resp.json().catch(() => ({}));
+    if(!result.ok) throw new Error('Edge Function returned: ' + (result.error || 'unknown'));
+
+    // Success: PATCH last_invite_sent_at and update local cache.
+    const nowIso = new Date().toISOString();
+    await sbPatch('session_invites', '?id=eq.' + sessionInviteId, { last_invite_sent_at: nowIso });
+    inv.last_invite_sent_at = nowIso;
+
+    const hhmm = new Date(nowIso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    if(btn) {
+      btn.textContent = 'Re-invited ✓ ' + hhmm;
+      btn.classList.add('is-success');
+      btn.disabled = true;
+    }
+    setTimeout(() => {
+      const el = document.getElementById('reinvite-btn-' + sessionInviteId);
+      if(!el) return;
+      el.textContent = 'Re-invite';
+      el.classList.remove('is-success');
+      el.disabled = false;
+    }, 3000);
+  } catch(e) {
+    console.error('[reInviteWorker] failed', e);
+    if(errEl) {
+      errEl.textContent = 'Send failed: ' + (e.message || 'unknown error');
+      errEl.style.display = 'block';
+    }
+    if(btn) { btn.disabled = false; btn.textContent = 'Re-invite'; }
+  }
+}
 
 // Per-request response cache keyed by shift_request_id. Populated by
 // syncResponsesForPendingRequests, consumed by renderRoom's per-card state
@@ -6648,6 +6954,7 @@ function renderLiveRoom() {
     if(zoneEl) zoneEl.textContent = activeZone?.name || '';
     renderRequestCards();
     renderRoom();
+    renderSessionStats();
     return;
   }
 
@@ -6657,12 +6964,23 @@ function renderLiveRoom() {
   room.innerHTML = `
     <!-- Session header (full-width selector at top of live console) -->
     <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;margin-top:6px;"></div>
           <div>
             <div style="font-size:15px;font-weight:700;color:var(--white);" data-zone-name>${zoneName}</div>
             <div style="font-size:11px;color:var(--grey);margin-top:2px;">${sessionDate} &nbsp;Â·&nbsp; Session #${liveSessionOps.sessionId}</div>
+            <!-- Round 4: invited / confirmed summary stats -->
+            <div class="session-stats-row">
+              <div class="session-stat-pill" onclick="openInviteListModal('all')" title="Show all invited workers">
+                <span class="session-stat-label">Invited</span>
+                <span class="session-stat-value" id="session-stat-invited">—</span>
+              </div>
+              <div class="session-stat-pill" onclick="openInviteListModal('confirmed')" title="Show confirmed workers only">
+                <span class="session-stat-label">Confirmed</span>
+                <span class="session-stat-value" id="session-stat-confirmed">—</span>
+              </div>
+            </div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -6720,6 +7038,7 @@ function renderLiveRoom() {
 
   renderRequestCards();
   renderRoom();
+  renderSessionStats();
 }
 
 async function goToSessions() {
@@ -7334,6 +7653,19 @@ async function sendInvite(sessionId, applicationId, btnEl) {
     }
     const result = await resp.json().catch(() => ({}));
     if(!result.ok) throw new Error('Edge Function returned: '+(result.error || 'unknown'));
+
+    // Round 4 Decision 1 (Option B): last_invite_sent_at = "last sent at"
+    // for any successful send (initial OR re-invite). PATCHed only after
+    // Edge Function success — if Edge Function fails, the row is rolled
+    // back below and last_invite_sent_at never gets written.
+    const nowIso = new Date().toISOString();
+    try {
+      await sbPatch('session_invites', '?id=eq.'+invite.id, { last_invite_sent_at: nowIso });
+      invite.last_invite_sent_at = nowIso;
+    } catch(patchErr) {
+      // Non-fatal: email went out, audit timestamp didn't land. Log and continue.
+      console.warn('[sendInvite] last_invite_sent_at PATCH failed', patchErr);
+    }
 
     // Success: refresh modal + sessions list so the new invite state surfaces
     // (button flips to disabled "Invited", invite-counts badge updates).
