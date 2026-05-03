@@ -531,39 +531,18 @@
   </div>
 </div>
 
-<!-- SESSION CODES OVERLAY -->
-<div id="ov-session-codes" class="overlay">
-  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
-    <div class="modal-title">Send Session Codes</div>
-    <div class="modal-sub">Send each confirmed worker their unique session code. Keep this page open while you send each one.</div>
-    <div id="session-codes-list" style="margin:16px 0;"></div>
-    <div class="modal-actions">
-      <button id="codes-done-btn" class="confirm-btn" disabled style="opacity:0.4;" onclick="closeOv('session-codes');loadSessionsList();">Done (tick all sent first)</button>
-    </div>
-  </div>
-</div>
-
 <!-- INVITE WORKERS OVERLAY -->
+<!-- The retired ov-session-codes and ov-invite-messages overlays were removed
+     in the CORE v5 invite-flow restructure. Per-worker Send invite triggers
+     the Resend Edge Function directly; the 6-digit Send Session Codes path
+     is retired (workers join via Join Session, not via code entry). -->
 <div id="ov-invite-workers" class="overlay">
   <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
-    <div class="modal-title">Invite Workers</div>
-    <div class="modal-sub">Select workers to invite. Each receives a unique session code.</div>
+    <div class="modal-title">Invite workers in zone</div>
+    <div class="modal-sub">Click Send invite to email a worker. View invite previews the email without sending.</div>
     <div id="invite-workers-list" style="margin:16px 0;"></div>
     <div class="modal-actions">
-      <button class="cancel-btn" onclick="closeOv('invite-workers')">Cancel</button>
-      <button class="confirm-btn" onclick="generateInvites()">Generate Invites</button>
-    </div>
-  </div>
-</div>
-
-<!-- INVITE MESSAGES OVERLAY -->
-<div id="ov-invite-messages" class="overlay">
-  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;">
-    <div class="modal-title">Invite Messages</div>
-    <div class="modal-sub">Copy each message and send via WhatsApp or email.</div>
-    <div id="invite-messages-list" style="margin:16px 0;"></div>
-    <div class="modal-actions">
-      <button id="invites-done-btn" class="confirm-btn" disabled style="opacity:0.4;" onclick="closeOv('invite-messages');loadSessionsList();">Done (tick all sent first)</button>
+      <button class="cancel-btn" onclick="closeOv('invite-workers')">Done</button>
     </div>
   </div>
 </div>
@@ -6896,8 +6875,7 @@ async function loadSessionsList() {
           <div style="font-size:12px;color:var(--grey);">No response: <strong style="color:var(--grey);">${counts.pending}</strong></div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="small-ice-btn" onclick="openInviteWorkers(${s.id})">Invite Workers</button>
-          <button class="small-ice-btn" onclick="sendSessionCodes(${s.id})">Send Session Codes</button>
+          <button class="small-ice-btn" onclick="openInviteWorkers(${s.id})">Invite workers in zone</button>
           <button class="small-ice-btn" onclick="goLiveSession(${s.id})">Go Live</button>
           <button style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;" onclick="cancelScheduledSession(${s.id})">Cancel</button>
         </div>
@@ -7060,125 +7038,10 @@ async function cancelScheduledSession(sessionId) {
   await loadSessionsList();
 }
 
-function checkAllCodesSent() {
-  const total = document.querySelectorAll('input[name="code-sent"]').length;
-  const ticked = document.querySelectorAll('input[name="code-sent"]:checked').length;
-  const doneBtn = document.getElementById('codes-done-btn');
-  if(!doneBtn) return;
-  if(ticked >= total && total > 0) {
-    doneBtn.disabled = false;
-    doneBtn.style.opacity = '1';
-    doneBtn.textContent = 'Done';
-  }
-}
-
-async function sendSessionCodes(sessionId) {
-  const listEl = document.getElementById('session-codes-list');
-  listEl.innerHTML = '<div class="empty">Loading confirmed workers...</div>';
-  openOv('session-codes');
-
-  // Get session details
-  const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=session_date,scheduled_start,start_time,zone_id,zones(name)');
-  const session = sessions[0];
-  if(!session) return;
-
-  const dateStr = session.scheduled_start
-    ? new Date(session.scheduled_start).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long'})
-    : (session.session_date ? new Date(session.session_date).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long'}) : 'TBC');
-  const timeStr = session.scheduled_start
-    ? new Date(session.scheduled_start).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
-    : (session.start_time ? session.start_time.slice(0,5) : '');
-  const zoneName = session.zones ? session.zones.name : '';
-
-  // Get confirmed workers only
-  const invites = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&attendance_confirmed=eq.confirmed&select=application_id,session_code,applications(name,email)');
-
-  if(!invites.length) {
-    listEl.innerHTML = '<div class="empty">No confirmed workers yet. Workers need to confirm attendance first.</div>';
-    const doneBtn = document.getElementById('codes-done-btn');
-    doneBtn.disabled = false;
-    doneBtn.style.opacity = '1';
-    doneBtn.textContent = 'Close';
-    return;
-  }
-
-  const total = invites.length;
-
-  function checkAllCodesSent() {
-    const ticked = document.querySelectorAll('input[name="code-sent"]:checked').length;
-    const doneBtn = document.getElementById('codes-done-btn');
-    if(ticked >= total) {
-      doneBtn.disabled = false;
-      doneBtn.style.opacity = '1';
-      doneBtn.textContent = 'Done';
-    }
-  }
-
-  // Build email per confirmed worker
-  window._codeEmails = invites.map(inv => {
-    const name = inv.applications?.name || 'Worker';
-    const email = inv.applications?.email || '';
-    const code = inv.session_code;
-    const firstName = name.split(' ')[0];
-
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body>
-<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
-<div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
-<div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;">
-<span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span>
-</div>
-</div>
-<div style="background:#ffffff;padding:28px 32px;">
-<p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${firstName},</p>
-<p style="margin:0 0 20px;font-size:15px;color:#374151;">Your session is live tonight at <strong>${timeStr}</strong>. Here is your session code.</p>
-<div style="background:#0d1117;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
-<div style="font-size:11px;letter-spacing:3px;color:#ffffff;margin-bottom:8px;opacity:0.6;">YOUR SESSION CODE</div>
-<div style="font-size:36px;font-weight:700;letter-spacing:12px;color:#ffffff;">${code}</div>
-</div>
-<p style="margin:0 0 12px;font-size:14px;color:#374151;">Log in at <strong>www.glasi.co.uk/portal.html</strong> at <strong>${timeStr}</strong> and enter this code in the Sessions tab.</p>
-<p style="margin:0 0 20px;font-size:13px;color:#6b7280;">Once you join the session, stay on the page. Do not navigate away. If you are not using a laptop, we recommend keeping this tab open on your phone and not switching apps.</p>
-<a href="https://www.glasi.co.uk/portal.html" style="display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:16px;">Log in to Glasi Portal</a>
-</div>
-<div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
-<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk</p>
-</div>
-</div>
-
-</body></html>`;
-
-    return { name, email, code, html };
-  });
-
-  listEl.innerHTML = window._codeEmails.map((w, i) => `
-    <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:var(--white);">${w.name}</div>
-          <div style="font-size:11px;color:var(--grey);margin-top:2px;">${w.email}</div>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" name="code-sent" onchange="checkAllCodesSent()" style="accent-color:var(--ice);width:18px;height:18px;">
-          <span style="font-size:11px;color:var(--grey);">Sent</span>
-        </label>
-      </div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;text-align:center;">
-        <div style="font-size:11px;letter-spacing:2px;color:var(--grey);margin-bottom:6px;">SESSION CODE</div>
-        <div style="font-size:24px;font-weight:700;letter-spacing:8px;color:var(--ice);">${w.code}</div>
-      </div>
-      <button onclick="openCodeEmail(${i})" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Open Email to Copy and Paste</button>
-    </div>
-  `).join('');
-}
-
-function openCodeEmail(index) {
-  const invite = window._codeEmails[index];
-  if(!invite) return;
-  const win = window.open('', '_blank');
-  if(win) {
-    win.document.write(invite.html);
-    win.document.close();
-  }
-}
+// sendSessionCodes, openCodeEmail, and checkAllCodesSent were retired in the
+// CORE v5 invite-flow restructure. The 6-digit session-code path is no longer
+// used; workers joining a live session bypass it entirely via the Join Session
+// button.
 
 async function openInviteWorkers(sessionId) {
   // Store session ID and open invite overlay
@@ -7353,53 +7216,82 @@ function copyWorkerReport(btn, reportId) {
 }
 
 
+// CORE v5 invite flow. Per-worker View / Send buttons. Send is the ONLY path
+// that triggers an email (via the send-invite-email Supabase Edge Function +
+// Resend). View is preview-only with zero side effects. Bulk "Invite all in
+// zone" is stubbed for future work.
+
 async function loadInviteWorkers(sessionId) {
   openOv('invite-workers');
   const listEl = document.getElementById('invite-workers-list');
   listEl.innerHTML = '<div class="empty">Loading workers...</div>';
 
-  // Get session zone
   const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=zone_id,session_date');
   const session = sessions[0];
   if(!session) return;
 
-  // Get zone postcodes
-  const zones = await sbGet('zones', '?id=eq.'+session.zone_id+'&select=postcodes');
+  const zones = await sbGet('zones', '?id=eq.'+session.zone_id+'&select=postcodes,name');
   const zone = zones[0];
-  const postcodes = zone ? zone.postcodes : [];
+  const postcodes = zone ? (zone.postcodes || []) : [];
+  const zoneName = zone ? zone.name : 'Zone';
 
-  // Get already invited workers for this session
   const existing = await sbGet('session_invites', '?session_id=eq.'+sessionId+'&select=application_id');
-  const existingIds = existing.map(e => Number(e.application_id));
+  const existingIds = new Set(existing.map(e => Number(e.application_id)));
 
-  // Get onboarded workers
-  const workers = await sbGet('applications', '?worker_status=eq.onboarded&active=not.eq.false&select=id,name,postcode_full,tier,hourly_rate,has_transport');
+  // Onboarded + active workers per CORE v5 eligibility (worker_status='onboarded',
+  // active=true, zone match). Embed session_workers -> shifts to compute average
+  // bar rating. reliability_score is internal-to-Sam under v5; visible here on
+  // the dashboard, not on the worker portal.
+  const workers = await sbGet('applications',
+    '?worker_status=eq.onboarded&active=not.eq.false'
+    + '&select=id,name,postcode_full,tier,reliability_score,session_workers(shifts(bar_rating))');
 
   if(!workers.length) {
     listEl.innerHTML = '<div class="empty">No onboarded workers available.</div>';
     return;
   }
 
-  // Get day of week for session to check availability
-  const sessionDay = session.session_date ? new Date(session.session_date).toLocaleDateString('en-GB', {weekday:'short'}).toLowerCase() : null;
+  function avgBarRating(w) {
+    const ratings = (w.session_workers || [])
+      .flatMap(sw => (sw.shifts || []).map(s => s.bar_rating))
+      .filter(r => r != null);
+    if(!ratings.length) return null;
+    return ratings.reduce((a,b) => a+b, 0) / ratings.length;
+  }
 
-  const inZoneWorkers = workers.filter(w => postcodes.some(p => w.postcode_full && w.postcode_full.startsWith(p)));
-  const outZoneWorkers = workers.filter(w => !postcodes.some(p => w.postcode_full && w.postcode_full.startsWith(p)));
+  function inZone(w) {
+    return postcodes.some(p => w.postcode_full && w.postcode_full.startsWith(p));
+  }
+
+  const inZoneWorkers = workers.filter(inZone);
+  const outZoneWorkers = workers.filter(w => !inZone(w));
 
   function renderWorker(w) {
-    const alreadyInvited = existingIds.includes(Number(w.id));
-    const inZone = postcodes.some(p => w.postcode_full && w.postcode_full.startsWith(p));
-    return `<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;background:${alreadyInvited ? 'rgba(168,198,232,0.08)' : 'transparent'};">
-      <input type="checkbox" name="invite-worker" value="${w.id}" ${alreadyInvited ? 'checked disabled' : ''} style="accent-color:var(--ice);width:16px;height:16px;flex-shrink:0;">
-      <div style="flex:1;">
-        <div style="font-size:14px;color:var(--white);font-weight:500;">${w.name}</div>
-        <div style="font-size:11px;color:var(--grey);margin-top:2px;">${w.postcode_full || ''} &nbsp;Â·&nbsp; Tier ${w.tier || 1} &nbsp;Â·&nbsp; ${w.has_transport ? 'Has transport' : 'No transport'}</div>
+    const alreadyInvited = existingIds.has(Number(w.id));
+    const rel = w.reliability_score != null ? Math.round(w.reliability_score) + '%' : 'no data';
+    const rating = avgBarRating(w);
+    const ratingStr = rating != null ? rating.toFixed(1) + '★' : 'no data';
+    const sendBtnHtml = alreadyInvited
+      ? '<button disabled style="flex:1;background:rgba(168,198,232,0.18);border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:700;cursor:default;font-family:\'Inter\',sans-serif;">Invited</button>'
+      : '<button onclick="sendInvite('+sessionId+', '+w.id+', this)" style="flex:1;background:var(--ice);border:1px solid var(--ice);color:var(--navy);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:\'Inter\',sans-serif;">Send invite</button>';
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:${alreadyInvited?'rgba(168,198,232,0.08)':'transparent'};">
+      <div style="margin-bottom:10px;">
+        <div style="font-size:14px;color:var(--white);font-weight:600;">${w.name}</div>
+        <div style="font-size:11px;color:var(--grey);margin-top:3px;font-family:'JetBrains Mono',monospace;">${w.postcode_full || ''}</div>
+        <div style="font-size:11px;color:var(--grey);margin-top:3px;">Tier ${w.tier || 1} &nbsp;·&nbsp; Reliability ${rel} &nbsp;·&nbsp; Bar rating ${ratingStr}</div>
       </div>
-      ${alreadyInvited ? '<span style="font-size:10px;color:var(--ice);letter-spacing:1px;">INVITED</span>' : ''}
-    </label>`;
+      <div style="display:flex;gap:6px;">
+        <button onclick="viewInvite(${sessionId}, ${w.id})" style="flex:1;background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:8px 12px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;">View invite</button>
+        ${sendBtnHtml}
+      </div>
+    </div>`;
   }
 
   listEl.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);">${zoneName}</div>
+      <button onclick="bulkInviteAllInZone()" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;">Invite all in zone</button>
+    </div>
     <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--ice);margin-bottom:8px;">IN ZONE (${inZoneWorkers.length})</div>
     ${inZoneWorkers.length ? inZoneWorkers.map(renderWorker).join('') : '<div class="empty" style="margin-bottom:12px;">No onboarded workers in this zone yet.</div>'}
     ${outZoneWorkers.length ? `
@@ -7411,13 +7303,19 @@ async function loadInviteWorkers(sessionId) {
   `;
 }
 
-async function generateInvites() {
-  const checked = [...document.querySelectorAll('input[name="invite-worker"]:checked:not(:disabled)')];
-  if(!checked.length) { alert('Select at least one worker to invite.'); return; }
-
-  const sessionId = currentInviteSessionId;
+// Build the email payload for an invite from session + worker data. Used by
+// both viewInvite (preview) and sendInvite (writes + sends). No side effects.
+async function buildInvitePayload(sessionId, applicationId, sessionInviteId) {
   const sessions = await sbGet('sessions', '?id=eq.'+sessionId+'&select=session_date,scheduled_start,start_time,zone_id,zones(name)');
   const session = sessions[0];
+  if(!session) return null;
+
+  const apps = await sbGet('applications', '?id=eq.'+applicationId+'&select=name,email');
+  const app = apps[0];
+  if(!app) return null;
+
+  const bars = await sbGet('bars', '?zone_id=eq.'+session.zone_id+'&select=name&limit=1');
+  const barName = bars[0] ? bars[0].name : '';
 
   const dateStr = session.scheduled_start
     ? new Date(session.scheduled_start).toLocaleDateString('en-GB', {weekday:'long',day:'numeric',month:'long'})
@@ -7425,130 +7323,133 @@ async function generateInvites() {
   const timeStr = session.scheduled_start
     ? new Date(session.scheduled_start).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
     : (session.start_time ? session.start_time.slice(0,5) : '');
+  const zoneName = (session.zones && session.zones.name) ? session.zones.name : '';
 
-  const messages = [];
-
-  for(const cb of checked) {
-    const appId = parseInt(cb.value);
-    // Generate unique 6 digit code
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-
-    // Write session_invite row
-    await sbPost('session_invites', {
-      session_id: sessionId,
-      application_id: appId,
-      session_code: code,
-      attendance_confirmed: 'pending',
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-    });
-
-    // Get worker name
-    const appRows = await sbGet('applications', '?id=eq.'+appId+'&select=name,phone,email');
-    const app = appRows[0];
-    if(!app) continue;
-
-    const confirmYes = 'glasi.co.uk/confirm.html?code='+code+'&response=yes';
-    const confirmNo = 'glasi.co.uk/confirm.html?code='+code+'&response=no';
-
-    const msg = `Hi ${app.name.split(' ')[0]}, Glasi session on ${dateStr} at ${timeStr}. Are you available?\n\nYes, I am in: ${confirmYes}\nCannot make it: ${confirmNo}`;
-
-    const zoneRows = await sbGet('zones', '?id=eq.'+session.zone_id+'&select=name');
-    const zoneName = zoneRows[0] ? zoneRows[0].name : '';
-    messages.push({ name: app.name, email: app.email, phone: app.phone, firstName: app.name.split(' ')[0], code, dateStr, timeStr, zone: zoneName });
-  }
-
-  closeOv('invite-workers');
-
-  // Build HTML email snippets
-  const messagesEl = document.getElementById('invite-messages-list');
-  const total = messages.length;
-
-  function checkAllSent() {
-    const ticked = document.querySelectorAll('input[name="invite-sent"]:checked').length;
-    const doneBtn = document.getElementById('invites-done-btn');
-    if(ticked >= total) {
-      doneBtn.disabled = false;
-      doneBtn.style.opacity = '1';
-    } else {
-      doneBtn.disabled = true;
-      doneBtn.style.opacity = '0.4';
-    }
-  }
-
-  messagesEl.innerHTML = messages.map((m, i) => {
-    const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
-<div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;">
-<div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;">
-<span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span>
-</div>
-</div>
-<div style="background:#ffffff;padding:28px 32px;">
-<p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p>
-<p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p>
-<p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p>
-<div style="display:flex;gap:12px;margin-bottom:24px;">
-<a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a>
-<a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a>
-</div>
-<p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at www.glasi.co.uk/portal.html at the session start time.</p>
-</div>
-<div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">
-<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk</p>
-</div>
-</div>`;
-
-    return `<div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;" id="invite-card-${i}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:var(--white);">${m.name}</div>
-          <div style="font-size:11px;color:var(--grey);margin-top:2px;">${m.email || ''}</div>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" name="invite-sent" onchange="checkAllSent()" style="accent-color:var(--ice);width:18px;height:18px;">
-          <span style="font-size:11px;color:var(--grey);">Sent</span>
-        </label>
-      </div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;font-size:11px;color:var(--grey);">
-        Preview: ${m.firstName}, invited to ${m.dateStr} at ${m.timeStr}
-      </div>
-      <button onclick="openInviteEmail(${i})" style="background:var(--ice-dim);border:1px solid var(--border);color:var(--ice);border-radius:6px;padding:8px 16px;font-size:12px;cursor:pointer;width:100%;">Open Email to Copy and Paste</button>
-    </div>`;
-  }).join('');
-
-  // Store email HTML for each invite
-  window._inviteEmails = messages.map(m => ({
-    name: m.name,
-    email: m.email,
-    html: `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:40px;background:#f0f4f8;}</style></head><body><div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;"><div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;"><div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;"><span style="font-size:20px;letter-spacing:8px;font-family:'Raleway',sans-serif;font-weight:400;color:#ffffff;">GLASI</span></div></div><div style="background:#ffffff;padding:28px 32px;"><p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ${m.firstName},</p><p style="margin:0 0 20px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>${m.dateStr} at ${m.timeStr}</strong> in ${m.zone}.</p><p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p><div style="display:flex;gap:12px;margin-bottom:24px;"><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=yes" style="flex:1;display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;">Yes, I am in</a><a href="https://glasi.co.uk/confirm.html?code=${m.code}&response=no" style="flex:1;display:block;text-align:center;background:#f8fafc;color:#374151;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #e2e8f0;">Cannot make it</a></div><p style="margin:0;font-size:12px;color:#9ca3af;">Once you confirm, you will receive your session code shortly before the session goes live. Log in at www.glasi.co.uk/portal.html at the session start time.</p></div><div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;"><p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &nbsp;Â·&nbsp; glasi.co.uk</p></div></div></body></html>`
-  }));
-
-  openOv('invite-messages');
-  await loadSessionsList();
-  checkAllSent();
+  return {
+    to_email: app.email,
+    worker_name: app.name,
+    session_time: timeStr,
+    session_date: dateStr,
+    bar_zone: zoneName,
+    session_id: sessionId,
+    bar_name: barName,
+    session_invite_id: sessionInviteId
+  };
 }
 
-function openInviteEmail(index) {
-  const invite = window._inviteEmails[index];
-  if(!invite) return;
+// Render the email HTML for preview. Mirrors the Edge Function's email body so
+// what Sam previews matches what the worker would receive. Pure function.
+function buildInviteEmailHtml(p) {
+  const firstName = (p.worker_name || '').split(' ')[0] || 'there';
+  return '<!DOCTYPE html>'
+    + '<html><head><meta charset="UTF-8"></head>'
+    + '<body style="margin:0;padding:40px;background:#f0f4f8;">'
+    + '<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">'
+    + '<div style="background:#0d1117;border-radius:12px 12px 0 0;padding:24px;text-align:center;">'
+    + '<div style="display:inline-block;border:1.5px solid #a8c6e8;border-radius:6px;padding:8px 20px;">'
+    + '<span style="font-size:20px;letter-spacing:8px;font-family:\'Raleway\',sans-serif;font-weight:400;color:#ffffff;">GLASI</span>'
+    + '</div></div>'
+    + '<div style="background:#ffffff;padding:28px 32px;">'
+    + '<p style="margin:0 0 16px;font-size:15px;color:#374151;">Hi ' + firstName + ',</p>'
+    + '<p style="margin:0 0 16px;font-size:15px;color:#374151;">You have been invited to a Glasi session on <strong>' + p.session_date + ' at ' + p.session_time + '</strong> in ' + p.bar_zone + ' at <strong>' + p.bar_name + '</strong>.</p>'
+    + '<p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Are you available to join?</p>'
+    + '<a href="https://glasi.co.uk/portal.html" style="display:block;text-align:center;background:#0d1117;color:#ffffff;text-decoration:none;padding:14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:20px;">Log in to confirm</a>'
+    + '<p style="margin:0 0 16px;font-size:13px;color:#6b7280;line-height:1.6;">Once you confirm, you will be able to join the session at the start time. Log in at <strong>www.glasi.co.uk/portal.html</strong>.</p>'
+    + '<p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">If you have any questions about this session, please email <a href="mailto:hello@glasi.co.uk" style="color:#0d1117;font-weight:600;">hello@glasi.co.uk</a> referencing session #' + p.session_id + ' (' + p.session_date + ', ' + p.bar_name + ').</p>'
+    + '</div>'
+    + '<div style="background:#0d1117;border-radius:0 0 12px 12px;padding:16px;text-align:center;">'
+    + '<p style="margin:0;font-size:11px;color:#4b5563;">hello@glasi.co.uk &middot; glasi.co.uk</p>'
+    + '</div></div></body></html>';
+}
+
+// View invite: PREVIEW ONLY. No DB write, no email send, no Edge Function call.
+async function viewInvite(sessionId, applicationId) {
+  const payload = await buildInvitePayload(sessionId, applicationId, null);
+  if(!payload) { alert('Could not build invite preview.'); return; }
+  const html = buildInviteEmailHtml(payload);
   const win = window.open('', '_blank');
   if(win) {
-    win.document.write(invite.html);
+    win.document.write(html);
     win.document.close();
+  } else {
+    alert('Allow popups for this site to preview the invite email.');
   }
 }
 
-function checkAllSent() {
-  const total = document.querySelectorAll('input[name="invite-sent"]').length;
-  const ticked = document.querySelectorAll('input[name="invite-sent"]:checked').length;
-  const doneBtn = document.getElementById('invites-done-btn');
-  if(!doneBtn) return;
-  if(ticked >= total && total > 0) {
-    doneBtn.disabled = false;
-    doneBtn.style.opacity = '1';
-  } else {
-    doneBtn.disabled = true;
-    doneBtn.style.opacity = '0.4';
+// Write a session_invites row. CORE v5: session_code is no longer generated
+// (the 6-digit code path is retired). attendance_confirmed starts at 'pending'.
+// Returns the inserted row.
+async function writeSessionInvite(sessionId, applicationId) {
+  const result = await sbPost('session_invites', {
+    session_id: sessionId,
+    application_id: applicationId,
+    attendance_confirmed: 'pending',
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  });
+  return (result && result[0]) || null;
+}
+
+// Roll back a session_invites row. Used only when the email send fails so a
+// phantom invite never reaches the worker. Documented exception to BUILD_STATE
+// "no row deletions anywhere" rule per Sam's invite-flow spec: an invite that
+// was written but couldn't be sent is not a real invite.
+async function rollbackSessionInvite(inviteId) {
+  await sbDelete('session_invites', '?id=eq.'+inviteId);
+}
+
+// Send invite: the ONLY path that triggers an email. Writes the session_invites
+// row first, then calls the send-invite-email Edge Function. On Edge Function
+// failure, the row is rolled back so the DB never carries a phantom invite.
+async function sendInvite(sessionId, applicationId, btnEl) {
+  if(btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Sending...';
   }
+  let invite = null;
+  try {
+    invite = await writeSessionInvite(sessionId, applicationId);
+    if(!invite || invite.id == null) throw new Error('Could not write session_invites row');
+
+    const payload = await buildInvitePayload(sessionId, applicationId, invite.id);
+    if(!payload) throw new Error('Could not build invite payload');
+    if(!payload.to_email) throw new Error('Worker has no email on record');
+
+    const resp = await fetch(SB + '/functions/v1/send-invite-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': KEY,
+        'Authorization': 'Bearer ' + KEY
+      },
+      body: JSON.stringify(payload)
+    });
+    if(!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      throw new Error('Edge Function HTTP '+resp.status+': '+errText);
+    }
+    const result = await resp.json().catch(() => ({}));
+    if(!result.ok) throw new Error('Edge Function returned: '+(result.error || 'unknown'));
+
+    // Success: refresh modal + sessions list so the new invite state surfaces
+    // (button flips to disabled "Invited", invite-counts badge updates).
+    await loadInviteWorkers(sessionId);
+    await loadSessionsList();
+  } catch(e) {
+    console.error('[sendInvite] failed', e);
+    if(invite && invite.id != null) {
+      try { await rollbackSessionInvite(invite.id); }
+      catch(rbErr) { console.error('[sendInvite] rollback failed', rbErr); }
+    }
+    alert('Failed to send invite: ' + (e.message || 'unknown error') + '. The invite has been rolled back.');
+    if(btnEl) {
+      btnEl.disabled = false;
+      btnEl.textContent = 'Send invite';
+    }
+  }
+}
+
+function bulkInviteAllInZone() {
+  alert('Bulk invite is future work. For now, send each invite individually using the Send invite button per worker.');
 }
 
 </script>
