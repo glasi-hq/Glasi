@@ -2242,8 +2242,6 @@
                 </div>
               </div>
 
-              <!-- Post clock-out celebration -->
-              <div id="portal-shift-complete" style="display:none;"></div>
             </div>
           </div>
 
@@ -2259,6 +2257,13 @@
             </div>
           </div>
         </div>
+
+        <!-- Post-shift feedback (round 4 batch A: relocated as direct sibling
+             of live-dispatched. Was previously nested 4 levels deep inside
+             clockin-confirmed-section, which leaked the dispatch UI scaffolding
+             whenever _renderPostShiftBody surfaced live-dispatched as the
+             outer container. Now an independent surface.) -->
+        <div id="portal-shift-complete" style="display:none;"></div>
 
       </div>
 
@@ -4736,6 +4741,10 @@
   }
 
   async function _renderPostShiftBody(sw, opts) {
+    // Round 4 batch A FIX 1: set the dispatch-flow row context so any handler
+    // that depends on it (confirmLeaving, workerClockOut) finds the right
+    // row even though the post-shift path doesn't normally call them.
+    if(sw && sw.id) currentSessionWorkerId = sw.id;
 
     document.getElementById('sessions-empty').style.display = 'none';
     document.getElementById('sessions-prejoin').style.display = 'none';
@@ -4743,12 +4752,10 @@
     document.getElementById('live-waiting').style.display = 'none';
     if(typeof clearAllShiftPostCards === 'function') clearAllShiftPostCards();
     document.getElementById('live-responded').style.display = 'none';
-    document.getElementById('live-dispatched').style.display = 'block';
-    document.getElementById('clockin-confirmed-section').style.display = 'block';
-    const onshiftCard = document.getElementById('portal-onshift-card');
-    if(onshiftCard) onshiftCard.style.display = 'none';
-    const endedCard = document.getElementById('portal-shift-ended-card');
-    if(endedCard) endedCard.style.display = 'none';
+    // Round 4 batch A FIX 1: post-shift no longer reuses live-dispatched as a
+    // wrapper. portal-shift-complete is now a direct sibling of live-dispatched.
+    // Hide the entire dispatch flow when surfacing the feedback screen.
+    document.getElementById('live-dispatched').style.display = 'none';
 
     let shiftRow = null;
     try {
