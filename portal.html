@@ -5295,7 +5295,26 @@
           mapsBtn.style.display = 'none';
         }
       }
-      const managerName = bar.manager_name || 'the bar manager';
+      // F-26: read manager name through shift_requests.bar_manager_id FK so
+      // the worker sees the actual submitter, not whichever name happens to
+      // be on bars.manager_name. Falls back to bars.manager_name (no-op
+      // decoration during transition) if bar_manager_id is null on this row.
+      let managerName = null;
+      if(currentSessionWorkerId) {
+        try {
+          const swRows = await fetch(SUPABASE_URL + '/rest/v1/session_workers?id=eq.' + currentSessionWorkerId + '&select=shift_request_id', { headers: H }).then(r => r.json());
+          const reqId = swRows?.[0]?.shift_request_id;
+          if(reqId) {
+            const reqRows = await fetch(SUPABASE_URL + '/rest/v1/shift_requests?id=eq.' + reqId + '&select=bar_manager_id', { headers: H }).then(r => r.json());
+            const mgrId = reqRows?.[0]?.bar_manager_id;
+            if(mgrId) {
+              const mgrRows = await fetch(SUPABASE_URL + '/rest/v1/bar_managers?id=eq.' + mgrId + '&select=name', { headers: H }).then(r => r.json());
+              if(mgrRows?.[0]?.name) managerName = mgrRows[0].name;
+            }
+          }
+        } catch(e) { /* fall through to bar.manager_name fallback */ }
+      }
+      managerName = managerName || bar.manager_name || 'the bar manager';
       const warningEl = document.querySelector('#live-dispatched .warning-box p');
       if(warningEl) warningEl.innerHTML = 'Share your live location with Glasi on <strong><a href="https://wa.me/447803856078" style="color:var(--amber);">07803856078</a></strong>, start heading to the venue and ask for <strong style="color:var(--white);">' + managerName + '</strong> who will have your clock-in code.';
       lastRenderedDispatchBarId = barId;
