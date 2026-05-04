@@ -710,6 +710,7 @@
   });
 
   let currentBar = null;
+  let currentManager = null; // F-26: bar_managers row for the logged-in manager
   let selectedShiftLength = null;
   let dispatchedWorkerWs = null;
 
@@ -732,18 +733,31 @@
       return;
     }
 
-    // Auth succeeded. Verify a bar row exists for this manager email
-    // before letting them into the portal. A valid Supabase Auth session
-    // is not enough on its own, the bars row still gates access.
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_pin,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
-    if(!rows || !rows.length) {
+    // F-26: Stage 2 — bar_managers lookup by auth_user_id. Filters revoked_at
+    // IS NULL so revoked managers cannot proceed even with valid Auth session.
+    const authUserId = data.session.user.id;
+    const managerRows = await fetch(SUPABASE_URL + '/rest/v1/bar_managers?auth_user_id=eq.' + encodeURIComponent(authUserId) + '&revoked_at=is.null&select=id,bar_id,name', { headers: H }).then(r => r.json());
+    if(!managerRows || !managerRows.length) {
       await sbAuth.auth.signOut();
       H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
-      errorEl.textContent = 'No account found. Please contact hello@glasi.co.uk.';
+      errorEl.textContent = 'No account found or account revoked. Please contact hello@glasi.co.uk.';
       return;
     }
+    currentManager = managerRows[0];
 
-    currentBar = rows[0];
+    // F-26: Stage 3 — bars lookup by id. Excludes manager_pin and
+    // manager_password from the select (they are no-op decoration during
+    // the bar_managers transition; never needed client-side post-F-26).
+    const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + currentManager.bar_id + '&select=id,name,address,zone_id,contact_name,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
+    if(!barRows || !barRows.length) {
+      await sbAuth.auth.signOut();
+      H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
+      currentManager = null;
+      errorEl.textContent = 'Bar not found. Please contact hello@glasi.co.uk.';
+      return;
+    }
+    currentBar = barRows[0];
+
     loadPortal();
     showScreen('portal');
   }
@@ -756,6 +770,7 @@
     if(shiftRequestsWs) { try { shiftRequestsWs.close(); } catch(e) {} shiftRequestsWs = null; }
     stopPendingRequestExpiry();
     currentBar = null;
+    currentManager = null;
     selectedShiftLength = null;
     document.getElementById('login-email').value = '';
     document.getElementById('login-password').value = '';
@@ -763,29 +778,42 @@
     showScreen('login');
   }
 
-  // Restore session on page reload. If a valid Supabase Auth session
-  // exists AND a bar row still exists for this manager email, skip the
-  // login screen and load the portal straight away. If the session is
-  // valid but no bar row matches, sign out and stay on login.
+  // Restore session on page reload. F-26: lookup by auth_user_id against
+  // bar_managers (filters revoked), then fetch bars by id (no manager_pin
+  // / manager_password). If the auth session is valid but no active
+  // bar_managers row matches, sign out and stay on login.
   window.addEventListener('DOMContentLoaded', async () => {
     const { data } = await sbAuth.auth.getSession();
     if(!data?.session) return;
     H.Authorization = 'Bearer ' + data.session.access_token;
-    const email = data.session.user.email;
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/bars?manager_email=eq.' + encodeURIComponent(email) + '&select=id,name,address,zone_id,contact_name,manager_name,manager_pin,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
-    if(!rows || !rows.length) {
+    const authUserId = data.session.user.id;
+
+    const managerRows = await fetch(SUPABASE_URL + '/rest/v1/bar_managers?auth_user_id=eq.' + encodeURIComponent(authUserId) + '&revoked_at=is.null&select=id,bar_id,name', { headers: H }).then(r => r.json());
+    if(!managerRows || !managerRows.length) {
       await sbAuth.auth.signOut();
       H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
       return;
     }
-    currentBar = rows[0];
+    currentManager = managerRows[0];
+
+    const barRows = await fetch(SUPABASE_URL + '/rest/v1/bars?id=eq.' + currentManager.bar_id + '&select=id,name,address,zone_id,contact_name,closing_time,opening_time,session_schedule', { headers: H }).then(r => r.json());
+    if(!barRows || !barRows.length) {
+      await sbAuth.auth.signOut();
+      H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
+      currentManager = null;
+      return;
+    }
+    currentBar = barRows[0];
+
     loadPortal();
     showScreen('portal');
   });
 
   async function loadPortal() {
     const bar = currentBar;
-    const managerName = bar.manager_name || bar.contact_name || 'there';
+    // F-26: greet the actual logged-in manager (currentManager.name) instead
+    // of bars.manager_name (which is no-op decoration during transition).
+    const managerName = currentManager?.name || bar.contact_name || 'there';
     document.getElementById('header-bar-name').textContent = bar.name;
     document.getElementById('portal-venue-name').textContent = 'Hi ' + managerName;
     document.getElementById('portal-venue-sub').textContent = bar.name + ' · Glasi Partner';
@@ -1455,20 +1483,37 @@
     }
   }
 
-  function checkPinConfirm() {
+  async function checkPinConfirm() {
     const pin = document.getElementById('manager-pin-input')?.value.trim();
     const errorEl = document.getElementById('manager-pin-error');
     const btn = document.getElementById('request-btn');
     if(errorEl) errorEl.textContent = '';
-    if(pin && pin.length === 4) {
-      if(currentBar?.manager_pin && pin === currentBar.manager_pin) {
+    if(!pin || pin.length !== 4) {
+      if(btn) btn.disabled = true;
+      return;
+    }
+    if(!currentManager?.id) {
+      if(btn) btn.disabled = true;
+      if(errorEl) errorEl.textContent = 'Session expired. Please refresh and try again.';
+      return;
+    }
+    // F-26: PIN never compared client-side. The verify_bar_manager_pin RPC
+    // bcrypt-checks server-side via pgcrypto and returns boolean. PIN value
+    // exists only in the input field briefly; nothing else carries it.
+    try {
+      const { data, error } = await sbAuth.rpc('verify_bar_manager_pin', {
+        manager_id: currentManager.id,
+        pin_attempt: pin
+      });
+      if(!error && data === true) {
         if(btn) btn.disabled = false;
       } else {
         if(btn) btn.disabled = true;
-        if(errorEl && pin.length === 4) errorEl.textContent = 'Incorrect PIN.';
+        if(errorEl) errorEl.textContent = 'Incorrect PIN.';
       }
-    } else {
+    } catch(e) {
       if(btn) btn.disabled = true;
+      if(errorEl) errorEl.textContent = 'Could not verify PIN. Try again.';
     }
   }
 
@@ -1495,6 +1540,7 @@
         headers: { ...H, 'Prefer': 'return=representation' },
         body: JSON.stringify({
           bar_id: currentBar.id,
+          bar_manager_id: currentManager?.id || null, // F-26: per-request attribution
           session_id: sessionId,
           shift_length_hours: selectedShiftLength,
           request_time: now.toISOString(),
