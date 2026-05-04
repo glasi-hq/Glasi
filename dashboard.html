@@ -554,6 +554,39 @@
     .badge-unfilled { background: var(--red-dim); color: var(--red); }
     .badge-pending { background: var(--ice-dim); color: var(--ice); }
     .badge-completed { background: var(--green-dim); color: var(--green); }
+    .badge-onshift { background: var(--green-dim); color: var(--green); }
+    .badge-expired { background: var(--red-dim); color: var(--red); }
+    .badge-cancelled { background: rgba(100,116,139,0.10); color: var(--grey); }
+
+    /* F-29: redesigned request card layout */
+    .rc-top-row { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 10px; font-size: 13px; line-height: 1.5; }
+    .rc-top-row > * + *::before { content: '\00B7'; color: var(--grey); margin: 0 8px; }
+    .rc-bar-name { font-weight: 600; color: var(--white); }
+    .rc-requester { color: var(--ice); }
+    .rc-shift-length { color: var(--grey); }
+    .rc-bar-id { color: var(--grey); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.5px; }
+
+    .rc-status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .rc-status-pill { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 9px; border-radius: 10px; white-space: nowrap; display: inline-block; font-weight: 700; }
+    .rc-status-pending    { background: var(--ice-dim);            color: var(--ice); }
+    .rc-status-dispatched { background: var(--amber-dim);          color: var(--amber); }
+    .rc-status-onshift    { background: var(--green-dim);          color: var(--green); }
+    .rc-status-completed  { background: rgba(100,116,139,0.18);    color: var(--grey); }
+    .rc-status-expired    { background: var(--red-dim);            color: var(--red); }
+    .rc-status-cancelled  { background: rgba(100,116,139,0.10);    color: var(--grey); }
+
+    .rc-dispatched-row { font-size: 12px; color: var(--grey); background: rgba(168,216,234,0.06); border-left: 2px solid var(--ice); padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; }
+    .rc-dispatched-row strong { color: var(--white); font-weight: 600; }
+
+    .rc-body { display: flex; flex-direction: column; row-gap: 4px; }
+    .rc-timestamp-row { display: flex; justify-content: space-between; font-size: 11px; line-height: 1.6; }
+    .rc-ts-label { color: var(--grey); }
+    .rc-ts-value { color: var(--white); font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+    .rc-ts-value.rc-ts-empty { color: var(--grey); font-weight: 400; opacity: 0.6; }
+
+    .rc-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .rc-action-btn { flex: 1; background: none; border: 1px solid var(--border); color: var(--grey); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: Inter, sans-serif; }
+    .rc-action-btn-danger { border-color: rgba(239,68,68,0.3); color: var(--red); flex: 0 0 auto; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2619,12 +2652,15 @@ async function tryRestoreSession() {
       '?session_id=eq.'+session.id+'&select=id,application_id,worker_name,worker_phone,status,clock_in_code,clock_out_code,clock_in_at,dispatched_at,departed_at,bar_id,shift_length_hours,shift_request_id,expected_arrival_minutes'
     ),
     sbGet('shift_requests',
-      '?session_id=eq.'+session.id+'&order=request_time.asc&select=*,bars(name)'
+      '?session_id=eq.'+session.id+'&order=request_time.asc&select=*,bars(name),bar_managers(name)'
     )
   ]);
   liveSessionOps.requests = reqData.map(r => ({
     ...r,
-    _barName: r.bars?.name || ''
+    _barName: r.bars?.name || '',
+    _requesterName: r.bar_managers?.name
+                  || bars.find(b => b.id === r.bar_id)?.manager_name
+                  || 'Unknown'
   }));
 
   // load completed shifts for this session
@@ -2819,10 +2855,12 @@ function renderZonesMgmt() {
 let currentZoneDetail = null;
 
 // F-28 Option B: zone overview rendering extracted into its own function.
-// Renders availability banner + bars list + workers list into the
-// #zone-overview-section inside the Schedule sub-tab. Called from
-// goToZoneDetail after the sub-tab DOM is in place; the new
-// goToZoneDetail no longer overwrites #zone-detail-body.
+// Renders bars list + workers list into the #zone-overview-section inside
+// the Schedule sub-tab. Called from goToZoneDetail after the sub-tab DOM is
+// in place; the new goToZoneDetail no longer overwrites #zone-detail-body.
+// F-28 amendment (4 May 2026): the availability banner that previously sat
+// above the bars list was removed as redundant with the per-worker Tonight
+// column on the workers table below.
 async function renderZoneOverview(z) {
   const overviewEl = document.getElementById('zone-overview-section');
   if(!overviewEl) return;
@@ -2843,7 +2881,8 @@ async function renderZoneOverview(z) {
     return (z.postcodes||[]).some(p=>pc.startsWith(p));
   });
 
-  // work out current availability slot using London timezone
+  // work out current availability slot using London timezone (used by the
+  // workers table's Tonight column only; banner removed)
   const now = new Date();
   const londonTime = new Date(now.toLocaleString('en-US', {timeZone:'Europe/London'}));
   const days = ['sun','mon','tue','wed','thu','fri','sat'];
@@ -2854,7 +2893,6 @@ async function renderZoneOverview(z) {
   else if(hour >= 12) slot = dayStr+'_12_18';
 
   const tonightSlot = dayStr+'_18_00';
-  const tomorrowSlot = days[(londonTime.getDay()+1)%7]+'_18_00';
 
   const isWorkerAvailableNow = w => slot && w.available_hours && w.available_hours.includes(slot);
   const isWorkerAvailableTonight = w => w.available_hours && w.available_hours.includes(tonightSlot);
@@ -2865,40 +2903,8 @@ async function renderZoneOverview(z) {
     w.available_hours.includes(dayStr+'_16_20') ||
     w.available_hours.includes(dayStr+'_20_00')
   );
-  const isWorkerAvailableTomorrow = w => w.available_hours && (
-    w.available_hours.includes(tomorrowSlot) ||
-    w.available_hours.includes(days[(londonTime.getDay()+1)%7]+'_20_00')
-  );
 
   const availableTonight = zoneWorkers.filter(isWorkerAvailableTonight);
-  const availableTonightAny = zoneWorkers.filter(isWorkerAvailableTonightAny);
-
-  const dayLabel = dayStr.charAt(0).toUpperCase()+dayStr.slice(1);
-  const tomorrowLabel = tomorrowSlot.slice(0,3).charAt(0).toUpperCase()+tomorrowSlot.slice(0,3).slice(1);
-
-  const bannerColor = availableTonightAny.length < 3 ? 'var(--red)' : availableTonightAny.length < 5 ? 'var(--amber)' : 'var(--green)';
-  const bannerText = availableTonightAny.length < 3 ? 'Low coverage tonight, consider recruiting more workers in this zone'
-    : availableTonightAny.length < 5 ? 'Moderate coverage tonight'
-    : 'Good coverage tonight';
-
-  const availBanner = '<div style="background:var(--navy-mid);border:1px solid '+bannerColor+';border-radius:16px;padding:20px;margin-bottom:24px;">'
-    +'<div style="font-size:9px;letter-spacing:3px;color:var(--grey);text-transform:uppercase;margin-bottom:12px;">Workers Available, '+dayLabel+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:12px;">'
-    +'<div style="text-align:center;">'
-    +'<div style="font-size:28px;font-weight:700;color:'+bannerColor+';font-family:\'JetBrains Mono\',monospace;">'+availableTonightAny.length+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);">available today</div>'
-    +'</div>'
-    +'<div style="text-align:center;">'
-    +'<div style="font-size:28px;font-weight:700;color:var(--white);font-family:\'JetBrains Mono\',monospace;">'+availableTonight.length+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);">available '+dayLabel+' 6pm+</div>'
-    +'</div>'
-    +'<div style="text-align:center;">'
-    +'<div style="font-size:28px;font-weight:700;color:var(--grey);font-family:\'JetBrains Mono\',monospace;">'+zoneWorkers.filter(isWorkerAvailableTomorrow).length+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);">available '+tomorrowLabel+' 6pm+</div>'
-    +'</div>'
-    +'</div>'
-    +'<div style="font-size:12px;color:'+bannerColor+';">'+bannerText+'</div>'
-    +'</div>';
 
   const barsHtml = '<div style="margin-bottom:28px;">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
@@ -2942,7 +2948,7 @@ async function renderZoneOverview(z) {
     )
     +'</div>';
 
-  overviewEl.innerHTML = availBanner + barsHtml + workersHtml;
+  overviewEl.innerHTML = barsHtml + workersHtml;
 }
 
 async function goToZoneDetail(zoneId) {
@@ -3722,6 +3728,18 @@ const liveSessionOps = {
         if(type === 'INSERT') {
           const barName = bars.find(b => b.id === record.bar_id)?.name || 'Unknown';
           record._barName = barName;
+          // F-29: realtime payload has no FK joins. Re-fetch the linked
+          // bar_manager name when bar_manager_id is present, else fall back to
+          // the legacy bars.manager_name column.
+          let _requesterName = bars.find(b => b.id === record.bar_id)?.manager_name || 'Unknown';
+          if(record.bar_manager_id) {
+            try {
+              const rows = await sbGet('shift_requests',
+                '?id=eq.'+record.id+'&select=bar_managers(name)');
+              if(rows?.[0]?.bar_managers?.name) _requesterName = rows[0].bar_managers.name;
+            } catch(e) { /* keep fallback */ }
+          }
+          record._requesterName = _requesterName;
           liveSessionOps.requests.push(record);
           startResponseWindow(record.id);
           this.emit('request:new', record);
@@ -3839,17 +3857,21 @@ const liveSessionOps = {
         }
       }
       const reqData = await sbGet('shift_requests',
-        '?session_id=eq.'+sessionId+'&order=request_time.asc&select=*,bars(name)');
+        '?session_id=eq.'+sessionId+'&order=request_time.asc&select=*,bars(name),bar_managers(name)');
       const ids = new Set(reqData.map(r => r.id));
       for(const r of reqData) {
         const existing = liveSessionOps.requests.find(x => x.id === r.id);
         const _barName = r.bars?.name || '';
+        const _requesterName = r.bar_managers?.name
+                              || bars.find(b => b.id === r.bar_id)?.manager_name
+                              || 'Unknown';
         if(existing) {
           existing.status = r.status;
           existing.current_round = r.current_round;
           existing._barName = _barName;
+          existing._requesterName = _requesterName;
         } else {
-          liveSessionOps.requests.push({ ...r, _barName });
+          liveSessionOps.requests.push({ ...r, _barName, _requesterName });
         }
       }
       for(let i = liveSessionOps.requests.length - 1; i >= 0; i--) {
@@ -3927,6 +3949,49 @@ function formatElapsed(totalSecs) {
   const m = Math.floor(totalSecs / 60);
   const s = totalSecs % 60;
   return m > 0 ? (m + 'm ' + String(s).padStart(2, '0') + 's') : (s + 's');
+}
+
+// F-29: HH:MM in Europe/London regardless of browser locale.
+function fmtHm(ts) {
+  if(!ts) return '';
+  return new Date(ts).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/London'
+  });
+}
+
+// F-29: requester name with F-26 FK first, legacy fallback, then 'Unknown'.
+function resolveRequesterName(r) {
+  return r._requesterName
+      || (bars.find(b => b.id === r.bar_id)?.manager_name)
+      || 'Unknown';
+}
+
+// F-29: status pill mapping. session_worker is the truth source for
+// dispatch / on-shift / completed; r.status is fallback for terminal states
+// where no session_worker exists (pending / expired / cancelled).
+function computeRequestPill(r, sw) {
+  if(sw) {
+    if(sw.status === 'dispatched' && !sw.clockInAt) {
+      return { slug: 'dispatched', label: 'Dispatched' };
+    }
+    if(sw.status === 'onshift' || (sw.clockInAt && !sw.clockOutAt)) {
+      return { slug: 'onshift', label: 'On Shift' };
+    }
+    if(sw.status === 'completed' || sw.clockOutAt) {
+      return { slug: 'completed', label: 'Completed' };
+    }
+    // sw.status in ('cancelled','no_show','left','session_ended') falls through
+  }
+  switch(r.status) {
+    case 'pending':    return { slug: 'pending',    label: 'Pending' };
+    case 'dispatched': return { slug: 'dispatched', label: 'Dispatched' };
+    case 'completed':  return { slug: 'completed',  label: 'Completed' };
+    case 'expired':    return { slug: 'expired',    label: 'Expired' };
+    case 'cancelled':  return { slug: 'cancelled',  label: 'Cancelled' };
+    default:           return { slug: 'pending',    label: r.status || 'Pending' };
+  }
 }
 
 function formatInviteTime(iso) {
@@ -6129,6 +6194,7 @@ function renderRequestCards() {
 
   cardsEl.innerHTML = liveSessionOps.requests.filter(r => r.status !== 'completed').map(r => {
     const barName = r._barName || bars.find(b => b.id === r.bar_id)?.name || 'Unknown';
+    const requesterName = resolveRequesterName(r);
     // Round 5 FIX 3: match the tick's posted_at-first preference so initial
     // render and per-second updates agree on the elapsed value.
     const postedAt = r.posted_at ? new Date(r.posted_at) : (r.request_time ? new Date(r.request_time) : new Date(r.created_at));
@@ -6139,12 +6205,53 @@ function renderRequestCards() {
     if(isDispatched) cardClass += ' dispatched';
     else if(isSelected) cardClass += ' selected';
 
+    // F-29: dispatched-worker lookup extended to include 'completed' so the
+    // card body keeps showing the worker name + clockOutAt during the brief
+    // window between session_workers.status='completed' (via realtime) and
+    // shift_requests.status='completed' (which filters the card out).
+    const dispWorker = liveSessionOps.workers.find(w =>
+      ['dispatched','onshift','completed'].includes(w.status) &&
+      Number(w.shiftRequestId) === Number(r.id)
+    ) || (isDispatched ? liveSessionOps.workers.find(w =>
+      ['dispatched','onshift','completed'].includes(w.status)
+    ) : null);
+
+    // F-29: pill mapping reads sw first, r.status fallback. See computeRequestPill.
+    const pill = computeRequestPill(r, dispWorker);
+    const elapsedClass = totalSecs >= 1500 ? ' critical' : (totalSecs >= 300 ? ' urgent' : '');
+    const requestedFmt = fmtHm(r.posted_at || r.request_time || r.created_at);
+    const clockInFmt = dispWorker?.clockInAt ? fmtHm(dispWorker.clockInAt) : '';
+    const clockOutFmt = dispWorker?.clockOutAt ? fmtHm(dispWorker.clockOutAt) : '';
+    // F-29: suppress the manager-portal boilerplate ('Bar manager request via
+    // portal'); render only Sam-entered notes via openAddNotes.
+    const showNotes = r.raw_message && r.raw_message !== 'Bar manager request via portal';
+
+    // F-29: shared inner body for both pending and dispatched branches.
+    const innerBody = ''
+      + '<div class="rc-top-row">'
+      +   '<span class="rc-bar-name">'+barName+'</span>'
+      +   '<span class="rc-requester">'+requesterName+'</span>'
+      +   '<span class="rc-shift-length">'+parseFloat(r.shift_length_hours||0)+'hr shift</span>'
+      +   '<span class="rc-bar-id">BAR ID : '+r.bar_id+'</span>'
+      + '</div>'
+      + '<div class="rc-status-row">'
+      +   '<span class="rc-status-pill rc-status-'+pill.slug+'" id="rbadge-'+r.id+'">'+pill.label+'</span>'
+      +   '<span class="req-card-elapsed'+elapsedClass+'" id="relapsed-'+r.id+'">'+formatElapsed(totalSecs)+'</span>'
+      + '</div>'
+      + (dispWorker
+          ? '<div class="rc-dispatched-row">Dispatched: <strong>'+dispWorker.name+'</strong></div>'
+          : '')
+      + '<div class="rc-body">'
+      +   '<div class="rc-timestamp-row"><span class="rc-ts-label">Requested at</span><span class="rc-ts-value">'+requestedFmt+'</span></div>'
+      +   '<div class="rc-timestamp-row"><span class="rc-ts-label">Clocked in at</span><span class="rc-ts-value'+(clockInFmt?'':' rc-ts-empty')+'">'+(clockInFmt || '&mdash;')+'</span></div>'
+      +   '<div class="rc-timestamp-row"><span class="rc-ts-label">Clocked out at</span><span class="rc-ts-value'+(clockOutFmt?'':' rc-ts-empty')+'">'+(clockOutFmt || '&mdash;')+'</span></div>'
+      + '</div>'
+      + (showNotes
+          ? '<div class="req-card-message" style="font-size:11px;color:var(--grey);margin-top:10px;line-height:1.5;font-style:italic;">'+r.raw_message+'</div>'
+          : '');
+
     if(isDispatched) {
-      // Find the dispatched worker for this request
-      const dispWorker = liveSessionOps.workers.find(w =>
-        (w.status === 'dispatched' || w.status === 'onshift') &&
-        (w.shiftRequestId === r.id || Number(w.shiftRequestId) === Number(r.id))
-      ) || liveSessionOps.workers.find(w => w.status === 'dispatched' || w.status === 'onshift');
+      // Find the dispatched worker for this request (already resolved as dispWorker above)
       const distData = dispWorker ? workerBarDistances.find(d => Number(d.application_id) === Number(dispWorker.applicationId) && d.bar_id === r.bar_id) : null;
       const walkMins = distData ? distData.walking_minutes : null;
 
@@ -6153,9 +6260,6 @@ function renderRequestCards() {
       //   DISPATCHED      = status='dispatched' AND !departed_at  (awaiting "I'm leaving now")
       //   CONFIRMED EN ROUTE = status='dispatched' AND departed_at  (worker has tapped, ETA ticks)
       //   ON SHIFT        = status='onshift' OR clock_in_at set
-      // The request-card status badge mirrors at clock-in:
-      //   pending dispatch -> "DISPATCHED"
-      //   worker has clocked in -> "GLASI CLOCKED IN"
       const isOnShift = dispWorker && (dispWorker.status === 'onshift' || dispWorker.clockInAt);
       const isEnRoute = dispWorker && dispWorker.status === 'dispatched' && dispWorker.departedAt;
       const departedAtMs = dispWorker?.departedAt ? new Date(dispWorker.departedAt).getTime() : null;
@@ -6173,15 +6277,13 @@ function renderRequestCards() {
         }
       }
 
-      const reqBadgeLabel = isOnShift ? 'GLASI CLOCKED IN' : 'DISPATCHED';
-
+      // F-29: LEFT card body uses shared innerBody (rc-* structure with
+      // status pill replacing the legacy DISPATCHED / GLASI CLOCKED IN
+      // letterspaced badge). Connector + RIGHT worker card untouched.
       return '<div class="dispatch-pair" id="rcard-'+r.id+'">'
-        // LEFT — request card
+        // LEFT: redesigned request card body
         +'<div class="dispatch-pair-request">'
-        +'<div style="font-size:10px;letter-spacing:2px;color:var(--green);font-weight:700;margin-bottom:8px;" id="rbadge-'+r.id+'">'+reqBadgeLabel+'</div>'
-        +'<div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px;">'+barName+'</div>'
-        +'<div style="font-size:12px;color:var(--grey);">'+parseFloat(r.shift_length_hours||0)+'hr shift</div>'
-        +(r.raw_message?'<div style="font-size:11px;color:var(--grey);margin-top:10px;line-height:1.5;">'+r.raw_message+'</div>':'')
+        + innerBody
         +'</div>'
         // CONNECTOR — chain motif
         +'<div class="dispatch-pair-connector"></div>'
@@ -6229,25 +6331,19 @@ function renderRequestCards() {
         +'</div>';
     }
 
-    // Round 5 FIX 3: single elapsed up-counter from posted_at. The 30-min
-    // auto-expire backstop is preserved silently in the per-second tick;
-    // only the visible UI changes.
-    const elapsedClass = totalSecs >= 1500 ? ' critical' : (totalSecs >= 300 ? ' urgent' : '');
+    // F-29: pending branch uses the same innerBody. Round 5 elapsed timer is
+    // already inside innerBody at .rc-status-row. Round 5 FIX 3 single
+    // up-counter from posted_at and 30-min auto-expire backstop are preserved
+    // by the per-second tick below.
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
-      +'<div class="req-card-top">'
-      +'<div class="req-card-bar">'+barName+'</div>'
-      +'<div class="req-card-elapsed'+elapsedClass+'" id="relapsed-'+r.id+'">'+formatElapsed(totalSecs)+'</div>'
-      +'</div>'
-      +(r.raw_message?'<div class="req-card-message" style="font-size:12px;color:var(--grey);margin:6px 0;line-height:1.5;">'+r.raw_message+'</div>':'')
-      +'<div class="req-card-meta">'
-      +'<span>'+parseFloat(r.shift_length_hours||0)+'hr shift</span>'
-      +'<span class="status-badge badge-'+(r.status||'pending')+'">'+(r.status||'pending')+'</span>'
-      +'</div>'
-      +(!isDispatched?'<div style="display:flex;gap:6px;margin-top:8px;">'
-        +'<button onclick="event.stopPropagation();openAddNotes('+r.id+')" style="background:none;border:1px solid var(--border);color:var(--grey);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;flex:1;">'+(r.raw_message?'Edit Notes':'+ Add Notes')+'</button>'
-        +'<button onclick="event.stopPropagation();removeRequest('+r.id+')" style="background:none;border:1px solid rgba(248,113,113,0.3);color:var(--red);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Remove</button>'
-        +'</div>':'')
-      +'</div>';
+      + innerBody
+      + (r.status === 'pending'
+          ? '<div class="rc-actions">'
+            + '<button onclick="event.stopPropagation();openAddNotes('+r.id+')" class="rc-action-btn">'+(showNotes?'Edit Notes':'+ Add Notes')+'</button>'
+            + '<button onclick="event.stopPropagation();removeRequest('+r.id+')" class="rc-action-btn rc-action-btn-danger">Remove</button>'
+            + '</div>'
+          : '')
+      + '</div>';
   }).join('');
 
   // update timer every second without full re-render
