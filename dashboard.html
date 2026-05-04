@@ -587,6 +587,35 @@
     .rc-actions { display: flex; gap: 6px; margin-top: 10px; }
     .rc-action-btn { flex: 1; background: none; border: 1px solid var(--border); color: var(--grey); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: Inter, sans-serif; }
     .rc-action-btn-danger { border-color: rgba(239,68,68,0.3); color: var(--red); flex: 0 0 auto; }
+
+    /* F-30: shifts + billing pages, paired-unit cards, sub-tab switcher */
+    .sh-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; align-items: center; background: var(--navy-mid); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+    .sh-filters .field { margin: 0; max-width: 200px; }
+    .sub-tab-row { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .sub-tab { background: none; border: none; color: var(--grey); padding: 10px 18px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; font-family: Inter, sans-serif; transition: all 0.15s; }
+    .sub-tab:hover { color: var(--white); }
+    .sub-tab.active { color: var(--white); border-bottom-color: var(--ice); }
+    .billing-tab { display: block; }
+    .batch-actions { display: flex; gap: 10px; margin-bottom: 16px; }
+
+    .paired-unit-card { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; transition: border-color 0.15s; }
+    .paired-unit-card[onclick] { cursor: pointer; }
+    .paired-unit-card[onclick]:hover { border-color: var(--ice); }
+    .pu-date { font-size: 11px; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
+
+    .pu-feedback-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .pu-feedback-block { background: var(--navy); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; }
+    .pu-fb-label { font-size: 9px; letter-spacing: 2px; color: var(--grey); text-transform: uppercase; margin-bottom: 6px; }
+    .pu-fb-stars { color: var(--amber); font-size: 14px; letter-spacing: 1px; margin-bottom: 4px; }
+    .pu-fb-empty { color: var(--grey); font-style: italic; }
+    .pu-fb-comment { color: var(--white); line-height: 1.5; }
+    .pu-fb-meta { color: var(--grey); font-size: 10px; margin-top: 4px; }
+
+    .pu-detail-section { background: var(--navy-mid); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .pu-detail-section h3 { font-size: 11px; letter-spacing: 2px; color: var(--grey); text-transform: uppercase; margin: 0 0 12px 0; font-weight: 600; }
+    .pu-detail-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+    .pu-detail-row .l { color: var(--grey); }
+    .pu-detail-row .v { color: var(--white); font-family: 'JetBrains Mono', monospace; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -625,7 +654,7 @@
     <button class="sidebar-nav-item" id="sidebar-nav-workers"    onclick="safeNavigate(goToWorkers)">Workers</button>
     <button class="sidebar-nav-item" id="sidebar-nav-sessions"   onclick="safeNavigate(goToSessionsAudit)">Sessions</button>
     <button class="sidebar-nav-item" id="sidebar-nav-shifts"     onclick="safeNavigate(goToShifts)">Shifts</button>
-    <button class="sidebar-nav-item" id="sidebar-nav-accounting" onclick="safeNavigate(goToAccounting)">Accounting</button>
+    <button class="sidebar-nav-item" id="sidebar-nav-billing"    onclick="safeNavigate(goToBilling)">Billing</button>
     <button class="sidebar-nav-item" id="sidebar-nav-settings"   onclick="safeNavigate(goToSettings)">Settings</button>
   </nav>
 
@@ -725,23 +754,162 @@
 </div>
 
 <!-- SHIFTS SCREEN -->
+<!-- F-30: Shifts page (paired unit primitive, operationally framed) -->
 <div id="screen-shifts" class="screen">
   <div class="history-screen">
-    <div class="page-title">Shifts</div>
-    <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px;">
-      <div style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:10px;">Coming soon.</div>
-      <div style="font-size:13px;color:var(--grey);line-height:1.7;">Shifts will list every dispatched shift, paired request + worker + payment state. Generated automatically when a worker is dispatched. From here you'll generate parasol timesheets, bar invoices, and resolve disputes.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div>
+        <div class="page-title">Shifts</div>
+        <div class="page-sub">Every paired unit, operationally framed</div>
+      </div>
+    </div>
+    <div class="sh-filters">
+      <select id="sh-bar-filter"      class="field" onchange="renderShiftsPage()"><option value="">All bars</option></select>
+      <input  id="sh-worker-filter"   class="field" type="text" placeholder="Worker name" oninput="renderShiftsPage()">
+      <input  id="sh-date-from"       class="field" type="date" onchange="renderShiftsPage()">
+      <input  id="sh-date-to"         class="field" type="date" onchange="renderShiftsPage()">
+      <select id="sh-zone-filter"     class="field" onchange="renderShiftsPage()"><option value="">All zones</option></select>
+      <select id="sh-status-filter"   class="field" onchange="renderShiftsPage()">
+        <option value="">All statuses</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="no_show">No-show</option>
+      </select>
+      <select id="sh-feedback-filter" class="field" onchange="renderShiftsPage()">
+        <option value="">All feedback</option>
+        <option value="both">Both submitted</option>
+        <option value="awaiting">Awaiting any</option>
+        <option value="5stars">5&star; both ways</option>
+      </select>
+    </div>
+    <div id="shifts-cards"><div class="empty">Loading...</div></div>
+  </div>
+</div>
+
+<!-- F-30: Paired unit detail (drill-in from Shifts page) -->
+<div id="screen-shift-paired" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+      <div>
+        <div class="page-title" id="shp-title">Paired unit</div>
+        <div class="page-sub" id="shp-sub"></div>
+      </div>
+      <button class="ghost-btn" onclick="goToShifts()">Back to Shifts</button>
+    </div>
+    <div id="shp-body"></div>
+  </div>
+</div>
+
+<!-- F-30: Billing page (renamed from Accounting). Two sub-tabs: Shifts (transactional) + Subscriptions. -->
+<div id="screen-billing" class="screen">
+  <div class="history-screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div>
+        <div class="page-title">Billing</div>
+        <div class="page-sub">Transactional shifts and recurring subscriptions</div>
+      </div>
+    </div>
+    <div class="sub-tab-row">
+      <button class="sub-tab active" id="bt-shifts" onclick="switchBillingTab('shifts')">Shifts</button>
+      <button class="sub-tab"        id="bt-subs"   onclick="switchBillingTab('subs')">Subscriptions</button>
+    </div>
+
+    <div id="billing-shifts-tab" class="billing-tab">
+      <div class="sh-filters">
+        <select id="bsh-bar-filter"    class="field" onchange="renderBillingShifts()"><option value="">All bars</option></select>
+        <input  id="bsh-date-from"     class="field" type="date" onchange="renderBillingShifts()">
+        <input  id="bsh-date-to"       class="field" type="date" onchange="renderBillingShifts()">
+        <select id="bsh-status-filter" class="field" onchange="renderBillingShifts()">
+          <option value="">All financial states</option>
+          <option value="awaiting_parasol">Awaiting Parasol</option>
+          <option value="parasol_exported">Parasol Exported</option>
+          <option value="parasol_paid">Parasol Paid</option>
+          <option value="bar_invoiced">Bar Invoiced</option>
+          <option value="bar_paid">Bar Paid</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="batch-actions">
+        <button class="small-ice-btn" onclick="openParasolExportModal()">Export Parasol CSV</button>
+        <button class="small-ice-btn" onclick="openBarInvoiceModal()">Generate Bar Invoices</button>
+      </div>
+      <div id="billing-shifts-cards"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div id="billing-subs-tab" class="billing-tab" style="display:none;">
+      <div class="sh-filters">
+        <select id="bsub-bar-filter"    class="field" onchange="renderBillingSubscriptions()"><option value="">All bars</option></select>
+        <select id="bsub-status-filter" class="field" onchange="renderBillingSubscriptions()">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="trial">Trial</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="batch-actions">
+        <button class="small-ice-btn" onclick="openAddSubscriptionModal()">+ Add Subscription</button>
+      </div>
+      <div id="billing-subs-cards"><div class="empty">Loading...</div></div>
     </div>
   </div>
 </div>
 
-<!-- F-28: Accounting placeholder -->
-<div id="screen-accounting" class="screen">
-  <div class="history-screen">
-    <div class="page-title">Accounting</div>
-    <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px;">
-      <div style="font-size:14px;color:var(--white);font-weight:600;margin-bottom:10px;">Coming soon.</div>
-      <div style="font-size:13px;color:var(--grey);line-height:1.7;">Accounting tracks the financial side of shifts, invoices sent to bars, parasol timesheets, payment status. Built on top of Shifts data.</div>
+<!-- F-30: Parasol CSV export modal -->
+<div id="ov-parasol-export" class="overlay">
+  <div class="modal">
+    <div class="modal-title">Export Parasol CSV</div>
+    <div class="modal-sub">Selects completed shifts in this date range that have not yet been exported.</div>
+    <label>From</label>
+    <input id="pe-from" type="date" class="field" style="width:100%;">
+    <label>To</label>
+    <input id="pe-to" type="date" class="field" style="width:100%;">
+    <div class="modal-actions">
+      <button class="cancel-btn"  onclick="closeOv('parasol-export')">Cancel</button>
+      <button class="confirm-btn" onclick="exportParasolCsv()">Export CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- F-30: Bar invoice batch generation modal -->
+<div id="ov-bar-invoice-batch" class="overlay">
+  <div class="modal">
+    <div class="modal-title">Generate Bar Invoices</div>
+    <div class="modal-sub">Creates one invoice per bar covering completed, uninvoiced shifts in this period.</div>
+    <label>From</label>
+    <input id="bi-from" type="date" class="field" style="width:100%;">
+    <label>To</label>
+    <input id="bi-to" type="date" class="field" style="width:100%;">
+    <div class="modal-actions">
+      <button class="cancel-btn"  onclick="closeOv('bar-invoice-batch')">Cancel</button>
+      <button class="confirm-btn" onclick="generateBarInvoices()">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- F-30: Add subscription modal -->
+<div id="ov-add-subscription" class="overlay">
+  <div class="modal">
+    <div class="modal-title">Add Subscription</div>
+    <div class="modal-sub">Create a new bar subscription. Default fee is &pound;349/month.</div>
+    <label>Bar</label>
+    <select id="as-bar" class="field" style="width:100%;"></select>
+    <label>Monthly fee (&pound;)</label>
+    <input id="as-fee" type="number" step="0.01" min="0" class="field" style="width:100%;" value="349.00">
+    <label>Discount (&pound;)</label>
+    <input id="as-discount" type="number" step="0.01" min="0" class="field" style="width:100%;" value="0.00">
+    <label>Status</label>
+    <select id="as-status" class="field" style="width:100%;">
+      <option value="inactive">Inactive</option>
+      <option value="trial">Trial</option>
+      <option value="active">Active</option>
+    </select>
+    <label>Billing cycle day (1-28)</label>
+    <input id="as-cycle" type="number" min="1" max="28" class="field" style="width:100%;" value="1">
+    <label>Notes</label>
+    <textarea id="as-notes" class="field" style="width:100%;" rows="3"></textarea>
+    <div class="modal-actions">
+      <button class="cancel-btn"  onclick="closeOv('add-subscription')">Cancel</button>
+      <button class="confirm-btn" onclick="saveNewSubscription()">Add</button>
     </div>
   </div>
 </div>
@@ -1824,9 +1992,9 @@ async function renderSessionsAudit() {
   }
 }
 
-// F-28: placeholder navigations.
-function goToShifts()     { showScreen('shifts');     setActiveNav('shifts'); }
-function goToAccounting() { showScreen('accounting'); setActiveNav('accounting'); }
+// F-28: placeholder navigations. F-30: Shifts and Billing are now functional;
+// the second definition of goToShifts below (line ~2032) overrides this stub.
+// goToBilling defined further below in the F-30 block.
 function goToSettings()   { showScreen('settings');   setActiveNav('settings'); }
 
 function safeNavigate(fn) {
@@ -1861,12 +2029,24 @@ async function goToWorker(workerId) {
   openEditWorker(workerId);
 }
 
+// F-30: Shifts page now functional (paired-unit primitive). Replaces the
+// legacy loadShiftsHistory call, which is retained dead-coded as deferred
+// deletion (along with #screen-shift-detail, getFinancialStatus, etc).
 function goToShifts() {
   showScreen('shifts');
   setActiveNav('shifts');
-  if(!bars.length) loadBars();
-  loadShiftsHistory();
+  loadShiftsPage();
 }
+
+// F-30: Billing replaces Accounting. goToAccounting kept as a thin alias for
+// one batch in case any external link or muscle memory points at it; remove
+// in a future tidy-up batch.
+function goToBilling() {
+  showScreen('billing');
+  setActiveNav('billing');
+  switchBillingTab(billingActiveTab || 'shifts');
+}
+function goToAccounting() { return goToBilling(); }
 
 function goToWorkers() {
   showScreen('workers');
@@ -8535,6 +8715,953 @@ async function sendInvite(sessionId, applicationId, btnEl) {
 
 function bulkInviteAllInZone() {
   alert('Bulk invite is future work. For now, send each invite individually using the Send invite button per worker.');
+}
+
+// ============================================================================
+// F-30: Shifts page (paired unit primitive) + Billing page (Shifts +
+// Subscriptions sub-tabs). Replaces the legacy loadShiftsHistory /
+// renderShiftsList / openShiftDetail flow, which stays dead-coded as
+// deferred deletion.
+// ============================================================================
+
+let allPairedUnits = [];
+let allSubscriptions = [];
+let allBarInvoices = [];
+let billingActiveTab = 'shifts';
+
+// ---- F-30 helpers -----------------------------------------------------------
+
+function f30FmtDateTime(ts) {
+  if(!ts) return '';
+  return new Date(ts).toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Europe/London'
+  });
+}
+
+function f30FmtDate(d) {
+  if(!d) return '';
+  const dt = new Date(d);
+  if(isNaN(dt.getTime())) return d;
+  return dt.toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    timeZone: 'Europe/London'
+  });
+}
+
+function f30FmtMonth(d) {
+  if(!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'Europe/London' });
+}
+
+function f30FmtCurrency(n) {
+  const v = parseFloat(n);
+  if(!isFinite(v)) return '';
+  return '£' + v.toFixed(2);
+}
+
+function f30Stars(n) {
+  const v = parseInt(n) || 0;
+  if(!v) return '';
+  return '★'.repeat(v) + '☆'.repeat(Math.max(0, 5 - v));
+}
+
+function f30TsRow(label, value) {
+  return '<div class="rc-timestamp-row"><span class="rc-ts-label">'+label+'</span><span class="rc-ts-value'+(value?'':' rc-ts-empty')+'">'+(value || '—')+'</span></div>';
+}
+
+function f30FeedbackBlock(label, stars, comment, wouldWantAgain) {
+  if(!stars && !comment && wouldWantAgain == null) {
+    return '<div class="pu-feedback-block">'
+      + '<div class="pu-fb-label">'+label+'</div>'
+      + '<div class="pu-fb-empty">Awaiting feedback</div>'
+      + '</div>';
+  }
+  let html = '<div class="pu-feedback-block">'
+    + '<div class="pu-fb-label">'+label+'</div>';
+  if(stars) html += '<div class="pu-fb-stars">'+f30Stars(stars)+'</div>';
+  if(comment) html += '<div class="pu-fb-comment">'+comment+'</div>';
+  if(wouldWantAgain === true)  html += '<div class="pu-fb-meta">Would want again: yes</div>';
+  if(wouldWantAgain === false) html += '<div class="pu-fb-meta">Would want again: no</div>';
+  html += '</div>';
+  return html;
+}
+
+// ---- Status pill mapping ----------------------------------------------------
+
+function computeShiftOperationalPill(p) {
+  const swStatus = p.session_workers?.status;
+  if(p.status === 'completed' || swStatus === 'completed' || p.clock_out_confirmed_at) {
+    return { slug: 'completed', label: 'Completed' };
+  }
+  if(swStatus === 'no_show' || p.status === 'no_show') {
+    return { slug: 'expired', label: 'No-show' };
+  }
+  if(swStatus === 'cancelled' || p.status === 'cancelled') {
+    return { slug: 'cancelled', label: 'Cancelled' };
+  }
+  return { slug: 'pending', label: p.status || swStatus || 'Unknown' };
+}
+
+function computeShiftFinancialPill(p) {
+  const par = p.parasol_export_status || 'pending';
+  const inv = p.bar_invoice_status || 'pending';
+  const parPaid = !!p.parasol_settled_at;
+  const invPaid = inv === 'paid';
+  if(parPaid && invPaid)             return { slug: 'completed',  label: 'Done' };
+  if(invPaid)                        return { slug: 'completed',  label: 'Bar Paid' };
+  if(inv === 'invoiced')             return { slug: 'onshift',    label: 'Bar Invoiced' };
+  if(parPaid)                        return { slug: 'onshift',    label: 'Parasol Paid' };
+  if(par === 'exported')             return { slug: 'dispatched', label: 'Parasol Exported' };
+  return { slug: 'pending', label: 'Awaiting Parasol' };
+}
+
+function computeSubscriptionPill(s) {
+  const latest = s._latestInvoice;
+  const overdue = latest && latest.status === 'sent' && latest.due_date && new Date(latest.due_date) < new Date() && !latest.paid_at;
+  if(s.status === 'trial')                 return { slug: 'dispatched', label: 'Trial' };
+  if(s.status === 'inactive')              return { slug: 'cancelled',  label: 'Inactive' };
+  if(s.status === 'active' && overdue)     return { slug: 'expired',    label: 'Active · Overdue' };
+  if(s.status === 'active')                return { slug: 'onshift',    label: 'Active' };
+  return { slug: 'pending', label: s.status };
+}
+
+// ---- Shared paired-unit card ------------------------------------------------
+
+function renderPairedUnitCard(p, view /* 'shifts' | 'billing' */) {
+  const bar = p.bars || {};
+  const sw  = p.session_workers || {};
+  const app = sw.applications || {};
+  const sr  = p.shift_requests || {};
+  const bm  = sr.bar_managers || {};
+  const wf  = p._workerFeedback || null;
+
+  const barName = bar.name || 'Unknown bar';
+  const requesterName = bm.name || bar.manager_name || 'Unknown';
+  const workerName = app.name || sw.worker_name || 'Unknown';
+  const shiftLen = parseFloat(p.shift_length_hours||0);
+  const dateLine = f30FmtDateTime(p.clock_in_confirmed_at || p.created_at);
+
+  const opPill   = computeShiftOperationalPill(p);
+  const finPill  = computeShiftFinancialPill(p);
+  const barTotal = (shiftLen * 30).toFixed(2);
+  const workerRate = parseFloat(p.hourly_rate||0);
+  const workerTotal = (workerRate * shiftLen).toFixed(2);
+
+  const topRow = ''
+    + '<div class="rc-top-row">'
+    +   '<span class="rc-bar-name">'+barName+'</span>'
+    +   '<span class="rc-requester">'+requesterName+'</span>'
+    +   '<span class="rc-shift-length">'+shiftLen+'hr shift</span>'
+    +   '<span class="rc-bar-id">BAR ID : '+(bar.id || p.bar_id || '?')+'</span>'
+    + '</div>';
+
+  const pill = view === 'shifts' ? opPill : finPill;
+  const statusRow = '<div class="rc-status-row">'
+    + '<span class="rc-status-pill rc-status-'+pill.slug+'">'+pill.label+'</span>'
+    + '<span class="pu-date">'+dateLine+'</span>'
+    + '</div>';
+
+  const workerRow = '<div class="rc-dispatched-row">Worker: <strong>'+workerName+'</strong></div>';
+
+  let body;
+  if(view === 'shifts') {
+    body = '<div class="rc-body">'
+      + f30TsRow('Requested at',  f30FmtDateTime(sr.posted_at))
+      + f30TsRow('Clocked in at', f30FmtDateTime(p.clock_in_confirmed_at))
+      + f30TsRow('Clocked out at',f30FmtDateTime(p.clock_out_confirmed_at))
+      + '</div>'
+      + '<div class="pu-feedback-pair">'
+      +   f30FeedbackBlock('Bar to worker', p.bar_rating, p.bar_notes, p.would_want_again)
+      +   f30FeedbackBlock('Worker to bar', wf?.stars, wf?.comment, null)
+      + '</div>';
+  } else {
+    body = '<div class="rc-body">'
+      + f30TsRow('Worker rate',  f30FmtCurrency(workerRate)+'/hr × '+shiftLen+'h = '+f30FmtCurrency(workerTotal))
+      + f30TsRow('Bar charge',   f30FmtCurrency(30)+'/hr × '+shiftLen+'h = '+f30FmtCurrency(barTotal))
+      + f30TsRow('Parasol',      parasolStateLabel(p))
+      + f30TsRow('Bar invoice',  barInvoiceStateLabel(p))
+      + '</div>'
+      + '<div class="rc-actions" style="flex-wrap:wrap;">'
+      +   parasolActionButtons(p)
+      +   barInvoiceActionButtons(p)
+      + '</div>';
+  }
+
+  const onclick = view === 'shifts' ? 'onclick="openPairedUnit('+p.id+')"' : '';
+  return '<div class="paired-unit-card" '+onclick+' id="pu-'+p.id+'">'
+    + topRow + statusRow + workerRow + body
+    + '</div>';
+}
+
+function parasolStateLabel(p) {
+  if(p.parasol_settled_at) return 'Paid ' + f30FmtDate(p.parasol_settled_at);
+  if(p.parasol_exported_at) return 'Exported ' + f30FmtDate(p.parasol_exported_at);
+  return 'Pending';
+}
+
+function barInvoiceStateLabel(p) {
+  if(p.bar_invoice_status === 'paid') return 'Paid';
+  if(p.bar_invoice_status === 'invoiced') return 'Invoiced (#' + (p.bar_invoice_id || '?') + ')';
+  return 'Pending';
+}
+
+function parasolActionButtons(p) {
+  const par = p.parasol_export_status || 'pending';
+  const parPaid = !!p.parasol_settled_at;
+  if(parPaid) return '';
+  if(par === 'exported') {
+    return '<button class="rc-action-btn" onclick="event.stopPropagation();markParasolPaidOne('+p.id+')">Mark Parasol Paid</button>';
+  }
+  return '<button class="rc-action-btn" onclick="event.stopPropagation();markParasolExportedOne('+p.id+')">Mark Parasol Exported</button>';
+}
+
+function barInvoiceActionButtons(p) {
+  const inv = p.bar_invoice_status || 'pending';
+  if(inv === 'paid') return '';
+  if(inv === 'invoiced') {
+    return '<button class="rc-action-btn" onclick="event.stopPropagation();markBarInvoicePaidOne('+p.id+')">Mark Bar Paid</button>';
+  }
+  return '';
+}
+
+// ---- Single-shift state advancement -----------------------------------------
+
+async function markParasolExportedOne(shiftId) {
+  await sbPatch('shifts', '?id=eq.'+shiftId,
+    { parasol_export_status: 'exported', parasol_exported_at: new Date().toISOString() });
+  await loadBillingShifts();
+}
+
+async function markParasolPaidOne(shiftId) {
+  await sbPatch('shifts', '?id=eq.'+shiftId,
+    { parasol_export_status: 'paid', parasol_settled_at: new Date().toISOString() });
+  await loadBillingShifts();
+}
+
+async function markBarInvoicePaidOne(shiftId) {
+  // The shift sits inside a bar_invoices row. Find the invoice id and mark it paid.
+  const rows = await sbGet('shifts', '?id=eq.'+shiftId+'&select=bar_invoice_id');
+  const invId = rows?.[0]?.bar_invoice_id;
+  if(!invId) { alert('No bar invoice linked to this shift.'); return; }
+  await sbPatch('bar_invoices', '?id=eq.'+invId,
+    { status: 'paid', paid_at: new Date().toISOString() });
+  // Mirror onto every shift in this invoice
+  await sbPatch('shifts', '?bar_invoice_id=eq.'+invId,
+    { bar_invoice_status: 'paid' });
+  await loadBillingShifts();
+}
+
+// ---- Shifts page (operational) ---------------------------------------------
+
+async function loadShiftsPage() {
+  const container = document.getElementById('shifts-cards');
+  if(container) container.innerHTML = '<div class="empty">Loading...</div>';
+
+  if(!bars.length) {
+    const r = await sbGet('bars','?order=name.asc&select=id,name,address,zone_id,status,manager_name');
+    bars = Array.isArray(r) ? r : [];
+  }
+
+  const rows = await sbGet('shifts',
+    '?status=in.(completed,cancelled,no_show)&order=clock_out_confirmed_at.desc.nullslast,created_at.desc'
+    + '&select=*,bars(id,name,zone_id,manager_name),session_workers(id,application_id,status,worker_name,applications(id,name,tier,parasol_worker_ref)),shift_requests(id,bar_manager_id,posted_at,raw_message,bar_managers(name))');
+
+  let feedbackByShift = new Map();
+  if(rows.length) {
+    const shiftIds = rows.map(r => r.id);
+    const fb = await sbGet('shift_feedback',
+      '?shift_id=in.('+shiftIds.join(',')+')&select=shift_id,stars,comment,submitted_at');
+    feedbackByShift = new Map((fb||[]).map(f => [Number(f.shift_id), f]));
+  }
+
+  allPairedUnits = rows.map(r => ({
+    ...r,
+    _workerFeedback: feedbackByShift.get(Number(r.id)) || null,
+    _zoneId: r.bars?.zone_id ?? null
+  }));
+
+  populateShiftsFilters();
+  renderShiftsPage();
+}
+
+function populateShiftsFilters() {
+  const barSel  = document.getElementById('sh-bar-filter');
+  const zoneSel = document.getElementById('sh-zone-filter');
+  if(barSel && barSel.options.length <= 1) {
+    bars.forEach(b => {
+      const o = document.createElement('option');
+      o.value = String(b.id); o.textContent = b.name;
+      barSel.appendChild(o);
+    });
+  }
+  if(zoneSel && zoneSel.options.length <= 1 && Array.isArray(ZONES)) {
+    ZONES.forEach(z => {
+      const o = document.createElement('option');
+      o.value = String(z.dbId); o.textContent = z.name;
+      zoneSel.appendChild(o);
+    });
+  }
+}
+
+function readShiftsFilters() {
+  return {
+    barId:    document.getElementById('sh-bar-filter')?.value || '',
+    worker:   (document.getElementById('sh-worker-filter')?.value || '').toLowerCase(),
+    from:     document.getElementById('sh-date-from')?.value || '',
+    to:       document.getElementById('sh-date-to')?.value || '',
+    zoneId:   document.getElementById('sh-zone-filter')?.value || '',
+    status:   document.getElementById('sh-status-filter')?.value || '',
+    feedback: document.getElementById('sh-feedback-filter')?.value || ''
+  };
+}
+
+function matchShiftsFilters(p, f) {
+  if(f.barId && String(p.bar_id) !== f.barId) return false;
+  const wname = (p.session_workers?.applications?.name || p.session_workers?.worker_name || '').toLowerCase();
+  if(f.worker && !wname.includes(f.worker)) return false;
+  const refDate = p.clock_in_confirmed_at || p.created_at;
+  if(f.from && refDate && new Date(refDate) < new Date(f.from + 'T00:00:00')) return false;
+  if(f.to   && refDate && new Date(refDate) > new Date(f.to   + 'T23:59:59')) return false;
+  if(f.zoneId && String(p._zoneId) !== f.zoneId) return false;
+  if(f.status && p.status !== f.status) return false;
+  if(f.feedback) {
+    const wf = p._workerFeedback;
+    const barRated = p.bar_rating != null;
+    const workerRated = wf?.stars != null;
+    if(f.feedback === 'both'     && !(barRated && workerRated)) return false;
+    if(f.feedback === 'awaiting' && barRated && workerRated)    return false;
+    if(f.feedback === '5stars'   && !(p.bar_rating === 5 && wf?.stars === 5)) return false;
+  }
+  return true;
+}
+
+function renderShiftsPage() {
+  const container = document.getElementById('shifts-cards');
+  if(!container) return;
+  const filters = readShiftsFilters();
+  const filtered = allPairedUnits.filter(p => matchShiftsFilters(p, filters));
+  if(!filtered.length) { container.innerHTML = '<div class="empty">No shifts match your filters.</div>'; return; }
+  container.innerHTML = filtered.map(p => renderPairedUnitCard(p, 'shifts')).join('');
+}
+
+// ---- Paired unit detail (drill-in from Shifts page) ------------------------
+
+async function openPairedUnit(shiftId) {
+  const p = allPairedUnits.find(x => Number(x.id) === Number(shiftId));
+  if(!p) { alert('Shift not found in current cache.'); return; }
+  showScreen('shift-paired');
+  setActiveNav('shifts');
+
+  const bar = p.bars || {};
+  const sw  = p.session_workers || {};
+  const app = sw.applications || {};
+  const sr  = p.shift_requests || {};
+  const bm  = sr.bar_managers || {};
+  const wf  = p._workerFeedback || null;
+  const opPill = computeShiftOperationalPill(p);
+  const finPill = computeShiftFinancialPill(p);
+
+  document.getElementById('shp-title').textContent = (bar.name || 'Unknown') + ' · ' + (app.name || 'Unknown');
+  document.getElementById('shp-sub').textContent = f30FmtDateTime(p.clock_in_confirmed_at || p.created_at);
+
+  const html = ''
+    + '<div class="pu-detail-section">'
+    +   '<h3>Status</h3>'
+    +   '<div class="pu-detail-row"><span class="l">Operational</span><span class="v"><span class="rc-status-pill rc-status-'+opPill.slug+'">'+opPill.label+'</span></span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Financial</span><span class="v"><span class="rc-status-pill rc-status-'+finPill.slug+'">'+finPill.label+'</span></span></div>'
+    + '</div>'
+    + '<div class="pu-detail-section">'
+    +   '<h3>Lifecycle</h3>'
+    +   '<div class="pu-detail-row"><span class="l">Request posted</span><span class="v">'+(f30FmtDateTime(sr.posted_at) || '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Dispatched</span><span class="v">'+(f30FmtDateTime(p.accepted_at) || '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Departed</span><span class="v">'+(f30FmtDateTime(p.departed_at) || '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Clocked in</span><span class="v">'+(f30FmtDateTime(p.clock_in_confirmed_at) || '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Clocked out</span><span class="v">'+(f30FmtDateTime(p.clock_out_confirmed_at) || '—')+'</span></div>'
+    + '</div>'
+    + '<div class="pu-detail-section">'
+    +   '<h3>Attribution</h3>'
+    +   '<div class="pu-detail-row"><span class="l">Bar</span><span class="v">'+(bar.name || '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Bar manager</span><span class="v">'+(bm.name || bar.manager_name || '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Worker</span><span class="v">'+(app.name || sw.worker_name || '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Worker tier</span><span class="v">'+(app.tier != null ? 'Tier '+app.tier : '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Worker rate</span><span class="v">'+(p.hourly_rate ? f30FmtCurrency(p.hourly_rate)+'/hr' : '—')+'</span></div>'
+    +   '<div class="pu-detail-row"><span class="l">Shift length</span><span class="v">'+(p.shift_length_hours || '—')+'h</span></div>'
+    + '</div>'
+    + (sr.raw_message && sr.raw_message !== 'Bar manager request via portal'
+        ? '<div class="pu-detail-section"><h3>Request notes</h3><div style="font-size:13px;color:var(--white);line-height:1.5;">'+sr.raw_message+'</div></div>'
+        : '')
+    + '<div class="pu-detail-section">'
+    +   '<h3>Feedback</h3>'
+    +   '<div class="pu-feedback-pair">'
+    +     f30FeedbackBlock('Bar to worker', p.bar_rating, p.bar_notes, p.would_want_again)
+    +     f30FeedbackBlock('Worker to bar', wf?.stars, wf?.comment, null)
+    +   '</div>'
+    + '</div>';
+
+  document.getElementById('shp-body').innerHTML = html;
+}
+
+// ---- Billing > Shifts sub-tab (transactional) ------------------------------
+
+function switchBillingTab(tab) {
+  billingActiveTab = tab;
+  const a = document.getElementById('billing-shifts-tab');
+  const b = document.getElementById('billing-subs-tab');
+  if(a) a.style.display = tab === 'shifts' ? 'block' : 'none';
+  if(b) b.style.display = tab === 'subs'   ? 'block' : 'none';
+  document.getElementById('bt-shifts')?.classList.toggle('active', tab === 'shifts');
+  document.getElementById('bt-subs')?.classList.toggle('active', tab === 'subs');
+  if(tab === 'shifts') loadBillingShifts();
+  else                 loadBillingSubscriptions();
+}
+
+async function loadBillingShifts() {
+  const container = document.getElementById('billing-shifts-cards');
+  if(container) container.innerHTML = '<div class="empty">Loading...</div>';
+  if(!bars.length) {
+    const r = await sbGet('bars','?order=name.asc&select=id,name,address,zone_id,status,manager_name');
+    bars = Array.isArray(r) ? r : [];
+  }
+  const rows = await sbGet('shifts',
+    '?status=eq.completed&order=clock_out_confirmed_at.desc.nullslast,created_at.desc'
+    + '&select=*,bars(id,name,zone_id,manager_name),session_workers(id,application_id,status,worker_name,applications(id,name,tier,parasol_worker_ref)),shift_requests(id,bar_manager_id,posted_at,bar_managers(name))');
+  allPairedUnits = rows.map(r => ({ ...r, _zoneId: r.bars?.zone_id ?? null }));
+  populateBillingShiftsFilters();
+  renderBillingShifts();
+}
+
+function populateBillingShiftsFilters() {
+  const barSel = document.getElementById('bsh-bar-filter');
+  if(barSel && barSel.options.length <= 1) {
+    bars.forEach(b => {
+      const o = document.createElement('option');
+      o.value = String(b.id); o.textContent = b.name;
+      barSel.appendChild(o);
+    });
+  }
+}
+
+function readBillingShiftsFilters() {
+  return {
+    barId:  document.getElementById('bsh-bar-filter')?.value || '',
+    from:   document.getElementById('bsh-date-from')?.value || '',
+    to:     document.getElementById('bsh-date-to')?.value || '',
+    status: document.getElementById('bsh-status-filter')?.value || ''
+  };
+}
+
+function matchBillingShiftsFilters(p, f) {
+  if(f.barId && String(p.bar_id) !== f.barId) return false;
+  const refDate = p.clock_in_confirmed_at || p.created_at;
+  if(f.from && refDate && new Date(refDate) < new Date(f.from + 'T00:00:00')) return false;
+  if(f.to   && refDate && new Date(refDate) > new Date(f.to   + 'T23:59:59')) return false;
+  if(f.status) {
+    const par = p.parasol_export_status || 'pending';
+    const inv = p.bar_invoice_status || 'pending';
+    const parPaid = !!p.parasol_settled_at;
+    const invPaid = inv === 'paid';
+    if(f.status === 'awaiting_parasol' && !(par === 'pending' && !parPaid))                  return false;
+    if(f.status === 'parasol_exported' && !(par === 'exported' && !parPaid))                 return false;
+    if(f.status === 'parasol_paid'     && !(parPaid && !invPaid && inv !== 'invoiced'))      return false;
+    if(f.status === 'bar_invoiced'     && !(inv === 'invoiced' && !invPaid))                 return false;
+    if(f.status === 'bar_paid'         && !(invPaid && !parPaid))                            return false;
+    if(f.status === 'done'             && !(invPaid && parPaid))                             return false;
+  }
+  return true;
+}
+
+function renderBillingShifts() {
+  const container = document.getElementById('billing-shifts-cards');
+  if(!container) return;
+  const filters = readBillingShiftsFilters();
+  const filtered = allPairedUnits.filter(p => matchBillingShiftsFilters(p, filters));
+  if(!filtered.length) { container.innerHTML = '<div class="empty">No shifts match your filters.</div>'; return; }
+  container.innerHTML = filtered.map(p => renderPairedUnitCard(p, 'billing')).join('');
+}
+
+// ---- Parasol CSV export -----------------------------------------------------
+
+function defaultParasolRange() {
+  // Default to the most recent completed Friday + Saturday + Sunday block.
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun ... 6=Sat
+  // Step back to last Sunday (inclusive of just-finished weekend).
+  const sundayOffset = day === 0 ? 0 : day; // 0..6 days back from today
+  const sun = new Date(now); sun.setDate(now.getDate() - sundayOffset); sun.setHours(23,59,59,999);
+  const fri = new Date(sun); fri.setDate(sun.getDate() - 2); fri.setHours(0,0,0,0);
+  const fmt = d => d.toISOString().slice(0,10);
+  return { from: fmt(fri), to: fmt(sun) };
+}
+
+function openParasolExportModal() {
+  const r = defaultParasolRange();
+  document.getElementById('pe-from').value = r.from;
+  document.getElementById('pe-to').value   = r.to;
+  openOv('parasol-export');
+}
+
+async function exportParasolCsv() {
+  const from = document.getElementById('pe-from').value;
+  const to   = document.getElementById('pe-to').value;
+  if(!from || !to) { alert('Please pick a date range.'); return; }
+  const rows = await sbGet('shifts',
+    '?status=eq.completed&parasol_export_status=eq.pending'
+    + '&clock_out_confirmed_at=gte.'+from+'T00:00:00Z'
+    + '&clock_out_confirmed_at=lte.'+to+'T23:59:59Z'
+    + '&select=id,shift_length_hours,hourly_rate,bar_id,session_workers(application_id,applications(id,name,parasol_worker_ref)),bars(name)');
+  if(!rows.length) { alert('No eligible shifts in that range.'); return; }
+
+  const headers = ['Worker ID','Bar Worked At','Shift Length','Rate','Total'];
+  const csvRows = rows.map(r => {
+    const app = r.session_workers?.applications || {};
+    const workerId = app.parasol_worker_ref || app.id || '';
+    const barName  = r.bars?.name || '';
+    const len = parseFloat(r.shift_length_hours||0);
+    const rate = parseFloat(r.hourly_rate||0);
+    const total = (rate * len).toFixed(2);
+    return [String(workerId), barName, len.toFixed(2), rate.toFixed(2), total];
+  });
+  const filename = 'parasol-shifts-'+from.replaceAll('-','')+'-to-'+to.replaceAll('-','')+'.csv';
+  downloadCSV([headers, ...csvRows].map(csvRow).join('\n'), filename);
+
+  const ids = rows.map(r => r.id);
+  await sbPatch('shifts', '?id=in.('+ids.join(',')+')',
+    { parasol_export_status: 'exported', parasol_exported_at: new Date().toISOString() });
+  closeOv('parasol-export');
+  alert('Exported '+rows.length+' shift(s). CSV downloaded.');
+  await loadBillingShifts();
+}
+
+// ---- Bar invoice batch generation -------------------------------------------
+
+async function nextBarInvoiceNumber() {
+  const year = new Date().getFullYear();
+  const prefix = 'INV-'+year+'-';
+  const rows = await sbGet('bar_invoices',
+    '?invoice_number=like.'+encodeURIComponent(prefix+'*')+'&order=invoice_number.desc&limit=1&select=invoice_number');
+  let lastN = 0;
+  if(rows?.[0]?.invoice_number) {
+    const tail = rows[0].invoice_number.slice(prefix.length);
+    const n = parseInt(tail, 10);
+    if(Number.isFinite(n)) lastN = n;
+  }
+  return prefix + String(lastN + 1).padStart(3, '0');
+}
+
+function openBarInvoiceModal() {
+  // Default range: current month, day 1 to today.
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmt = d => d.toISOString().slice(0,10);
+  document.getElementById('bi-from').value = fmt(first);
+  document.getElementById('bi-to').value   = fmt(now);
+  openOv('bar-invoice-batch');
+}
+
+async function generateBarInvoices() {
+  const from = document.getElementById('bi-from').value;
+  const to   = document.getElementById('bi-to').value;
+  if(!from || !to) { alert('Please pick a period.'); return; }
+  const rows = await sbGet('shifts',
+    '?status=eq.completed&bar_invoice_status=eq.pending'
+    + '&clock_out_confirmed_at=gte.'+from+'T00:00:00Z'
+    + '&clock_out_confirmed_at=lte.'+to+'T23:59:59Z'
+    + '&select=id,bar_id,shift_length_hours,hourly_rate,clock_in_confirmed_at,session_workers(applications(name)),bars(id,name,address)');
+  if(!rows.length) { alert('No uninvoiced completed shifts in that range.'); return; }
+
+  // Group by bar
+  const byBar = new Map();
+  for(const r of rows) {
+    const id = Number(r.bar_id);
+    if(!byBar.has(id)) byBar.set(id, []);
+    byBar.get(id).push(r);
+  }
+
+  const dueDate = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10); })();
+  let createdCount = 0;
+  for(const [barId, shiftRows] of byBar.entries()) {
+    const total = shiftRows.reduce((s, r) => s + parseFloat(r.shift_length_hours||0) * 30, 0);
+    const lineAmount = total;
+    const invoiceNumber = await nextBarInvoiceNumber();
+    let inserted = null;
+    try {
+      inserted = await sbPost('bar_invoices', {
+        bar_id: barId,
+        invoice_number: invoiceNumber,
+        period_start: from,
+        period_end: to,
+        total_amount: lineAmount.toFixed(2),
+        status: 'draft',
+        due_date: dueDate
+      });
+    } catch(e) { console.error('bar_invoices insert failed', e); }
+    const invId = inserted?.[0]?.id;
+    if(!invId) { alert('Failed to create invoice for bar '+barId); continue; }
+    const shiftIds = shiftRows.map(r => r.id);
+    await sbPatch('shifts', '?id=in.('+shiftIds.join(',')+')', {
+      bar_invoice_id: invId,
+      bar_invoice_status: 'invoiced',
+      bar_invoice_amount: null  // per-shift amount is bar charge; left null and computed at render
+    });
+    // Open invoice in a print window
+    const bar = shiftRows[0].bars || {};
+    const lineItems = shiftRows.map(r => ({
+      desc: (r.session_workers?.applications?.name || 'Worker')
+            + ' · ' + (f30FmtDateTime(r.clock_in_confirmed_at) || '')
+            + ' · ' + (parseFloat(r.shift_length_hours)||0) + 'h @ £30/hr',
+      amount: parseFloat(r.shift_length_hours||0) * 30
+    }));
+    const invoiceForRender = { invoice_number: invoiceNumber, period_start: from, period_end: to, total_amount: lineAmount, due_date: dueDate, sent_at: null, created_at: new Date().toISOString() };
+    openInvoicePrintWindow(renderInvoiceHtml(invoiceForRender, 'bar', lineItems, bar));
+    createdCount++;
+  }
+  closeOv('bar-invoice-batch');
+  alert('Generated '+createdCount+' invoice(s) covering '+rows.length+' shift(s).');
+  await loadBillingShifts();
+}
+
+// ---- Invoice HTML (Glasi branded, print-friendly) --------------------------
+
+function renderInvoiceHtml(invoice, type /* 'bar' | 'subscription' */, lineItems, bar) {
+  const issued = f30FmtDate(invoice.sent_at || invoice.created_at);
+  const total = type === 'bar' ? invoice.total_amount : invoice.amount;
+  const rows = lineItems.map(li => '<tr><td>'+li.desc+'</td><td class="amt">'+f30FmtCurrency(li.amount)+'</td></tr>').join('');
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">'
+    + '<title>'+invoice.invoice_number+'</title>'
+    + '<style>'
+    +   '@media print { @page { margin: 18mm } }'
+    +   'body{font-family:Inter,system-ui,sans-serif;color:#0F1F3D;max-width:760px;margin:24px auto;padding:24px}'
+    +   '.glasi-mark{font-family:Raleway,sans-serif;letter-spacing:8px;font-weight:700;font-size:24px;border:1.5px solid #0F1F3D;display:inline-block;padding:6px 14px;border-radius:6px}'
+    +   'h1{font-size:18px;margin:24px 0 6px}'
+    +   '.meta{font-size:13px;color:#475569;margin:4px 0}'
+    +   'table{width:100%;border-collapse:collapse;margin:18px 0}'
+    +   'th,td{text-align:left;padding:8px;border-bottom:1px solid #e2e8f0;font-size:13px}'
+    +   '.amt{text-align:right;font-family:JetBrains Mono,monospace}'
+    +   '.total-row td{font-weight:700;font-size:15px;border-bottom:none;border-top:2px solid #0F1F3D}'
+    +   '.foot{font-size:12px;color:#64748B;margin-top:24px;line-height:1.6}'
+    + '</style></head><body>'
+    + '<div class="glasi-mark">GLASI</div>'
+    + '<h1>'+(type === 'bar' ? 'Invoice' : 'Subscription Invoice')+' '+invoice.invoice_number+'</h1>'
+    + '<div class="meta">Period '+f30FmtDate(invoice.period_start)+' to '+f30FmtDate(invoice.period_end)+'</div>'
+    + '<div class="meta">Issued '+(issued || '(set on send)')+' · Due '+(f30FmtDate(invoice.due_date) || '(set on send)')+'</div>'
+    + '<h1>Billed to</h1>'
+    + '<div class="meta">'+(bar?.name || '')+'</div>'
+    + (bar?.address ? '<div class="meta">'+bar.address+'</div>' : '')
+    + '<table><thead><tr><th>Description</th><th class="amt">Amount</th></tr></thead>'
+    + '<tbody>'+rows
+    +   '<tr class="total-row"><td>Total</td><td class="amt">'+f30FmtCurrency(total)+'</td></tr>'
+    + '</tbody></table>'
+    + '<div class="foot">Payment within 30 days. Bank details on Glasi covering email. Reference '+invoice.invoice_number+' on payment.</div>'
+    + '</body></html>';
+}
+
+function openInvoicePrintWindow(html) {
+  const w = window.open('', '_blank', 'width=820,height=1000');
+  if(!w) { alert('Popup blocked. Allow popups for the dashboard to view invoices.'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  w.onload = () => { try { w.print(); } catch(e) {} };
+}
+
+// ---- Billing > Subscriptions sub-tab ---------------------------------------
+
+async function loadBillingSubscriptions() {
+  const container = document.getElementById('billing-subs-cards');
+  if(container) container.innerHTML = '<div class="empty">Loading...</div>';
+  if(!bars.length) {
+    const r = await sbGet('bars','?order=name.asc&select=id,name,address,zone_id,status,manager_name');
+    bars = Array.isArray(r) ? r : [];
+  }
+  const subs = await sbGet('bar_subscriptions',
+    '?order=created_at.desc&select=*,bars(id,name,zone_id,address)');
+  let invoices = [];
+  if(subs.length) {
+    const subIds = subs.map(s => s.id);
+    invoices = await sbGet('subscription_invoices',
+      '?bar_subscription_id=in.('+subIds.join(',')+')&order=period_start.desc&select=*');
+  }
+  const latestBySub = new Map();
+  for(const inv of invoices) {
+    if(!latestBySub.has(Number(inv.bar_subscription_id))) {
+      latestBySub.set(Number(inv.bar_subscription_id), inv);
+    }
+  }
+  allSubscriptions = subs.map(s => ({
+    ...s,
+    _latestInvoice: latestBySub.get(Number(s.id)) || null,
+    _allInvoices: invoices.filter(i => Number(i.bar_subscription_id) === Number(s.id))
+  }));
+  populateSubscriptionsFilters();
+  renderBillingSubscriptions();
+}
+
+function populateSubscriptionsFilters() {
+  const barSel = document.getElementById('bsub-bar-filter');
+  if(barSel && barSel.options.length <= 1) {
+    bars.forEach(b => {
+      const o = document.createElement('option');
+      o.value = String(b.id); o.textContent = b.name;
+      barSel.appendChild(o);
+    });
+  }
+}
+
+function readSubscriptionsFilters() {
+  return {
+    barId:  document.getElementById('bsub-bar-filter')?.value || '',
+    status: document.getElementById('bsub-status-filter')?.value || ''
+  };
+}
+
+function renderBillingSubscriptions() {
+  const container = document.getElementById('billing-subs-cards');
+  if(!container) return;
+  const f = readSubscriptionsFilters();
+  const filtered = allSubscriptions.filter(s => {
+    if(f.barId && String(s.bar_id) !== f.barId) return false;
+    if(f.status && s.status !== f.status) return false;
+    return true;
+  });
+  if(!filtered.length) { container.innerHTML = '<div class="empty">No subscriptions match your filters.</div>'; return; }
+  container.innerHTML = filtered.map(s => renderSubscriptionCard(s)).join('');
+}
+
+function renderSubscriptionCard(s) {
+  const bar = s.bars || {};
+  const pill = computeSubscriptionPill(s);
+  const fee = parseFloat(s.monthly_fee || 0);
+  const discount = parseFloat(s.discount_amount || 0);
+  const netCharge = (fee - discount).toFixed(2);
+  const cycle = s.billing_cycle_day || 1;
+  const latest = s._latestInvoice;
+  const nextBill = (() => {
+    const now = new Date();
+    const nb = new Date(now.getFullYear(), now.getMonth(), cycle);
+    if(nb <= now) nb.setMonth(nb.getMonth() + 1);
+    return f30FmtDate(nb);
+  })();
+
+  const startedLine = s.started_at ? 'Started ' + f30FmtDate(s.started_at) : 'Not started';
+  const trialLine = s.status === 'trial' && s.trial_ends_at ? ' · Trial ends ' + f30FmtDate(s.trial_ends_at) : '';
+
+  const topRow = '<div class="rc-top-row">'
+    + '<span class="rc-bar-name">'+(bar.name || 'Unknown')+'</span>'
+    + '<span class="rc-shift-length">'+f30FmtCurrency(netCharge)+'/mo</span>'
+    + (discount > 0 ? '<span class="rc-shift-length">'+f30FmtCurrency(fee)+' less '+f30FmtCurrency(discount)+' discount</span>' : '')
+    + '<span class="rc-bar-id">BAR ID : '+(bar.id || s.bar_id)+'</span>'
+    + '</div>';
+
+  const statusRow = '<div class="rc-status-row">'
+    + '<span class="rc-status-pill rc-status-'+pill.slug+'">'+pill.label+'</span>'
+    + '<span class="pu-date">'+startedLine+trialLine+'</span>'
+    + '</div>';
+
+  const body = '<div class="rc-body">'
+    + f30TsRow('Billing cycle', 'Day '+cycle+' of each month')
+    + f30TsRow('Next bill date', nextBill)
+    + f30TsRow('Latest invoice', latest
+        ? latest.invoice_number + ' · ' + (latest.status || 'draft') + (latest.paid_at ? ' · paid ' + f30FmtDate(latest.paid_at) : '')
+        : 'None yet')
+    + (s.notes ? '<div class="rc-timestamp-row" style="margin-top:6px;"><span class="rc-ts-label">Notes</span><span class="rc-ts-value" style="font-family:Inter,sans-serif;font-weight:400;text-align:right;max-width:60%;">'+s.notes+'</span></div>' : '')
+    + '</div>';
+
+  const actions = '<div class="rc-actions" style="flex-wrap:wrap;">'
+    + subscriptionStateButtons(s)
+    + '</div>';
+
+  return '<div class="paired-unit-card" id="sub-'+s.id+'">'
+    + topRow + statusRow + body + actions
+    + '</div>';
+}
+
+function subscriptionStateButtons(s) {
+  let html = '';
+  if(s.status === 'inactive') {
+    html += '<button class="rc-action-btn" onclick="startSubscriptionTrial('+s.id+')">Start Trial</button>';
+    html += '<button class="rc-action-btn" onclick="resumeSubscription('+s.id+')">Resume Active</button>';
+  }
+  if(s.status === 'trial') {
+    html += '<button class="rc-action-btn" onclick="convertSubscriptionToActive('+s.id+')">Convert to Active</button>';
+  }
+  if(s.status === 'active') {
+    html += '<button class="rc-action-btn" onclick="pauseSubscription('+s.id+')">Pause</button>';
+  }
+  // Generate this month's invoice (any status, but typically active or trial)
+  if(s.status === 'active' || s.status === 'trial') {
+    html += '<button class="rc-action-btn" onclick="generateThisMonthInvoice('+s.id+')">Generate Invoice for '+f30FmtMonth(new Date())+'</button>';
+  }
+  // Mark sent / paid on latest draft / sent invoice
+  const latest = s._latestInvoice;
+  if(latest && latest.status === 'draft') {
+    html += '<button class="rc-action-btn" onclick="markSubscriptionInvoiceSent('+latest.id+')">Mark Sent</button>';
+  }
+  if(latest && latest.status === 'sent') {
+    html += '<button class="rc-action-btn" onclick="markSubscriptionInvoicePaid('+latest.id+')">Mark Paid</button>';
+  }
+  // Cancel (soft)
+  html += '<button class="rc-action-btn rc-action-btn-danger" onclick="cancelSubscription('+s.id+')">Cancel</button>';
+  return html;
+}
+
+// ---- Subscription state machine actions ------------------------------------
+
+async function startSubscriptionTrial(subId) {
+  const now = new Date();
+  const trialEnd = new Date(now); trialEnd.setDate(trialEnd.getDate() + 30);
+  await sbPatch('bar_subscriptions', '?id=eq.'+subId,
+    { status: 'trial', started_at: now.toISOString(), trial_ends_at: trialEnd.toISOString(), paused_at: null, cancelled_at: null });
+  await loadBillingSubscriptions();
+}
+
+async function convertSubscriptionToActive(subId) {
+  const now = new Date().toISOString();
+  await sbPatch('bar_subscriptions', '?id=eq.'+subId,
+    { status: 'active', trial_ends_at: now, paused_at: null });
+  await loadBillingSubscriptions();
+}
+
+async function pauseSubscription(subId) {
+  await sbPatch('bar_subscriptions', '?id=eq.'+subId,
+    { status: 'inactive', paused_at: new Date().toISOString() });
+  await loadBillingSubscriptions();
+}
+
+async function resumeSubscription(subId) {
+  const sub = allSubscriptions.find(s => Number(s.id) === Number(subId));
+  const patch = { status: 'active', paused_at: null, cancelled_at: null };
+  if(!sub?.started_at) patch.started_at = new Date().toISOString();
+  await sbPatch('bar_subscriptions', '?id=eq.'+subId, patch);
+  await loadBillingSubscriptions();
+}
+
+async function cancelSubscription(subId) {
+  if(!confirm('Cancel this subscription? It will be moved to Inactive with cancelled_at set. The row is retained for audit.')) return;
+  await sbPatch('bar_subscriptions', '?id=eq.'+subId,
+    { status: 'inactive', cancelled_at: new Date().toISOString(), paused_at: null });
+  await loadBillingSubscriptions();
+}
+
+// ---- Subscription invoice generation ---------------------------------------
+
+async function nextSubscriptionInvoiceNumber() {
+  const year = new Date().getFullYear();
+  const prefix = 'SUB-'+year+'-';
+  const rows = await sbGet('subscription_invoices',
+    '?invoice_number=like.'+encodeURIComponent(prefix+'*')+'&order=invoice_number.desc&limit=1&select=invoice_number');
+  let lastN = 0;
+  if(rows?.[0]?.invoice_number) {
+    const tail = rows[0].invoice_number.slice(prefix.length);
+    const n = parseInt(tail, 10);
+    if(Number.isFinite(n)) lastN = n;
+  }
+  return prefix + String(lastN + 1).padStart(3, '0');
+}
+
+async function generateThisMonthInvoice(subId) {
+  const sub = allSubscriptions.find(s => Number(s.id) === Number(subId));
+  if(!sub) { alert('Subscription not found.'); return; }
+  const now = new Date();
+  const cycle = sub.billing_cycle_day || 1;
+  // Period: from cycle day of current month to (cycle day - 1) of next month
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), cycle);
+  if(periodStart > now) periodStart.setMonth(periodStart.getMonth() - 1);
+  const periodEnd = new Date(periodStart); periodEnd.setMonth(periodEnd.getMonth() + 1); periodEnd.setDate(periodEnd.getDate() - 1);
+  const fmt = d => d.toISOString().slice(0,10);
+  // Avoid duplicate invoice for the same period
+  const existing = sub._allInvoices?.find(i => i.period_start === fmt(periodStart) && i.period_end === fmt(periodEnd));
+  if(existing) {
+    alert('An invoice already exists for this period: '+existing.invoice_number+'.');
+    return;
+  }
+  const fee = parseFloat(sub.monthly_fee||0);
+  const discount = parseFloat(sub.discount_amount||0);
+  const amount = (fee - discount).toFixed(2);
+  const invoiceNumber = await nextSubscriptionInvoiceNumber();
+  let inserted = null;
+  try {
+    inserted = await sbPost('subscription_invoices', {
+      bar_subscription_id: subId,
+      invoice_number: invoiceNumber,
+      period_start: fmt(periodStart),
+      period_end: fmt(periodEnd),
+      amount: amount,
+      status: 'draft'
+    });
+  } catch(e) { console.error('subscription_invoices insert failed', e); }
+  if(!inserted?.[0]?.id) { alert('Failed to create invoice.'); return; }
+  // Open invoice print window
+  const lineItems = [{ desc: 'Glasi monthly subscription · '+f30FmtMonth(periodStart), amount: fee }];
+  if(discount > 0) lineItems.push({ desc: 'Discount', amount: -discount });
+  const invoiceForRender = { invoice_number: invoiceNumber, period_start: fmt(periodStart), period_end: fmt(periodEnd), amount: parseFloat(amount), due_date: null, sent_at: null, created_at: new Date().toISOString() };
+  openInvoicePrintWindow(renderInvoiceHtml(invoiceForRender, 'subscription', lineItems, sub.bars || {}));
+  await loadBillingSubscriptions();
+}
+
+async function markSubscriptionInvoiceSent(invoiceId) {
+  const now = new Date();
+  const due = new Date(now); due.setDate(due.getDate() + 30);
+  await sbPatch('subscription_invoices', '?id=eq.'+invoiceId,
+    { status: 'sent', sent_at: now.toISOString(), due_date: due.toISOString().slice(0,10) });
+  await loadBillingSubscriptions();
+}
+
+async function markSubscriptionInvoicePaid(invoiceId) {
+  await sbPatch('subscription_invoices', '?id=eq.'+invoiceId,
+    { status: 'paid', paid_at: new Date().toISOString() });
+  await loadBillingSubscriptions();
+}
+
+// ---- Add subscription modal ------------------------------------------------
+
+function openAddSubscriptionModal() {
+  // Populate bar dropdown with bars that have no active/trial subscription
+  const sel = document.getElementById('as-bar');
+  sel.innerHTML = '<option value="">Select bar</option>';
+  const taken = new Set(allSubscriptions.filter(s => s.status === 'active' || s.status === 'trial').map(s => Number(s.bar_id)));
+  bars.filter(b => !taken.has(Number(b.id))).forEach(b => {
+    const o = document.createElement('option');
+    o.value = String(b.id); o.textContent = b.name;
+    sel.appendChild(o);
+  });
+  document.getElementById('as-fee').value = '349.00';
+  document.getElementById('as-discount').value = '0.00';
+  document.getElementById('as-status').value = 'inactive';
+  document.getElementById('as-cycle').value = '1';
+  document.getElementById('as-notes').value = '';
+  openOv('add-subscription');
+}
+
+async function saveNewSubscription() {
+  const barId = parseInt(document.getElementById('as-bar').value, 10);
+  if(!barId) { alert('Please pick a bar.'); return; }
+  const fee = parseFloat(document.getElementById('as-fee').value || '0');
+  const discount = parseFloat(document.getElementById('as-discount').value || '0');
+  const status = document.getElementById('as-status').value;
+  const cycle = parseInt(document.getElementById('as-cycle').value || '1', 10);
+  const notes = document.getElementById('as-notes').value.trim() || null;
+  const now = new Date().toISOString();
+  const trialEnd = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString(); })();
+  const payload = {
+    bar_id: barId,
+    monthly_fee: fee.toFixed(2),
+    discount_amount: discount.toFixed(2),
+    status: status,
+    billing_cycle_day: cycle,
+    notes: notes,
+    started_at: status === 'inactive' ? null : now,
+    trial_ends_at: status === 'trial' ? trialEnd : null
+  };
+  let inserted = null;
+  try { inserted = await sbPost('bar_subscriptions', payload); }
+  catch(e) { inserted = null; console.error('saveNewSubscription failed', e); }
+  if(!inserted?.[0]?.id) {
+    alert('Failed to create subscription. The unique-active-per-bar index may have rejected it (one active or trial subscription per bar at a time).');
+    return;
+  }
+  closeOv('add-subscription');
+  await loadBillingSubscriptions();
 }
 
 </script>
