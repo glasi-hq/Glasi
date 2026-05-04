@@ -1207,7 +1207,7 @@
 
 <!-- OVERLAY: ADD BAR -->
 <div class="overlay" id="ov-add-bar">
-  <div class="modal">
+  <div class="modal" style="max-width:560px;max-height:90vh;overflow-y:auto;">
     <div class="modal-title">Add Bar</div>
     <label>Bar Name</label>
     <input class="field" type="text" id="bar-name" placeholder="e.g. Dancing Man Brewery" />
@@ -1233,9 +1233,86 @@
     <input class="field" type="text" id="bar-keyword" placeholder="e.g. WOOL - workers reply this to accept" />
     <label>Notes</label>
     <textarea class="field" id="bar-notes" rows="3" placeholder="Entrance details, parking, anything useful..."></textarea>
+
+    <!-- F-26: initial manager fields. The bar's first manager (paperwork
+         signer) is created at the same time as the bar. Additional managers
+         are added later via the bar admin overlay. -->
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:6px;">Initial Manager</div>
+      <div style="font-size:12px;color:var(--grey);margin-bottom:14px;line-height:1.5;">The bar's first manager, typically the paperwork signer. They will receive an invite email to set their password. More managers can be added later.</div>
+    </div>
+    <label>Manager Name</label>
+    <input class="field" type="text" id="bar-mgr-name" placeholder="e.g. Aidan" />
+    <label>Manager Email</label>
+    <input class="field" type="email" id="bar-mgr-email" placeholder="manager@bar.com" />
+    <label>Initial PIN (4 digits)</label>
+    <input class="field" type="text" id="bar-mgr-pin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="0000" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+    <div id="add-bar-error" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px;"></div>
+
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeOv('add-bar')">Cancel</button>
-      <button class="confirm-btn" onclick="saveBar()">Add Bar</button>
+      <button class="confirm-btn" id="add-bar-btn" onclick="saveBar()">Add Bar + Manager</button>
+    </div>
+  </div>
+</div>
+
+<!-- F-26: edit-bar overlay (was missing entirely). Pencil-edit on a bar card
+     opens this. Top section: bar fields. Bottom section: managers list with
+     add/edit/revoke flows. -->
+<div class="overlay" id="ov-edit-bar">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-title" id="edit-bar-title">Edit Bar</div>
+
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--ice);text-transform:uppercase;margin-bottom:14px;">Managers</div>
+      <div id="edit-bar-managers-list" style="margin-bottom:12px;">
+        <!-- rendered by renderBarManagersList -->
+      </div>
+      <button class="ghost-btn" onclick="openAddManagerModal()" style="width:100%;">+ Add Manager</button>
+    </div>
+
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="cancel-btn" onclick="closeOv('edit-bar')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- F-26: add-manager sub-modal. Opens from "+ Add Manager" inside ov-edit-bar.
+     Calls the admin-create-bar-manager Edge Function. -->
+<div class="overlay" id="ov-add-manager">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">Add Manager</div>
+    <div class="modal-sub" id="add-manager-bar-name">—</div>
+    <label>Name</label>
+    <input class="field" type="text" id="add-mgr-name" placeholder="e.g. Wolf" />
+    <label>Email</label>
+    <input class="field" type="email" id="add-mgr-email" placeholder="manager@bar.com" />
+    <label>Initial PIN (4 digits)</label>
+    <input class="field" type="text" id="add-mgr-pin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="0000" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+    <div id="add-mgr-error" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px;"></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('add-manager')">Cancel</button>
+      <button class="confirm-btn" id="add-mgr-btn" onclick="addBarManager()">Send Invite + Set PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- F-26: edit-manager sub-modal. Opens from a manager row in ov-edit-bar.
+     Allows name update via PATCH, PIN regenerate via set_bar_manager_pin RPC.
+     Email is read-only (auth user email change is its own flow, deferred). -->
+<div class="overlay" id="ov-edit-manager">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">Edit Manager</div>
+    <label>Name</label>
+    <input class="field" type="text" id="edit-mgr-name" />
+    <label>Email</label>
+    <input class="field" type="email" id="edit-mgr-email" disabled />
+    <label>New PIN (4 digits, optional)</label>
+    <input class="field" type="text" id="edit-mgr-pin" maxlength="4" inputmode="numeric" placeholder="Leave blank to keep current PIN" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+    <div id="edit-mgr-error" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px;"></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeOv('edit-manager')">Cancel</button>
+      <button class="confirm-btn" id="edit-mgr-btn" onclick="saveManagerEdit()">Save</button>
     </div>
   </div>
 </div>
@@ -2860,6 +2937,7 @@ function renderBars(bars, contacts) {
           <option value="paused" ${b.status==='paused'?'selected':''}>Paused</option>
         </select>
         <button class="bar-action-btn" onclick="openAddContact(${b.id}, '${b.name.replace(/'/g,"\\'")}')">+ Contact</button>
+        <button class="bar-action-btn" onclick="openEditBar(${b.id})" style="background:rgba(168,216,234,0.1);color:var(--ice);border:1px solid rgba(168,216,234,0.3);">Edit / Managers</button>
       </div>
       ${barContacts.length?`
         <div class="bar-card-section">
@@ -2915,21 +2993,268 @@ function copyText(text, btn) {
 }
 
 async function saveBar() {
+  // F-26: bar + initial manager created atomically. Bar row is INSERTed
+  // first (returns the new id). Then the admin-create-bar-manager Edge
+  // Function creates the auth user via inviteUserByEmail, INSERTs the
+  // bar_managers row, and sets the initial PIN via the RPC.
+  const errEl = document.getElementById('add-bar-error');
+  if(errEl) errEl.textContent = '';
+  const btn = document.getElementById('add-bar-btn');
+
   const name = document.getElementById('bar-name').value.trim();
-  if(!name) return;
+  if(!name) { if(errEl) errEl.textContent = 'Bar name required.'; return; }
+
+  const mgrName = document.getElementById('bar-mgr-name').value.trim();
+  const mgrEmail = document.getElementById('bar-mgr-email').value.trim().toLowerCase();
+  const mgrPin = document.getElementById('bar-mgr-pin').value.trim();
+  if(!mgrName) { if(errEl) errEl.textContent = 'Initial manager name required.'; return; }
+  if(!mgrEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mgrEmail)) {
+    if(errEl) errEl.textContent = 'Valid manager email required.'; return;
+  }
+  if(!/^\d{4}$/.test(mgrPin)) {
+    if(errEl) errEl.textContent = 'PIN must be exactly 4 digits.'; return;
+  }
+
+  if(btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+
   const keyword = document.getElementById('bar-keyword').value.trim().toUpperCase()||null;
-  await sbPost('bars', {
-    name,
-    address: document.getElementById('bar-address').value.trim()||null,
-    google_maps_link: document.getElementById('bar-maps').value.trim()||null,
-    zone_id: parseInt(document.getElementById('bar-zone').value),
-    status: document.getElementById('bar-status').value,
-    notes: document.getElementById('bar-notes').value.trim()||null,
-    zoom_keyword: keyword
-  });
-  ['bar-name','bar-address','bar-maps','bar-notes','bar-keyword'].forEach(id=>document.getElementById(id).value='');
+
+  // Step 1: INSERT bar row
+  let barRow;
+  try {
+    const inserted = await sbPost('bars', {
+      name,
+      address: document.getElementById('bar-address').value.trim()||null,
+      google_maps_link: document.getElementById('bar-maps').value.trim()||null,
+      zone_id: parseInt(document.getElementById('bar-zone').value),
+      status: document.getElementById('bar-status').value,
+      notes: document.getElementById('bar-notes').value.trim()||null,
+      zoom_keyword: keyword
+    });
+    barRow = Array.isArray(inserted) ? inserted[0] : inserted;
+    if(!barRow?.id) throw new Error('Bar insert returned no id');
+  } catch(e) {
+    if(errEl) errEl.textContent = 'Could not create bar: ' + (e.message || 'unknown');
+    if(btn) { btn.disabled = false; btn.textContent = 'Add Bar + Manager'; }
+    return;
+  }
+
+  // Step 2: create initial manager via Edge Function (auth user + bar_managers row + PIN)
+  try {
+    const { data: { session } } = await sbAuth.auth.getSession();
+    const token = session?.access_token || KEY;
+    const resp = await fetch(SB + '/functions/v1/admin-create-bar-manager', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': KEY,
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        bar_id: barRow.id,
+        name: mgrName,
+        email: mgrEmail,
+        initial_pin: mgrPin
+      })
+    });
+    const result = await resp.json().catch(() => ({}));
+    if(!resp.ok || !result.ok) {
+      throw new Error(result.error || ('Edge Function HTTP ' + resp.status));
+    }
+  } catch(e) {
+    if(errEl) errEl.textContent = 'Bar created (id=' + barRow.id + ') but manager creation failed: ' + (e.message || 'unknown') + '. Add manager manually via Edit Bar.';
+    if(btn) { btn.disabled = false; btn.textContent = 'Add Bar + Manager'; }
+    loadBars();
+    return;
+  }
+
+  ['bar-name','bar-address','bar-maps','bar-notes','bar-keyword','bar-mgr-name','bar-mgr-email','bar-mgr-pin'].forEach(id=>document.getElementById(id).value='');
+  if(btn) { btn.disabled = false; btn.textContent = 'Add Bar + Manager'; }
   closeOv('add-bar');
   loadBars();
+}
+
+// F-26: edit-bar overlay support + manager management within it.
+let editingBarId = null;
+let editingManagerId = null;
+
+async function openEditBar(barId) {
+  editingBarId = barId;
+  const bar = bars.find(b => b.id === barId);
+  if(!bar) return;
+  document.getElementById('edit-bar-title').textContent = 'Edit Bar: ' + bar.name;
+  await renderBarManagersList(barId);
+  openOv('edit-bar');
+}
+
+async function renderBarManagersList(barId) {
+  const listEl = document.getElementById('edit-bar-managers-list');
+  if(!listEl) return;
+  listEl.innerHTML = '<div style="font-size:12px;color:var(--grey);">Loading...</div>';
+
+  // F-26 Decision 3: two-query client-side. bar_managers list, then auth.users
+  // emails by id. PostgREST doesn't auto-embed cross-schema FK to auth.users.
+  let managers = [];
+  try {
+    managers = await sbGet('bar_managers',
+      '?bar_id=eq.' + barId + '&revoked_at=is.null&order=created_at.asc&select=id,bar_id,auth_user_id,name,created_at') || [];
+  } catch(e) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--red);">Could not load managers.</div>';
+    return;
+  }
+
+  if(!managers.length) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--grey);font-style:italic;padding:8px 0;">No managers yet. Add one below.</div>';
+    return;
+  }
+
+  // Email lookup via auth.users — one query for all auth_user_ids on this bar.
+  const authIds = [...new Set(managers.map(m => m.auth_user_id))].filter(Boolean);
+  let emailByAuthId = {};
+  if(authIds.length) {
+    try {
+      // PostgREST exposes auth schema only via service-role; for anon-key callers
+      // emails come back via a view or are unavailable. Best-effort fetch.
+      const idsQuery = authIds.map(id => 'id.eq.' + id).join(',');
+      const users = await sbGet('users', '?or=(' + idsQuery + ')&select=id,email') || [];
+      users.forEach(u => { emailByAuthId[u.id] = u.email; });
+    } catch(e) { /* email column will display as '—' */ }
+  }
+
+  listEl.innerHTML = managers.map(m => {
+    const email = emailByAuthId[m.auth_user_id] || '(email lookup unavailable)';
+    return '<div class="invite-row" id="bar-mgr-row-' + m.id + '" style="grid-template-columns:1.4fr 1fr auto auto;">'
+      + '<div>'
+      +   '<div class="invite-row-name">' + (m.name || '(no name)') + '</div>'
+      +   '<div class="invite-row-meta">' + email + '</div>'
+      + '</div>'
+      + '<div><span class="invite-row-status-pill is-confirmed">Active</span></div>'
+      + '<button class="invite-row-reinvite" style="background:var(--navy-mid);color:var(--ice);border:1px solid var(--border);" onclick="openEditManagerModal(' + m.id + ')">Edit</button>'
+      + '<button class="invite-row-reinvite" style="background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.35);" onclick="confirmRevokeManager(' + m.id + ',\'' + (m.name || '').replace(/'/g, "\\'") + '\')">Revoke</button>'
+      + '</div>';
+  }).join('');
+}
+
+function openAddManagerModal() {
+  if(!editingBarId) return;
+  const bar = bars.find(b => b.id === editingBarId);
+  document.getElementById('add-manager-bar-name').textContent = 'For: ' + (bar?.name || 'Bar');
+  ['add-mgr-name','add-mgr-email','add-mgr-pin'].forEach(id => document.getElementById(id).value = '');
+  const errEl = document.getElementById('add-mgr-error');
+  if(errEl) errEl.textContent = '';
+  const btn = document.getElementById('add-mgr-btn');
+  if(btn) { btn.disabled = false; btn.textContent = 'Send Invite + Set PIN'; }
+  openOv('add-manager');
+}
+
+async function addBarManager() {
+  if(!editingBarId) return;
+  const errEl = document.getElementById('add-mgr-error');
+  if(errEl) errEl.textContent = '';
+  const btn = document.getElementById('add-mgr-btn');
+
+  const name = document.getElementById('add-mgr-name').value.trim();
+  const email = document.getElementById('add-mgr-email').value.trim().toLowerCase();
+  const pin = document.getElementById('add-mgr-pin').value.trim();
+  if(!name) { if(errEl) errEl.textContent = 'Name required.'; return; }
+  if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    if(errEl) errEl.textContent = 'Valid email required.'; return;
+  }
+  if(!/^\d{4}$/.test(pin)) { if(errEl) errEl.textContent = 'PIN must be exactly 4 digits.'; return; }
+
+  if(btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+
+  try {
+    const { data: { session } } = await sbAuth.auth.getSession();
+    const token = session?.access_token || KEY;
+    const resp = await fetch(SB + '/functions/v1/admin-create-bar-manager', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': KEY,
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ bar_id: editingBarId, name, email, initial_pin: pin })
+    });
+    const result = await resp.json().catch(() => ({}));
+    if(!resp.ok || !result.ok) throw new Error(result.error || ('HTTP ' + resp.status));
+  } catch(e) {
+    if(errEl) errEl.textContent = 'Manager creation failed: ' + (e.message || 'unknown');
+    if(btn) { btn.disabled = false; btn.textContent = 'Send Invite + Set PIN'; }
+    return;
+  }
+
+  closeOv('add-manager');
+  await renderBarManagersList(editingBarId);
+}
+
+async function openEditManagerModal(managerId) {
+  editingManagerId = managerId;
+  const errEl = document.getElementById('edit-mgr-error');
+  if(errEl) errEl.textContent = '';
+  document.getElementById('edit-mgr-pin').value = '';
+
+  const rows = await sbGet('bar_managers', '?id=eq.' + managerId + '&select=id,name,auth_user_id') || [];
+  const m = rows[0];
+  if(!m) return;
+  document.getElementById('edit-mgr-name').value = m.name || '';
+
+  // Email lookup (best effort)
+  let email = '(email lookup unavailable)';
+  try {
+    const users = await sbGet('users', '?id=eq.' + m.auth_user_id + '&select=email') || [];
+    if(users[0]?.email) email = users[0].email;
+  } catch(e) { /* ignore */ }
+  document.getElementById('edit-mgr-email').value = email;
+
+  const btn = document.getElementById('edit-mgr-btn');
+  if(btn) { btn.disabled = false; btn.textContent = 'Save'; }
+  openOv('edit-manager');
+}
+
+async function saveManagerEdit() {
+  if(!editingManagerId) return;
+  const errEl = document.getElementById('edit-mgr-error');
+  if(errEl) errEl.textContent = '';
+  const btn = document.getElementById('edit-mgr-btn');
+  const newName = document.getElementById('edit-mgr-name').value.trim();
+  const newPin = document.getElementById('edit-mgr-pin').value.trim();
+
+  if(!newName) { if(errEl) errEl.textContent = 'Name required.'; return; }
+  if(newPin && !/^\d{4}$/.test(newPin)) {
+    if(errEl) errEl.textContent = 'PIN must be exactly 4 digits, or blank to keep current.'; return;
+  }
+
+  if(btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  try {
+    await sbPatch('bar_managers', '?id=eq.' + editingManagerId, { name: newName, updated_at: new Date().toISOString() });
+    if(newPin) {
+      const { data, error } = await sbAuth.rpc('set_bar_manager_pin', {
+        manager_id: editingManagerId,
+        new_pin: newPin
+      });
+      if(error || data !== true) throw new Error(error?.message || 'PIN set returned false');
+    }
+  } catch(e) {
+    if(errEl) errEl.textContent = 'Save failed: ' + (e.message || 'unknown');
+    if(btn) { btn.disabled = false; btn.textContent = 'Save'; }
+    return;
+  }
+
+  closeOv('edit-manager');
+  if(editingBarId) await renderBarManagersList(editingBarId);
+}
+
+async function confirmRevokeManager(managerId, managerName) {
+  if(!confirm('Revoke ' + (managerName || 'this manager') + '?\n\nThey will be unable to log in or submit requests. This is reversible from the database (clear revoked_at).')) return;
+  try {
+    await sbPatch('bar_managers', '?id=eq.' + managerId, { revoked_at: new Date().toISOString() });
+  } catch(e) {
+    alert('Revoke failed: ' + (e.message || 'unknown'));
+    return;
+  }
+  if(editingBarId) await renderBarManagersList(editingBarId);
 }
 
 async function updateBarStatus(barId, status) {
