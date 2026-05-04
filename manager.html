@@ -733,6 +733,13 @@
       return;
     }
 
+    // F-26 login fix: synchronously propagate JWT into shared H header
+    // before Stage 2/3 fetches. The onAuthStateChange callback runs
+    // asynchronously and isn't reliable as the auth source for fetches
+    // that follow signInWithPassword in the same call stack. Mirrors the
+    // pattern at line 773 in the session-restore handler.
+    H.Authorization = 'Bearer ' + data.session.access_token;
+
     // F-26: Stage 2 — bar_managers lookup by auth_user_id. Filters revoked_at
     // IS NULL so revoked managers cannot proceed even with valid Auth session.
     const authUserId = data.session.user.id;
