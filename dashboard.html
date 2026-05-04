@@ -886,6 +886,41 @@
   </div>
 </div>
 
+<!-- F-31: Points correction modal -->
+<div id="ov-points-correction" class="overlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">Add Points Correction</div>
+    <div class="modal-sub">Append a correction row to points_ledger. The original disputed row is never mutated.</div>
+    <input type="hidden" id="pc-app-id">
+    <input type="hidden" id="pc-shift-id">
+    <input type="hidden" id="pc-request-id">
+    <input type="hidden" id="pc-session-id">
+    <input type="hidden" id="pc-source">
+
+    <label>Worker</label>
+    <div id="pc-worker-name" style="font-size:14px;color:var(--white);margin-bottom:12px;"></div>
+
+    <label>Amount (positive or negative)</label>
+    <input id="pc-amount" type="number" step="1" class="field" style="width:100%;" placeholder="e.g. 15 or -25">
+
+    <label>Disputed event (optional)</label>
+    <select id="pc-disputed-event" class="field" style="width:100%;">
+      <option value="">Independent correction (not linked)</option>
+    </select>
+
+    <label>Worker claim / dispute description</label>
+    <textarea id="pc-worker-claim" class="field" style="width:100%;" rows="2" placeholder="What the worker said, paraphrased"></textarea>
+
+    <label>Decision rationale (required for audit)</label>
+    <textarea id="pc-rationale" class="field" style="width:100%;" rows="3" placeholder="Why this correction was applied"></textarea>
+
+    <div class="modal-actions">
+      <button class="cancel-btn"  onclick="closeOv('points-correction')">Cancel</button>
+      <button class="confirm-btn" onclick="submitPointsCorrection()">Add Correction</button>
+    </div>
+  </div>
+</div>
+
 <!-- F-30: Add subscription modal -->
 <div id="ov-add-subscription" class="overlay">
   <div class="modal">
@@ -5312,6 +5347,7 @@ async function awardPoints(applicationId, awards, opts = {}) {
     shift_id: a.shiftId || opts.shiftId || null,
     source_type: a.sourceType || opts.sourceType || null,
     source_id: a.sourceId || opts.sourceId || null,
+    correction_for_event_id: a.correctionForEventId || opts.correctionForEventId || null, // F-31
     awarded_by: a.awardedBy || opts.awardedBy || 'system',
     metadata: a.metadata || null,
     notes: a.notes || null
@@ -7598,12 +7634,15 @@ async function loadSessionsHistory(zoneId) {
 async function loadSessionDetail(sessionId) {
   const listEl = document.getElementById('sessions-history-list');
 
-  // Fetch session data
-  const [sessionArr, requests, sessionShifts, invites] = await Promise.all([
+  // Fetch session data. F-31: ledgerRows + swRows added for the new
+  // WORKERS · POINTS section.
+  const [sessionArr, requests, sessionShifts, invites, ledgerRows, swRows] = await Promise.all([
     sbGet('sessions', '?id=eq.'+sessionId+'&select=id,session_date,start_time,end_time,zone_id,zones(name)'),
     sbGet('shift_requests', '?session_id=eq.'+sessionId+'&select=*,bars(name)'),
     sbGet('shifts', '?session_id=eq.'+sessionId+'&select=*,session_workers(worker_name,application_id,dispatched_at,departed_at,clock_in_at)'),
-    sbGet('session_invites', '?session_id=eq.'+sessionId+'&select=application_id,attendance_confirmed,joined_at')
+    sbGet('session_invites', '?session_id=eq.'+sessionId+'&select=application_id,attendance_confirmed,joined_at'),
+    sbGet('points_ledger', '?session_id=eq.'+sessionId+'&order=awarded_at.asc&select=id,application_id,amount,reason,shift_id,source_type,source_id,awarded_at,awarded_by,metadata,notes,correction_for_event_id'),
+    sbGet('session_workers', '?session_id=eq.'+sessionId+'&select=id,application_id,worker_name,status,points_earned,applications(id,name,tier)')
   ]);
 
   const session = sessionArr[0];
@@ -7629,8 +7668,22 @@ async function loadSessionDetail(sessionId) {
     + '</div>'
     + '</div>'
 
+    // F-31: WORKERS · POINTS section. Per-worker row with total + expandable
+    // breakdown + Add Correction button.
+    + '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">WORKERS &middot; POINTS</div>'
+    + (() => {
+        const ledgerByApp = new Map();
+        for(const r of (ledgerRows || [])) {
+          const id = Number(r.application_id);
+          if(!ledgerByApp.has(id)) ledgerByApp.set(id, []);
+          ledgerByApp.get(id).push(r);
+        }
+        if(!swRows || swRows.length === 0) return '<div class="empty">No workers in this session.</div>';
+        return swRows.map(sw => renderSessionWorkerPointsRow(sw, ledgerByApp.get(Number(sw.application_id)) || [], sessionId)).join('');
+      })()
+
     // Shifts list
-    + '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">SHIFTS</div>'
+    + '<div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--grey);margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);">SHIFTS</div>'
     + (sessionShifts.length === 0
       ? '<div style="font-size:13px;color:var(--grey);padding:16px 0;">No shifts completed in this session.</div>'
       : sessionShifts.map(s => {
@@ -9099,9 +9152,17 @@ async function openPairedUnit(shiftId) {
     +     f30FeedbackBlock('Bar to worker', p.bar_rating, p.bar_notes, p.would_want_again)
     +     f30FeedbackBlock('Worker to bar', wf?.stars, wf?.comment, null)
     +   '</div>'
+    + '</div>'
+    // F-31: Worker Points section. Filled async by loadShiftPoints once the
+    // outer HTML is in the DOM.
+    + '<div class="pu-detail-section">'
+    +   '<h3>Worker Points</h3>'
+    +   '<div id="shp-points-' + p.id + '"><div class="empty">Loading points...</div></div>'
     + '</div>';
 
   document.getElementById('shp-body').innerHTML = html;
+  // F-31: populate the points block now that #shp-points-${id} is in the DOM.
+  loadShiftPoints(p);
 }
 
 // ---- Billing > Shifts sub-tab (transactional) ------------------------------
@@ -9662,6 +9723,289 @@ async function saveNewSubscription() {
   }
   closeOv('add-subscription');
   await loadBillingSubscriptions();
+}
+
+// ============================================================================
+// F-31: Worker points visibility on shift + session detail screens, plus
+// manual correction capability for dispute resolution. points_ledger is
+// append-only per CORE; corrections are NEW rows linked to the disputed
+// event, never mutations.
+// ============================================================================
+
+const POINTS_REASON_LABELS = {
+  genesis:                          'Joined Glasi',
+  joined_session:                   'Joined session',
+  selected_for_shift:               'Selected for shift',
+  responded_available:              'Responded available',
+  responded_available_under_30s:    'Responded available (under 30s)',
+  responded_pass:                   "I'll pass",
+  completed_shift:                  'Completed shift',
+  arrived_early:                    'Arrived early',
+  arrived_on_time:                  'Arrived on time',
+  no_response:                      'No response',
+  no_show:                          'No-show',
+  manual_adjustment:                'Manual adjustment',
+  manual_correction:                'Manual correction',
+  tier_promoted:                    'Tier promotion',
+  follow_instagram:                 'Followed @glasi_official',
+  post_tag_instagram:               'Tagged @glasi_official',
+  instagram_post_bonus:             'Instagram post bonus'
+};
+
+function f31ReasonLabel(reason) {
+  return POINTS_REASON_LABELS[reason] || reason || 'Unknown';
+}
+
+// ---- F-31 shift detail extension -------------------------------------------
+
+async function loadShiftPoints(p) {
+  const target = document.getElementById('shp-points-' + p.id);
+  if(!target) return;
+  const sw = p.session_workers || {};
+  const appId = sw.application_id;
+  if(!appId) {
+    target.innerHTML = '<div class="empty">No worker dispatched, no points to show.</div>';
+    return;
+  }
+
+  const shiftId = p.id;
+  const requestId = p.shift_request_id;
+  const sessionId = p.session_id;
+  const postedAt = p.shift_requests?.posted_at;
+  const clockOutAt = p.clock_out_confirmed_at;
+
+  const orParts = ['shift_id.eq.' + shiftId];
+  if(requestId) orParts.push('and(source_type.eq.shift_request,source_id.eq.' + requestId + ')');
+
+  let linked = await sbGet('points_ledger',
+    '?application_id=eq.' + appId
+    + '&or=(' + orParts.join(',') + ')'
+    + '&order=awarded_at.asc'
+    + '&select=id,amount,reason,session_id,shift_id,source_type,source_id,awarded_at,awarded_by,metadata,notes,correction_for_event_id');
+
+  if(linked.length) {
+    const linkedIds = linked.map(r => r.id);
+    const corrections = await sbGet('points_ledger',
+      '?correction_for_event_id=in.(' + linkedIds.join(',') + ')'
+      + '&order=awarded_at.asc'
+      + '&select=id,amount,reason,session_id,shift_id,source_type,source_id,awarded_at,awarded_by,metadata,notes,correction_for_event_id');
+    const seen = new Set(linked.map(r => r.id));
+    for(const c of corrections) if(!seen.has(c.id)) { linked.push(c); seen.add(c.id); }
+    linked.sort((a, b) => new Date(a.awarded_at) - new Date(b.awarded_at));
+  }
+
+  const [beforeRows, afterRows] = await Promise.all([
+    postedAt
+      ? sbGet('points_ledger', '?application_id=eq.' + appId + '&awarded_at=lt.' + encodeURIComponent(postedAt) + '&select=amount')
+      : Promise.resolve([]),
+    clockOutAt
+      ? sbGet('points_ledger', '?application_id=eq.' + appId + '&awarded_at=lte.' + encodeURIComponent(clockOutAt) + '&select=amount')
+      : Promise.resolve(null)
+  ]);
+  const beforeTotal = beforeRows.reduce((s, r) => s + (parseInt(r.amount) || 0), 0);
+  const afterTotal = afterRows ? afterRows.reduce((s, r) => s + (parseInt(r.amount) || 0), 0) : null;
+  const linkedDelta = linked.reduce((s, r) => s + (parseInt(r.amount) || 0), 0);
+
+  target.innerHTML = renderShiftPointsBlock({
+    appId, shiftId, requestId, sessionId,
+    beforeTotal, afterTotal, linkedDelta, linked
+  });
+}
+
+function renderShiftPointsBlock(ctx) {
+  const { appId, shiftId, requestId, sessionId, beforeTotal, afterTotal, linkedDelta, linked } = ctx;
+
+  const summary = '<div class="pu-detail-row"><span class="l">Points before shift</span><span class="v">' + beforeTotal + '</span></div>'
+    + '<div class="pu-detail-row"><span class="l">Points after shift</span><span class="v">' + (afterTotal != null ? afterTotal : '—') + '</span></div>'
+    + '<div class="pu-detail-row"><span class="l">Net for this shift</span><span class="v" style="color:' + (linkedDelta >= 0 ? 'var(--green)' : 'var(--red)') + ';">' + (linkedDelta >= 0 ? '+' : '') + linkedDelta + '</span></div>';
+
+  const rows = linked.length
+    ? '<table class="history-table" style="margin-top:14px;"><thead><tr>'
+      + '<th>When</th><th>Reason</th><th>Amount</th><th>Awarded by</th><th>Notes</th></tr></thead><tbody>'
+      + linked.map(r => '<tr>'
+          + '<td><span style="font-size:11px;color:var(--grey);font-family:JetBrains Mono,monospace;">' + f30FmtDateTime(r.awarded_at) + '</span></td>'
+          + '<td>' + f31ReasonLabel(r.reason) + (r.correction_for_event_id ? ' <span style="color:var(--grey);font-size:10px;">(corrects #' + r.correction_for_event_id + ')</span>' : '') + '</td>'
+          + '<td><span style="color:' + (r.amount >= 0 ? 'var(--green)' : 'var(--red)') + ';font-weight:600;font-family:JetBrains Mono,monospace;">' + (r.amount >= 0 ? '+' : '') + r.amount + '</span></td>'
+          + '<td><span style="font-size:11px;color:var(--grey);">' + (r.awarded_by || '') + '</span></td>'
+          + '<td><span style="font-size:11px;color:var(--grey);">' + (r.notes ? String(r.notes).replaceAll('<','&lt;').replaceAll('>','&gt;') : '') + '</span></td>'
+          + '</tr>').join('')
+      + '</tbody></table>'
+    : '<div class="empty" style="margin-top:14px;">No points_ledger rows linked to this shift yet.</div>';
+
+  const ctxArg = JSON.stringify({ appId, shiftId, requestId: requestId || null, sessionId: sessionId || null, source: 'shift_detail' });
+  const addBtn = '<button class="rc-action-btn" style="margin-top:14px;" onclick=\'openCorrectionModal(' + ctxArg + ')\'>+ Add Correction</button>';
+
+  return summary + rows + addBtn;
+}
+
+// ---- F-31 session detail extension -----------------------------------------
+// Renders one row per session_worker showing total points earned in this
+// session, expandable to a per-row breakdown plus an Add Correction button.
+
+function renderSessionWorkerPointsRow(sw, rows, sessionId) {
+  const app = sw.applications || {};
+  const name = app.name || sw.worker_name || 'Unknown';
+  const tier = app.tier != null ? 'Tier ' + app.tier : '';
+  const total = rows.reduce((s, r) => s + (parseInt(r.amount) || 0), 0);
+  const statusLabel = (sw.status || '').replace('_', ' ');
+
+  const breakdown = rows.length
+    ? '<table class="history-table" style="margin-top:10px;"><thead><tr>'
+      + '<th>When</th><th>Reason</th><th>Amount</th><th>Awarded by</th><th>Notes</th></tr></thead><tbody>'
+      + rows.map(r => '<tr>'
+          + '<td><span style="font-size:11px;color:var(--grey);font-family:JetBrains Mono,monospace;">' + f30FmtDateTime(r.awarded_at) + '</span></td>'
+          + '<td>' + f31ReasonLabel(r.reason) + (r.correction_for_event_id ? ' <span style="color:var(--grey);font-size:10px;">(corrects #' + r.correction_for_event_id + ')</span>' : '') + '</td>'
+          + '<td><span style="color:' + (r.amount >= 0 ? 'var(--green)' : 'var(--red)') + ';font-weight:600;font-family:JetBrains Mono,monospace;">' + (r.amount >= 0 ? '+' : '') + r.amount + '</span></td>'
+          + '<td><span style="font-size:11px;color:var(--grey);">' + (r.awarded_by || '') + '</span></td>'
+          + '<td><span style="font-size:11px;color:var(--grey);">' + (r.notes ? String(r.notes).replaceAll('<','&lt;').replaceAll('>','&gt;') : '') + '</span></td>'
+          + '</tr>').join('')
+      + '</tbody></table>'
+    : '<div class="empty" style="margin-top:10px;">No points_ledger rows for this worker in this session.</div>';
+
+  const totalSlug = total > 0 ? 'onshift' : (total < 0 ? 'expired' : 'pending');
+  const ctxArg = JSON.stringify({ appId: sw.application_id, sessionId: sessionId, source: 'session_detail' });
+
+  return '<div class="paired-unit-card" style="cursor:pointer;" onclick="toggleSessionWorkerPoints(' + sw.application_id + ', ' + sessionId + ')" id="swp-row-' + sw.application_id + '-' + sessionId + '">'
+    + '<div class="rc-top-row">'
+    +   '<span class="rc-bar-name">' + name + '</span>'
+    +   '<span class="rc-shift-length">' + statusLabel + '</span>'
+    +   (tier ? '<span class="rc-shift-length">' + tier + '</span>' : '')
+    + '</div>'
+    + '<div class="rc-status-row">'
+    +   '<span class="rc-status-pill rc-status-' + totalSlug + '">' + (total >= 0 ? '+' : '') + total + ' pts this session</span>'
+    +   '<span class="pu-date">Click to ' + (rows.length ? 'expand' : 'add correction') + '</span>'
+    + '</div>'
+    + '<div id="swp-detail-' + sw.application_id + '-' + sessionId + '" style="display:none;">'
+    +   breakdown
+    +   '<button class="rc-action-btn" style="margin-top:14px;" onclick=\'event.stopPropagation();openCorrectionModal(' + ctxArg + ')\'>+ Add Correction</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function toggleSessionWorkerPoints(appId, sessionId) {
+  const el = document.getElementById('swp-detail-' + appId + '-' + sessionId);
+  if(el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+}
+
+// ---- F-31 correction modal -------------------------------------------------
+
+async function openCorrectionModal(ctx) {
+  const appId     = ctx.appId || null;
+  const shiftId   = ctx.shiftId || null;
+  const requestId = ctx.requestId || null;
+  const sessionId = ctx.sessionId || null;
+  const source    = ctx.source || 'unknown';
+
+  document.getElementById('pc-app-id').value     = appId || '';
+  document.getElementById('pc-shift-id').value   = shiftId || '';
+  document.getElementById('pc-request-id').value = requestId || '';
+  document.getElementById('pc-session-id').value = sessionId || '';
+  document.getElementById('pc-source').value     = source;
+  document.getElementById('pc-amount').value     = '';
+  document.getElementById('pc-worker-claim').value = '';
+  document.getElementById('pc-rationale').value = '';
+
+  let workerName = 'Worker';
+  if(appId) {
+    try {
+      const apps = await sbGet('applications', '?id=eq.' + appId + '&select=name');
+      if(apps?.[0]?.name) workerName = apps[0].name;
+    } catch(e) {}
+  }
+  document.getElementById('pc-worker-name').textContent = workerName;
+
+  let scopedRows = [];
+  try {
+    if(shiftId) {
+      const orParts = ['shift_id.eq.' + shiftId];
+      if(requestId) orParts.push('and(source_type.eq.shift_request,source_id.eq.' + requestId + ')');
+      scopedRows = await sbGet('points_ledger',
+        '?application_id=eq.' + appId
+        + '&or=(' + orParts.join(',') + ')'
+        + '&reason=neq.manual_correction'
+        + '&order=awarded_at.desc&select=id,amount,reason,awarded_at');
+    } else if(sessionId) {
+      scopedRows = await sbGet('points_ledger',
+        '?application_id=eq.' + appId + '&session_id=eq.' + sessionId
+        + '&reason=neq.manual_correction'
+        + '&order=awarded_at.desc&select=id,amount,reason,awarded_at');
+    }
+  } catch(e) { scopedRows = []; }
+
+  const sel = document.getElementById('pc-disputed-event');
+  sel.innerHTML = '<option value="">Independent correction (not linked)</option>';
+  for(const r of scopedRows) {
+    const o = document.createElement('option');
+    o.value = String(r.id);
+    o.textContent = '#' + r.id + ' · ' + f31ReasonLabel(r.reason) + ' · ' + (r.amount >= 0 ? '+' : '') + r.amount + ' · ' + f30FmtDateTime(r.awarded_at);
+    sel.appendChild(o);
+  }
+  openOv('points-correction');
+}
+
+async function submitPointsCorrection() {
+  const appId     = parseInt(document.getElementById('pc-app-id').value, 10);
+  const amount    = parseInt(document.getElementById('pc-amount').value, 10);
+  const claim     = document.getElementById('pc-worker-claim').value.trim();
+  const rationale = document.getElementById('pc-rationale').value.trim();
+  const disputedEventId = document.getElementById('pc-disputed-event').value
+    ? parseInt(document.getElementById('pc-disputed-event').value, 10) : null;
+  const shiftId   = document.getElementById('pc-shift-id').value ? parseInt(document.getElementById('pc-shift-id').value, 10) : null;
+  const sessionId = document.getElementById('pc-session-id').value ? parseInt(document.getElementById('pc-session-id').value, 10) : null;
+  const source    = document.getElementById('pc-source').value || 'unknown';
+
+  if(!appId)                           { alert('Worker not identified.'); return; }
+  if(!Number.isFinite(amount) || amount === 0) { alert('Amount must be a non-zero integer.'); return; }
+  if(!rationale)                       { alert('Decision rationale is required for audit.'); return; }
+
+  let disputedEventType = null;
+  if(disputedEventId) {
+    try {
+      const rows = await sbGet('points_ledger', '?id=eq.' + disputedEventId + '&select=reason');
+      disputedEventType = rows?.[0]?.reason || null;
+    } catch(e) {}
+  }
+
+  let adminEmail = 'sam@glasi.co.uk';
+  try {
+    const { data } = await sbAuth.auth.getUser();
+    if(data?.user?.email) adminEmail = data.user.email;
+  } catch(e) {}
+
+  const metadata = {
+    disputed_event_type: disputedEventType,
+    worker_claim: claim || null,
+    admin_decision_rationale: rationale,
+    correction_source: source,
+    correction_timestamp: new Date().toISOString()
+  };
+
+  let result = null;
+  try {
+    result = await awardPoints(appId, [{
+      amount,
+      reason: 'manual_correction',
+      sessionId: sessionId || null,
+      shiftId: shiftId || null,
+      correctionForEventId: disputedEventId || null,
+      awardedBy: adminEmail,
+      notes: claim || rationale,
+      metadata
+    }]);
+  } catch(e) {
+    console.error('submitPointsCorrection failed', e);
+    alert('Correction failed: ' + (e?.message || 'unknown error') + '. Check console.');
+    return;
+  }
+
+  if(!result) { alert('Correction failed (awardPoints returned null). Check console.'); return; }
+  closeOv('points-correction');
+
+  if(source === 'shift_detail' && shiftId) {
+    await openPairedUnit(shiftId);
+  } else if(source === 'session_detail' && sessionId) {
+    await loadSessionDetail(sessionId);
+  }
 }
 
 </script>
