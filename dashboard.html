@@ -147,21 +147,8 @@
     .wc-btn-left { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
     .wc-btn-restore { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.3); font-size: 10px; }
 
-    /* CORE v6 F-03 supplemental: per-card state row. One row per active in-range
-       request relevant to this worker. Round 3: bar name on top, state on bottom,
-       optional DISPATCH button on the right. Window remaining ticks per second; on
-       response (available) the DISPATCH button surfaces. */
-    .wc-state-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(168,216,234,0.05); border: 1px solid rgba(168,216,234,0.2); border-radius: 6px; font-size: 11px; }
-    .wc-state-row-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-    .wc-state-row-bar { color: var(--ice); font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wc-state-row-state { color: var(--grey); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
-    .wc-state-row-state.is-available { color: var(--green); }
-    .wc-state-row-state.is-passed { color: var(--amber); }
-    .wc-state-row-state.is-noresponse { color: var(--grey); }
-    .wc-state-row-state.is-expired { color: var(--red); }
-    .wc-state-row-state.is-urgent { color: var(--amber); }
-    .wc-state-row-dispatch { flex: 0 0 auto; background: var(--ice); color: var(--navy); border: none; border-radius: 4px; padding: 5px 12px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; letter-spacing: 0.5px; }
-    .wc-state-row-dispatch:hover { opacity: 0.85; }
+    /* Round 6: .wc-state-row family retired. Replaced by the cells
+       architecture (.wc-cell + .wc-cells + .wc-identity below). */
 
     /* CORE v6 F-03 supplemental round 3: 3-column live console grid.
        Sessions selector header sits above (full width). Grid below: requests col
@@ -192,6 +179,134 @@
         var(--navy);
     }
     .dispatch-pair-worker { flex: 1 1 0; min-width: 0; background: var(--navy-mid); border: 1px solid rgba(74,222,128,0.3); border-left: none; border-radius: 0 12px 12px 0; padding: 16px; }
+
+    /* Round 5 FIX 1: widen the live-tab parent .history-screen so the live
+       console matches the full-width top nav. Toggled by switchSessionsTab.
+       Schedule and Sessions sub-tabs keep the default 1100px max-width. */
+    #screen-sessions .history-screen.live-mode { max-width: none; }
+
+    /* Round 6: worker card cells architecture. Left section is a horizontal
+       wrapping grid of mini-cells, one per active in-range pending request.
+       Right section holds worker identity (name, In Session pill, meta).
+       Replaces round 5 Fix 2/4/5/6 (which retired here) — vertical
+       state-row + idle marker model didn't scale to multi-bar reality where
+       a worker can have 5-10 simultaneous in-flight requests. Cell label
+       uses bar_id (#1, #2, ...) for terse cross-card lookup with the request
+       card section. Timer span keyed by reqId for forward compat with
+       multi-request-per-bar scenarios. Native title-attribute tooltip
+       carries the human-readable bar name + shift length + posted-Xm-ago. */
+    .wc-cells {
+      flex: 1 1 70%;
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-content: flex-start;
+    }
+    .wc-cells-empty {
+      flex: 1 1 auto;
+      font-size: 11px;
+      color: var(--grey);
+      font-style: italic;
+      align-self: center;
+      padding: 8px 0;
+    }
+    .wc-cell {
+      flex: 0 0 130px;
+      width: 130px;
+      min-height: 64px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(168,216,234,0.05);
+      border: 1px solid rgba(168,216,234,0.2);
+      border-radius: 6px;
+      font-family: 'Inter', sans-serif;
+      cursor: help;
+    }
+    .wc-cell.is-available {
+      background: rgba(34,197,94,0.08);
+      border-color: rgba(34,197,94,0.35);
+    }
+    .wc-cell.is-unavailable {
+      background: rgba(255,255,255,0.02);
+      border-color: var(--border);
+      opacity: 0.6;
+    }
+    .wc-cell-bar {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--grey);
+      letter-spacing: 0.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .wc-cell-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1 1 auto;
+    }
+    .wc-cell-timer {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .wc-cell-timer.is-urgent { color: var(--amber); }
+    .wc-cell-timer.is-expired { color: var(--red); }
+    .wc-cell-unavail {
+      font-size: 11px;
+      color: var(--grey);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .wc-cell-dispatch {
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .wc-cell-dispatch:hover { opacity: 0.85; }
+    .wc-cell-meta {
+      font-size: 10px;
+      color: var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 12px;
+    }
+
+    .wc-identity {
+      flex: 0 0 28%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      padding-left: 14px;
+      border-left: 1px solid var(--border);
+    }
+    .wc-identity-status {
+      display: inline-block;
+      align-self: flex-start;
+      background: rgba(168,216,234,0.15);
+      color: var(--ice);
+      font-size: 9px;
+      letter-spacing: 1px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Inter', sans-serif;
+      width: fit-content;
+    }
 
     /* CORE v6 F-03 supplemental round 4: session card summary stats. Two
        clickable pills under the zone/session line in the session header.
@@ -275,8 +390,14 @@
     #report-body strong {  }
     .req-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
     .req-card-bar { font-size: 14px; font-weight: 500; }
-    .req-card-timer {  font-size: 11px; color: var(--amber); }
-    .req-card-timer.urgent { color: var(--red); }
+    /* Round 5 FIX 3: single elapsed up-counter from request.posted_at.
+       Replaces the legacy .req-card-timer (30-min countdown) and #rwindow
+       (60-sec rounds-model artefact). Urgency thresholds are operational:
+       grey 0-5min (workers responding), amber 5-25min (aging), red 25-30min
+       (critical before auto-expire backstop). */
+    .req-card-elapsed { font-size: 13px; font-weight: 700; color: var(--grey); font-family: 'JetBrains Mono', monospace; }
+    .req-card-elapsed.urgent { color: var(--amber); }
+    .req-card-elapsed.critical { color: var(--red); }
     .req-card-message { font-size: 12px; color: var(--grey); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .req-card-meta { display: flex; gap: 12px; font-size: 10px;  color: var(--grey); }
     .req-card-posted { color: var(--green); }
@@ -3205,6 +3326,15 @@ function isInviteModalOpen() {
   return !!(el && el.classList.contains('open'));
 }
 
+// Round 5 FIX 3: formats an elapsed-seconds count as "Xm YYs" (with leading
+// zero on seconds when minutes > 0) or "Xs" when under one minute. Used by
+// the request card's single up-counter from posted_at.
+function formatElapsed(totalSecs) {
+  const m = Math.floor(totalSecs / 60);
+  const s = totalSecs % 60;
+  return m > 0 ? (m + 'm ' + String(s).padStart(2, '0') + 's') : (s + 's');
+}
+
 function formatInviteTime(iso) {
   if(!iso) return '';
   const d = new Date(iso);
@@ -3468,11 +3598,12 @@ async function handleWorkerPortalJoin(record) {
 }
 
 // "In the session" rendering. Workers with status='in_session' appear here as
-// cards. Each card carries one .wc-state-row per active in-range pending
-// request (CORE v6 F-03 supplemental). Workers in dispatched/onshift/completed
-// status appear instead as the paired worker beside their request card via
-// renderRequestCards. Workers with status='left' don't render here at all
-// (Refinement 1: data remains in DB; left section is separate scope).
+// cards. Each card carries one .wc-cell per active in-range pending request
+// (round 6 cells architecture, replacing round 5's vertical state-row model).
+// Workers in dispatched/onshift/completed status appear instead as the paired
+// worker beside their request card via renderRequestCards. Workers with
+// status='left' don't render here at all (data remains in DB; left section
+// is separate scope).
 function renderRoom() {
   const grid = document.getElementById('worker-grid');
   const invitedGrid = document.getElementById('invited-grid');
@@ -3499,73 +3630,82 @@ function renderRoom() {
       .filter(Boolean);
   }
 
-  function renderStateRow(worker, entry) {
+  // Round 6: cells architecture. One mini-cell per active in-range pending
+  // request for this worker. Cells wrap horizontally; identity zone on the
+  // right side. Replaces round 5 Fix 2/4/5/6 vertical state-row + idle marker
+  // model — that model didn't scale to the multi-bar reality where a worker
+  // can have 5-10 concurrent requests in flight.
+  //
+  // Cell content: #{barId} top, state middle (timer / DISPATCH / "Unavail."),
+  // response time micro-label bottom (when responded available).
+  // Tooltip via native title attr: "{Bar Name} · {N}hr shift · posted Xm ago".
+  // Pre-response cells tick down via cell-timer-${appId}-${reqId} target.
+  function renderCell(worker, entry) {
     const appId = Number(worker.applicationId);
     const reqId = entry.req.id;
+    const barId = entry.req.bar_id;
     const barName = (entry.req._barName) || (bars.find(b => b.id === entry.req.bar_id)?.name) || 'Unknown';
+    const shiftLen = parseFloat(entry.req.shift_length_hours || 0);
     const postedAtMs = entry.req.posted_at ? new Date(entry.req.posted_at).getTime() : Date.now();
+    const postedMinAgo = Math.max(0, Math.floor((Date.now() - postedAtMs) / 60000));
+    const tooltip = (barName + ' · ' + shiftLen + 'hr shift · posted ' + postedMinAgo + 'm ago').replace(/"/g, '&quot;');
+
     const elapsedSecs = Math.floor((Date.now() - postedAtMs) / 1000);
     const windowSecs = (30 - entry.mins) * 60;
     const remainingSecs = Math.max(0, windowSecs - elapsedSecs);
-    let stateLabel = '';
-    let stateClass = '';
-    let showDispatch = false;
+
+    let stateClass = 'is-pending';
+    let stateInner = '';
+    let metaInner = '';
+
     if(entry.response) {
       if(entry.response.response === 'available') {
-        stateLabel = 'Available' + (entry.response.response_seconds != null ? ' · ' + entry.response.response_seconds + 's' : '');
         stateClass = 'is-available';
-        showDispatch = true;
-      } else if(entry.response.response === 'pass') {
-        stateLabel = 'Passed';
-        stateClass = 'is-passed';
+        stateInner = '<button class="wc-cell-dispatch" onclick="event.stopPropagation();dispatchWorker(' + appId + ',' + reqId + ')">DISPATCH</button>';
+        metaInner = (entry.response.response_seconds != null) ? (entry.response.response_seconds + 's') : '';
       } else {
-        stateLabel = 'No response';
-        stateClass = 'is-noresponse';
+        // pass / no_response → unavailable, no action
+        stateClass = 'is-unavailable';
+        stateInner = '<span class="wc-cell-unavail">Unavail.</span>';
       }
     } else if(remainingSecs > 0) {
       const m = Math.floor(remainingSecs / 60);
       const s = String(remainingSecs % 60).padStart(2, '0');
-      stateLabel = (m > 0 ? (m + 'm ' + s + 's') : (remainingSecs + 's')) + ' left';
-      stateClass = remainingSecs < 30 ? 'is-urgent' : '';
+      const label = m > 0 ? (m + 'm ' + s + 's') : (remainingSecs + 's');
+      stateInner = '<span class="wc-cell-timer'+(remainingSecs < 30 ? ' is-urgent' : '')+'" id="cell-timer-'+appId+'-'+reqId+'">'+label+'</span>';
     } else {
-      stateLabel = 'Window expired';
-      stateClass = 'is-expired';
+      stateClass = 'is-unavailable';
+      stateInner = '<span class="wc-cell-timer is-expired" id="cell-timer-'+appId+'-'+reqId+'">Expired</span>';
     }
-    return '<div class="wc-state-row" data-req-id="' + reqId + '" data-app-id="' + appId + '">'
-      + '<div class="wc-state-row-info">'
-      + '<div class="wc-state-row-bar">' + barName + '</div>'
-      + '<span class="wc-state-row-state ' + stateClass + '" id="wc-state-' + appId + '-' + reqId + '">' + stateLabel + '</span>'
-      + '</div>'
-      + (showDispatch
-          ? '<button class="wc-state-row-dispatch" onclick="event.stopPropagation();dispatchWorker(' + appId + ',' + reqId + ')">DISPATCH</button>'
-          : '')
+
+    return '<div class="wc-cell '+stateClass+'" data-req-id="'+reqId+'" data-app-id="'+appId+'" title="'+tooltip+'">'
+      + '<div class="wc-cell-bar">#'+barId+'</div>'
+      + '<div class="wc-cell-state">'+stateInner+'</div>'
+      + '<div class="wc-cell-meta">'+metaInner+'</div>'
       + '</div>';
   }
 
-  function renderIdleState(w) {
-    const rel = (w.reliability_score != null) ? Math.round(w.reliability_score) + '%' : '—';
-    return '<div class="wc-idle">AVAILABLE · ' + rel + '</div>';
-  }
-
-  // Available section -- workers who joined via portal
+  // In-session section -- workers present in the live session. "Available"
+  // is per-request only (cells); presence state is "in session".
   if(!available.length) {
     grid.innerHTML='<div class="empty">No workers in the session yet. Workers will appear here as they join via the portal.</div>';
   } else {
     grid.innerHTML=available.map(w=>{
       const isSelected=w.id===selectedWorkerId;
       const selectedClass=isSelected?' worker-selected':'';
-      const stateRows = pendingInRangeFor(w).map(entry => renderStateRow(w, entry)).join('');
-      const rightZone = stateRows || renderIdleState(w);
       const tier = w.tier != null ? 'T' + w.tier : '';
       const rel = w.reliability_score != null ? Math.round(w.reliability_score) + '%' : '';
       const metaParts = [w.postcode_full || '', tier, rel].filter(Boolean).join(' · ');
+      const cells = pendingInRangeFor(w).map(entry => renderCell(w, entry)).join('');
+      const cellsContent = cells || '<div class="wc-cells-empty">No requests yet</div>';
       return '<div class="worker-card '+w.status+selectedClass+'" id="wc-'+w.id+'" onclick="selectWorker(\''+w.id+'\')">'+
         '<div class="wc-status-dot"></div>'+
-        '<div class="wc-left">'+
+        '<div class="wc-cells">'+cellsContent+'</div>'+
+        '<div class="wc-identity">'+
           '<div class="wc-name">'+w.name+'</div>'+
+          '<div class="wc-identity-status">In Session</div>'+
           '<div class="wc-meta">'+metaParts+'</div>'+
         '</div>'+
-        '<div class="wc-right">' + rightZone + '</div>'+
         '</div>';
     }).join('');
   }
@@ -5386,21 +5526,15 @@ function renderRequestCards() {
 
   cardsEl.innerHTML = liveSessionOps.requests.filter(r => r.status !== 'completed').map(r => {
     const barName = r._barName || bars.find(b => b.id === r.bar_id)?.name || 'Unknown';
-    const reqTime = r.request_time ? new Date(r.request_time) : new Date(r.created_at);
-    const totalSecs = Math.floor((Date.now() - reqTime.getTime()) / 1000);
-    const mins = Math.floor(totalSecs / 60);
-    const secs = totalSecs % 60;
-    const timerStr = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
-    const urgent = mins >= 5;
+    // Round 5 FIX 3: match the tick's posted_at-first preference so initial
+    // render and per-second updates agree on the elapsed value.
+    const postedAt = r.posted_at ? new Date(r.posted_at) : (r.request_time ? new Date(r.request_time) : new Date(r.created_at));
+    const totalSecs = Math.floor((Date.now() - postedAt.getTime()) / 1000);
     const isSelected = r.id === selectedRequestId;
     const isDispatched = r.status === 'dispatched';
     let cardClass = 'request-card';
     if(isDispatched) cardClass += ' dispatched';
     else if(isSelected) cardClass += ' selected';
-
-    const postedAt = r.posted_at ? new Date(r.posted_at) : null;
-    const windowSecs = postedAt ? Math.max(0, 60 - Math.floor((Date.now() - postedAt.getTime()) / 1000)) : null;
-    const windowOpen = windowSecs !== null && windowSecs > 0;
 
     if(isDispatched) {
       // Find the dispatched worker for this request
@@ -5492,13 +5626,14 @@ function renderRequestCards() {
         +'</div>';
     }
 
+    // Round 5 FIX 3: single elapsed up-counter from posted_at. The 30-min
+    // auto-expire backstop is preserved silently in the per-second tick;
+    // only the visible UI changes.
+    const elapsedClass = totalSecs >= 1500 ? ' critical' : (totalSecs >= 300 ? ' urgent' : '');
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
       +'<div class="req-card-top">'
       +'<div class="req-card-bar">'+barName+'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px;">'
-      +(windowSecs !== null ? '<div id="rwindow-'+r.id+'" style="font-size:13px;font-weight:700;color:'+(windowOpen?'var(--amber)':'var(--grey)')+';">'+(windowOpen ? windowSecs+'s' : 'Closed')+'</div>' : '')
-      +'<div class="req-card-timer'+(urgent?' urgent':'')+'" id="rtimer-'+r.id+'">'+timerStr+'</div>'
-      +'</div>'
+      +'<div class="req-card-elapsed'+elapsedClass+'" id="relapsed-'+r.id+'">'+formatElapsed(totalSecs)+'</div>'
       +'</div>'
       +(r.raw_message?'<div class="req-card-message" style="font-size:12px;color:var(--grey);margin:6px 0;line-height:1.5;">'+r.raw_message+'</div>':'')
       +'<div class="req-card-meta">'
@@ -5516,20 +5651,19 @@ function renderRequestCards() {
   if(requestTimerInterval) clearInterval(requestTimerInterval);
   requestTimerInterval = setInterval(() => {
     liveSessionOps.requests.forEach(r => {
-      const el = document.getElementById('rtimer-'+r.id);
-
-      // 30 minute request timeout countdown -- only for non-dispatched requests with a timer element
-      if(el && r.status !== 'dispatched' && r.status !== 'onshift' && r.status !== 'expired') {
+      // Round 5 FIX 3: single elapsed up-counter. Display is "Xm Ys" elapsed
+      // since posted_at. Urgency: grey 0-5min, amber 5-25min, red 25-30min.
+      // Auto-expire backstop fires silently at 30 min (CORE v6 invariant).
+      const elapsedEl = document.getElementById('relapsed-'+r.id);
+      if(elapsedEl && r.status !== 'dispatched' && r.status !== 'onshift' && r.status !== 'expired') {
         const postedAt = r.posted_at ? new Date(r.posted_at) : (r.request_time ? new Date(r.request_time) : new Date(r.created_at));
         const totalSecs = Math.floor((Date.now() - postedAt.getTime()) / 1000);
-        const remainingSecs = Math.max(0, 1800 - totalSecs);
-        const mins = Math.floor(remainingSecs / 60);
-        const secs = remainingSecs % 60;
-        el.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
-        el.className = 'req-card-timer' + (remainingSecs <= 300 ? ' urgent' : '');
+        elapsedEl.textContent = formatElapsed(totalSecs);
+        elapsedEl.className = 'req-card-elapsed' + (totalSecs >= 1500 ? ' critical' : (totalSecs >= 300 ? ' urgent' : ''));
 
-        // Auto-expire at zero
-        if(remainingSecs === 0 && r.status === 'pending') {
+        // Auto-expire at 30 minutes (CORE v6 invariant). Display is elapsed
+        // up-counter, but the lifecycle deadline remains 30 min from posted_at.
+        if(totalSecs >= 1800 && r.status === 'pending') {
           r.status = 'expired';
           sbPatch('shift_requests', '?id=eq.'+r.id, { status: 'expired' });
           renderRequestCards();
@@ -5595,28 +5729,18 @@ function renderRequestCards() {
         }
       }
 
-      const windowEl = document.getElementById('rwindow-'+r.id);
-      if(windowEl && r.posted_at) {
-        const postedAt = new Date(r.posted_at);
-        const windowSecs = Math.max(0, 60 - Math.floor((Date.now() - postedAt.getTime()) / 1000));
-        if(windowSecs > 0) {
-          windowEl.textContent = windowSecs + 's';
-          windowEl.style.color = windowSecs <= 10 ? 'var(--red)' : 'var(--amber)';
-        } else {
-          windowEl.textContent = 'Window closed';
-          windowEl.style.color = 'var(--grey)';
-          windowEl.style.fontWeight = '400';
-        }
-      }
+      // Round 5 FIX 3: legacy #rwindow 60-second tick block retired. The
+      // single elapsed up-counter (#relapsed) above carries all timer
+      // semantics now; no separate window display.
 
-      // CORE v6 F-03 supplemental: per-second update of per-card state-row
-      // spans on worker cards. Replaces the v5/v6 rollup tick. One pass over
-      // pending requests Ã— in-range workers, surgical DOM update on
-      // id="wc-state-${appId}-${reqId}". Workers with a recorded response
-      // (or no longer in 'in_session' status) hold their final state and are
-      // skipped. Workers still in their window tick naturally; at expiry the
-      // visual state flips to "Window expired" without writing anything to
-      // the DB (no_response writes still come via F-04 sweep on request close).
+      // Round 6: per-second update of per-cell timer spans on worker cards.
+      // One pass over pending requests x in-range workers, surgical DOM update
+      // on id="cell-timer-${appId}-${reqId}". Workers with a recorded response
+      // (or no longer in 'in_session' status) skip — their cells render with
+      // a final-state element (DISPATCH button or "Unavail.") and no timer
+      // span exists. At window expiry the visual state flips to "Expired"
+      // without writing anything to the DB (no_response writes still come
+      // via F-04 sweep on request close).
       if(r.status === 'pending' && r.posted_at && typeof workerBarDistances !== 'undefined') {
         const elapsedSecsForReq = Math.floor((Date.now() - new Date(r.posted_at).getTime()) / 1000);
         const responsesForReq = (typeof liveSessionResponses !== 'undefined') ? (liveSessionResponses.get(r.id) || []) : [];
@@ -5627,18 +5751,18 @@ function renderRequestCards() {
           if(respondedAppIds.has(appId)) return;
           const dist = workerBarDistances.find(d => Number(d.application_id) === appId && Number(d.bar_id) === Number(r.bar_id));
           if(!dist || dist.walking_minutes == null || dist.walking_minutes >= 30) return;
-          const stateEl = document.getElementById('wc-state-' + appId + '-' + r.id);
-          if(!stateEl) return;
+          const timerEl = document.getElementById('cell-timer-' + appId + '-' + r.id);
+          if(!timerEl) return;
           const windowSecsForWorker = (30 - dist.walking_minutes) * 60;
           const remainingSecs = Math.max(0, windowSecsForWorker - elapsedSecsForReq);
           if(remainingSecs > 0) {
             const m = Math.floor(remainingSecs / 60);
             const s = String(remainingSecs % 60).padStart(2, '0');
-            stateEl.textContent = (m > 0 ? (m + 'm ' + s + 's') : (remainingSecs + 's')) + ' left';
-            stateEl.className = 'wc-state-row-state' + (remainingSecs < 30 ? ' is-urgent' : '');
+            timerEl.textContent = m > 0 ? (m + 'm ' + s + 's') : (remainingSecs + 's');
+            timerEl.className = 'wc-cell-timer' + (remainingSecs < 30 ? ' is-urgent' : '');
           } else {
-            stateEl.textContent = 'Window expired';
-            stateEl.className = 'wc-state-row-state is-expired';
+            timerEl.textContent = 'Expired';
+            timerEl.className = 'wc-cell-timer is-expired';
           }
         });
       }
@@ -6907,6 +7031,12 @@ function switchSessionsTab(tab, opts) {
   document.getElementById('sessions-schedule-tab').style.display = isSchedule ? 'block' : 'none';
   document.getElementById('sessions-live-tab').style.display = isLive ? 'block' : 'none';
   document.getElementById('sessions-history-tab').style.display = isHistory ? 'block' : 'none';
+
+  // Round 5 FIX 1: live tab escapes the parent .history-screen 1100px
+  // constraint via .live-mode override. Schedule and Sessions sub-tabs
+  // keep the default centred 1100px layout.
+  const screenWrap = document.querySelector('#screen-sessions .history-screen');
+  if(screenWrap) screenWrap.classList.toggle('live-mode', isLive);
 
   // Tab button styles
   ['schedule','live','history'].forEach(t => {
