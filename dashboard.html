@@ -5211,56 +5211,129 @@ function scorebadge(score) {
   return '<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:600;color:'+color+';">'+s.toFixed(0)+'%</span>';
 }
 
+// F-32: six-component reliability composite per CORE Phase 3 (5 May 2026
+// update). Each component has a numerator/denominator; only events where
+// the worker had a real opportunity count. Components with insufficient
+// denominator are skipped, weight redistributed proportionally to remaining
+// components. Sources: session_invites, session_workers, shift_requests,
+// shift_responses, worker_bar_distances, shifts. session_chat_log is no
+// longer consulted (Zoom-parser-fed, unreliable).
 async function calculateReliabilityScore(applicationId) {
-  // 1. Commitment rate (35%) - sessions joined / sessions invited
-  const swData = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&select=status');
-  const totalInvited = swData.length;
-  if(!totalInvited) return null; // no data yet
-  const confirmed = swData.filter(r => ['in_session','dispatched','completed'].includes(r.status)).length;
-  const commitmentRate = confirmed / totalInvited;
+  const components = []; // { weight, score, applicable }
+  const W = { invitation: 0.15, join: 0.15, response: 0.25, quick: 0.15, execution: 0.20, noShow: 0.10 };
 
-  // 2. Arrival reliability (30%) - based on avg delta
-  const swIds = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&select=id');
-  let arrivalScore = 1; // default full marks if no data
-  if(swIds.length) {
-    const idList = swIds.map(r=>r.id).join(',');
-    const shiftData = await sbGet('shifts', '?session_worker_id=in.('+idList+')&expected_arrival_minutes=not.is.null&select=expected_arrival_minutes,accepted_at,clock_in_confirmed_at');
-    if(shiftData.length) {
-      const deltas = shiftData.map(s => {
-        const actual = Math.round((new Date(s.clock_in_confirmed_at) - new Date(s.accepted_at)) / 60000);
-        return actual - s.expected_arrival_minutes;
-      });
-      const avgDelta = deltas.reduce((a,b)=>a+b,0) / deltas.length;
-      // score: <= 0 mins late = 100%, 1-5 mins late = 70%, 5-10 = 40%, >10 = 10%
-      if(avgDelta <= 0) arrivalScore = 1;
-      else if(avgDelta <= 5) arrivalScore = 0.7;
-      else if(avgDelta <= 10) arrivalScore = 0.4;
-      else arrivalScore = 0.1;
+  // Component 1: Invitation acceptance rate (15%)
+  // session_invites for this worker, attendance_confirmed='confirmed' / total
+  try {
+    const invites = await sbGet('session_invites', '?application_id=eq.'+applicationId+'&select=attendance_confirmed,joined_at,session_id');
+    if(invites.length >= 3) {
+      const confirmed = invites.filter(i => i.attendance_confirmed === 'confirmed').length;
+      components.push({ weight: W.invitation, score: confirmed / invites.length, applicable: true });
+    } else {
+      components.push({ weight: W.invitation, score: 0, applicable: false });
     }
-  }
-
-  // 3. Response rate (20%) - shift_responded / total sessions from session_chat_log
-  let responseScore = 1; // default full marks if no data
-  const chatLog = await sbGet('session_chat_log', '?application_id=eq.'+applicationId+'&select=shift_responded');
-  if(chatLog.length) {
-    const responded = chatLog.filter(r => r.shift_responded).length;
-    responseScore = responded / chatLog.length;
-  }
-
-  // 4. Completion rate (10%) - completed shifts / accepted shifts
-  let completionScore = 1;
-  if(swIds.length) {
-    const idList = swIds.map(r=>r.id).join(',');
-    const shiftStatuses = await sbGet('shifts', '?session_worker_id=in.('+idList+')&select=status');
-    if(shiftStatuses.length) {
-      const completed = shiftStatuses.filter(s=>s.status==='completed').length;
-      completionScore = completed / shiftStatuses.length;
+    // Component 2: Join rate (15%)
+    // Of confirmed invites, how many actually joined (session_workers row exists with status in_session+)
+    const confirmedInvites = invites.filter(i => i.attendance_confirmed === 'confirmed');
+    if(confirmedInvites.length >= 3) {
+      // joined_at on session_invites is the gate (set when worker entered live waiting room)
+      const joined = confirmedInvites.filter(i => i.joined_at).length;
+      components.push({ weight: W.join, score: joined / confirmedInvites.length, applicable: true });
+    } else {
+      components.push({ weight: W.join, score: 0, applicable: false });
     }
+  } catch(e) {
+    components.push({ weight: W.invitation, score: 0, applicable: false });
+    components.push({ weight: W.join, score: 0, applicable: false });
   }
 
-  // Weighted score
-  const score = (commitmentRate * 0.35 + responseScore * 0.30 + arrivalScore * 0.25 + completionScore * 0.10) * 100;
-  return Math.round(score * 10) / 10; // 1 decimal place
+  // Component 3: Response rate when demand existed (25%)
+  // Numerator: count of shift_responses (any final action) for this worker
+  // Denominator: count of shift_requests where worker was eligible (in_session
+  // in that session, distance < 30min). The eligibility intersection is
+  // expensive; approximation: count shift_responses + count of no_response
+  // rows for this worker.
+  try {
+    const responses = await sbGet('shift_responses', '?application_id=eq.'+applicationId+'&select=response');
+    if(responses.length >= 5) {
+      // Final-action responses: response IN (available, pass).
+      const finalAction = responses.filter(r => r.response === 'available' || r.response === 'pass').length;
+      // Denominator includes no_response rows (those represent missed opportunities)
+      components.push({ weight: W.response, score: finalAction / responses.length, applicable: true });
+    } else {
+      components.push({ weight: W.response, score: 0, applicable: false });
+    }
+
+    // Component 4: Quick-response rate (15%)
+    // Of available-response rows, what proportion were within first 25% of personal window.
+    // Approximation: response_seconds / window_seconds. window_seconds derived from
+    // worker_bar_distances at time of response (lookup below).
+    const availableRows = responses.filter(r => r.response === 'available');
+    if(availableRows.length >= 3) {
+      // Need shift_request_id and bar to compute window. Fetch full rows.
+      const fullRows = await sbGet('shift_responses',
+        '?application_id=eq.'+applicationId+'&response=eq.available&select=shift_request_id,response_seconds,shift_requests(bar_id)');
+      const distRows = await sbGet('worker_bar_distances',
+        '?application_id=eq.'+applicationId+'&select=bar_id,walking_minutes');
+      const distByBar = new Map((distRows || []).map(d => [Number(d.bar_id), parseFloat(d.walking_minutes)]));
+      let qualified = 0, denom = 0;
+      for(const r of fullRows || []) {
+        const barId = r.shift_requests?.bar_id;
+        const walkMins = distByBar.get(Number(barId));
+        const respSecs = parseFloat(r.response_seconds);
+        if(!Number.isFinite(walkMins) || walkMins >= 30 || !Number.isFinite(respSecs)) continue;
+        const windowSecs = (30 - walkMins) * 60;
+        if(windowSecs <= 0) continue;
+        denom++;
+        if(respSecs / windowSecs < 0.25) qualified++;
+      }
+      if(denom >= 3) {
+        components.push({ weight: W.quick, score: qualified / denom, applicable: true });
+      } else {
+        components.push({ weight: W.quick, score: 0, applicable: false });
+      }
+    } else {
+      components.push({ weight: W.quick, score: 0, applicable: false });
+    }
+  } catch(e) {
+    components.push({ weight: W.response, score: 0, applicable: false });
+    components.push({ weight: W.quick, score: 0, applicable: false });
+  }
+
+  // Component 5: Execution rate (20%)
+  // Of dispatches, what proportion completed cleanly (no no_show, no cancel)
+  try {
+    const swRows = await sbGet('session_workers',
+      '?application_id=eq.'+applicationId+'&status=in.(dispatched,onshift,completed,cancelled,no_show,left)&select=status');
+    const dispatches = swRows.length;
+    if(dispatches >= 1) {
+      const clean = swRows.filter(r => r.status === 'completed' || r.status === 'onshift').length;
+      components.push({ weight: W.execution, score: clean / dispatches, applicable: true });
+    } else {
+      components.push({ weight: W.execution, score: 0, applicable: false });
+    }
+  } catch(e) {
+    components.push({ weight: W.execution, score: 0, applicable: false });
+  }
+
+  // Component 6: No-show severity (10%) — always applicable
+  try {
+    const noShows = await sbGet('session_workers', '?application_id=eq.'+applicationId+'&status=eq.no_show&select=id');
+    const count = noShows.length;
+    const severityScore = Math.max(0, 1.0 - (count * 0.2));
+    components.push({ weight: W.noShow, score: severityScore, applicable: true });
+  } catch(e) {
+    components.push({ weight: W.noShow, score: 1.0, applicable: true });
+  }
+
+  // Redistribute weight from skipped components proportionally
+  const applicable = components.filter(c => c.applicable);
+  if(!applicable.length) return null;
+  const totalApplicableWeight = applicable.reduce((s, c) => s + c.weight, 0);
+  if(totalApplicableWeight <= 0) return null;
+  const scaleUp = 1 / totalApplicableWeight;
+  const score = applicable.reduce((s, c) => s + c.score * c.weight * scaleUp, 0) * 100;
+  return Math.round(score * 10) / 10;
 }
 
 async function updateWorkerReliabilityScores() {
@@ -5280,16 +5353,17 @@ async function updateWorkerReliabilityScores() {
 
 // -- POINTS SYSTEM CONSTANTS ------------------------------------------------
 // Locked spec. No further changes without Sam's explicit instruction.
-// I'm Available: +15 base, +30 total under 30s. I'll Pass: +1 base, +5 total under 30s.
-// No separate speed bonus; only the under-30-second threshold matters.
-// Selected for shift +20 is awarded separately at dispatch time, not here.
+// F-32: I'm Available +15 base, +15 quick-response bonus (within first 25%
+// of personal window). I'll Pass +1 (no quick-response variant; engagement-
+// with-work earns the speed bonus, declining-fast does not). Selected for
+// shift +20 is awarded separately at dispatch time, not here.
 const POINTS = {
   joined:               5,
-  declined:             1,    // I'll Pass (base). Under 30s total = 5 (handled by structural rewire).
-  accepted:            15,    // I'm Available (base). Under 30s total = 30.
-  speedBonus30:        15,    // Bonus on top of I'm Available base for under-30s responses.
-  speedBonus60:         0,    // Deprecated by new locked spec.
-  speedBonus120:        0,    // Deprecated by new locked spec.
+  declined:             1,    // I'll Pass.
+  accepted:            15,    // I'm Available (base).
+  speedBonus30:        15,    // Quick-response bonus on I'm Available within first 25% of personal window.
+  speedBonus60:         0,    // Deprecated by F-32 locked spec; kept at 0 for legacy session-end sweep compatibility.
+  speedBonus120:        0,    // Deprecated by F-32 locked spec; kept at 0.
   selectedForShift:    20,    // Awarded at dispatch time, separate from response action.
   completedShift:      60,
   arrivedEarly:        40,
@@ -5300,13 +5374,10 @@ const POINTS = {
 
 const TIER_THRESHOLDS = [0, 250, 650, 1500, 3500];
 
-function reliabilityMultiplier(score) {
-  if(score == null) return 1.0;
-  if(score >= 85) return 1.2;
-  if(score >= 70) return 1.1;
-  if(score >= 50) return 1.0;
-  return 0.8;
-}
+// F-32: reliabilityMultiplier removed (was dead — zero call sites). The
+// engine multiplier concept moved to the recommendation engine ranking, not
+// a points multiplier. Reliability now drives recommendation order, not
+// magnitude of awards.
 
 function pointsToTier(points) {
   for(let i = TIER_THRESHOLDS.length - 1; i >= 0; i--) {
@@ -5334,7 +5405,11 @@ function pointsToNextTier(points) {
 //     { amount: 5,  reason: 'joined_session', sessionId },
 //     { amount: 60, reason: 'completed_shift', sessionId, shiftId }
 //   ], { awardedBy: 'system' });
-async function awardPoints(applicationId, awards, opts = {}) {
+// F-32: awardPoints renamed awardPointsImmediate to align with the portal
+// helper of the same name. Behaviour unchanged on dashboard side. The legacy
+// awardPoints alias is preserved at the bottom of this function for callers
+// not yet updated.
+async function awardPointsImmediate(applicationId, awards, opts = {}) {
   if(!Array.isArray(awards)) awards = [awards];
   const valid = awards.filter(a => a && a.amount !== 0);
   if(!valid.length) return null;
@@ -5365,7 +5440,14 @@ async function awardPoints(applicationId, awards, opts = {}) {
   const newTier = pointsToTier(newTotal);
 
   const updates = { total_points: newTotal };
-  if(newTier !== oldTier) updates.tier = newTier;
+  if(newTier !== oldTier) {
+    updates.tier = newTier;
+    // F-31 follow-up: keep applications.hourly_rate in lockstep with tier on
+    // promotion so the rate snapshot at the next dispatch reflects the new
+    // tier. CORE Phase 5 "Worker tier and rates" requires atomic tier +
+    // hourly_rate update.
+    updates.hourly_rate = [12.71, 13.71, 14.71, 15.71, 16.71][newTier - 1];
+  }
   await sbPatch('applications', '?id=eq.'+applicationId, updates);
 
   if(newTier > oldTier) {
@@ -5382,6 +5464,9 @@ async function awardPoints(applicationId, awards, opts = {}) {
 
   return { newTotal, newTier, promoted: newTier > oldTier, oldTier };
 }
+
+// F-32: legacy alias. Kept for one batch so unmigrated callers still work.
+const awardPoints = awardPointsImmediate;
 
 // Per-shift ledger writes for the worker who just clocked out. Covers the
 // completed_shift +60 plus arrived_early +40 / arrived_on_time +25 from the
@@ -5425,15 +5510,17 @@ async function awardShiftCompletionPoints(worker) {
   return result;
 }
 
-// Maps the legacy breakdown labels emitted by calculateSessionPoints to the
-// locked-spec reason codes used in points_ledger. Translation layer until
-// build sequence item #4 rewires calculateSessionPoints to use shift_responses.
+// F-32: BREAKDOWN_REASON_MAP retired. Engagement reasons (joined_session,
+// responded_available, responded_available_quick, responded_pass) now fire
+// in real time via the worker portal awardPointsImmediate path, not from the
+// session-end sweep. The map is kept dead-coded for one batch so the legacy
+// updateWorkerPoints sweep doesn't error if anything still calls it; remove
+// after F-33. New entries reflect the post-F-32 vocabulary (under_30s
+// renamed to quick).
 const BREAKDOWN_REASON_MAP = {
   'Joined session': 'joined_session',
   'Accepted shift': 'responded_available',
-  'Response under 30s': 'responded_available_under_30s',
-  'Response under 60s': 'responded_available',
-  'Response under 120s': 'responded_available',
+  'Response quick': 'responded_available_quick',
   'Responded (declined)': 'responded_pass',
   'Completed shift': 'completed_shift',
   'Arrived early': 'arrived_early',
@@ -5462,17 +5549,23 @@ async function calculateSessionPoints(applicationId, sessionId) {
   const chat = chatRows[0];
   if(chat) {
     if(chat.shift_responded) {
-      // Check if they were dispatched (accept) or not (decline)
+      // F-32: real-time writers on the worker portal now fire responded_available
+      // and responded_available_quick at the moment of response, sourced from the
+      // worker's tap, not from session_chat_log (which is Zoom-parser-fed and
+      // unreliable). The session-end sweep below remains as a defensive
+      // backfill: if the real-time write somehow failed (portal offline, etc.),
+      // the chat-log inference fills the gap. The under_30s vs first-25%-of-window
+      // distinction is preserved per CORE Phase 3, but the sweep approximates
+      // with the legacy seconds threshold since it can't reconstruct each
+      // worker's personal window from a chat row alone.
       const wasDispatched = sw.status === 'dispatched' || sw.status === 'completed';
       if(wasDispatched) {
         base += POINTS.accepted;
         breakdown.push({ action: 'Accepted shift', pts: POINTS.accepted });
-        // Speed bonus
         const secs = chat.shift_response_seconds;
-        if(secs != null) {
-          if(secs < 30)       { base += POINTS.speedBonus30;  breakdown.push({ action: 'Response under 30s', pts: POINTS.speedBonus30 }); }
-          else if(secs < 60)  { base += POINTS.speedBonus60;  breakdown.push({ action: 'Response under 60s', pts: POINTS.speedBonus60 }); }
-          else if(secs < 120) { base += POINTS.speedBonus120; breakdown.push({ action: 'Response under 120s', pts: POINTS.speedBonus120 }); }
+        if(secs != null && secs < 30) {
+          base += POINTS.speedBonus30;
+          breakdown.push({ action: 'Response quick', pts: POINTS.speedBonus30 });
         }
       } else {
         base += POINTS.declined;
@@ -5521,14 +5614,21 @@ async function updateWorkerPoints() {
       '?application_id=eq.'+appId+'&session_id=eq.'+liveSessionOps.sessionId+'&select=reason,amount');
     const existingReasons = new Set((existing || []).map(r => r.reason));
 
+    // F-32: drop unmapped-fallback writes. manual_adjustment was removed from
+    // the CHECK vocabulary; if a breakdown label maps to nothing, skip the
+    // write entirely and log to console for diagnosis (rather than emitting a
+    // CHECK violation at INSERT).
     const awards = (breakdown || [])
       .filter(b => b.pts !== 0)
-      .map(b => ({
-        amount: b.pts,
-        reason: BREAKDOWN_REASON_MAP[b.action] || 'manual_adjustment',
-        notes: BREAKDOWN_REASON_MAP[b.action] ? null : 'Unmapped breakdown label: ' + b.action
-      }))
-      .filter(a => !existingReasons.has(a.reason));
+      .map(b => {
+        const reason = BREAKDOWN_REASON_MAP[b.action];
+        if(!reason) {
+          console.warn('[updateWorkerPoints] unmapped breakdown label, skipping:', b.action);
+          return null;
+        }
+        return { amount: b.pts, reason };
+      })
+      .filter(a => a && !existingReasons.has(a.reason));
 
     if(awards.length) {
       await awardPoints(appId, awards, { sessionId: liveSessionOps.sessionId });
@@ -6257,6 +6357,105 @@ async function dispatchWorker(applicationId, requestId) {
   liveSessionResponses.delete(requestId);
   renderRequestCards();
   renderRoom();
+
+  // F-32: no-response sweep. Fires after dispatch closes the request. Penalises
+  // in-session workers eligible for this request (within 30min) who never
+  // took a final action AND had at least 75% of their personal window OR a
+  // fully-expired window. Lenient when request closed early on a short window.
+  await f32NoResponseSweep(requestId, request.bar_id, request.posted_at || request.request_time);
+}
+
+// F-32: no-response sweep — penalty writer for in-session workers who didn't
+// engage with a request that closed (dispatch / cancel / auto-expire).
+// Writes both a shift_responses row (response='no_response') and a
+// points_ledger row (reason='no_response', amount=-5) per eligible worker.
+// Gating per CORE Phase 3 5 May 2026 update:
+//   - If worker's full personal window elapsed: write penalty.
+//   - Else if elapsed >= 75% of window AND window >= 5min: write penalty.
+//   - Else (closed early on short window): skip (forgive).
+async function f32NoResponseSweep(requestId, barId, postedAt) {
+  if(!requestId || !postedAt) return;
+  const postedAtMs = new Date(postedAt).getTime();
+  if(!Number.isFinite(postedAtMs)) return;
+  const elapsedSecs = (Date.now() - postedAtMs) / 1000;
+
+  try {
+    // 1. In-session workers in the current session, excluding those who got
+    // dispatched on this request (their session_workers.status would have
+    // moved away from in_session by now).
+    const sessionId = liveSessionOps.sessionId;
+    if(!sessionId) return;
+    const swRows = await sbGet('session_workers',
+      '?session_id=eq.'+sessionId+'&select=application_id,status');
+    const eligibleAppIds = swRows
+      .filter(s => s.status === 'in_session')
+      .map(s => Number(s.application_id))
+      .filter(Boolean);
+    if(!eligibleAppIds.length) return;
+
+    // 2. Walking minutes for each eligible worker against this bar.
+    const distRows = await sbGet('worker_bar_distances',
+      '?application_id=in.('+eligibleAppIds.join(',')+')&bar_id=eq.'+barId+'&select=application_id,walking_minutes');
+    const walkByApp = new Map((distRows || []).map(d => [Number(d.application_id), parseFloat(d.walking_minutes)]));
+
+    // 3. Existing shift_responses for this request (skip workers who responded).
+    const responseRows = await sbGet('shift_responses',
+      '?shift_request_id=eq.'+requestId+'&select=application_id');
+    const respondedSet = new Set((responseRows || []).map(r => Number(r.application_id)));
+
+    // 4. Apply gating per worker, collect rows to write.
+    const respRows = [];
+    const ledgerRows = [];
+    for(const appId of eligibleAppIds) {
+      if(respondedSet.has(appId)) continue;
+      const walkMins = walkByApp.get(appId);
+      if(!Number.isFinite(walkMins) || walkMins >= 30) continue; // not eligible for this request
+      const windowSecs = (30 - walkMins) * 60;
+      const windowExpired = elapsedSecs >= windowSecs;
+      const seventyFiveOnLongWindow = (elapsedSecs / windowSecs >= 0.75) && (windowSecs >= 300);
+      if(!(windowExpired || seventyFiveOnLongWindow)) continue;
+      respRows.push({
+        shift_request_id: requestId,
+        application_id: appId,
+        response: 'no_response',
+        responded_at: new Date().toISOString(),
+        response_seconds: Math.round(elapsedSecs)
+      });
+      ledgerRows.push({
+        application_id: appId,
+        amount: -5,
+        reason: 'no_response',
+        session_id: sessionId,
+        source_type: 'shift_request',
+        source_id: requestId,
+        awarded_by: 'system',
+        notes: 'No response when window had elapsed'
+      });
+    }
+
+    if(respRows.length) {
+      try { await sbPost('shift_responses', respRows); } catch(e) { console.warn('[f32NoResponseSweep] shift_responses POST failed', e); }
+    }
+    if(ledgerRows.length) {
+      // Each worker's penalty is one row. Use awardPointsImmediate per worker
+      // so total_points + tier (and potential demotion later) stay in sync.
+      for(const row of ledgerRows) {
+        try {
+          await awardPointsImmediate(row.application_id, [{
+            amount: row.amount,
+            reason: row.reason,
+            sessionId: row.session_id,
+            sourceType: row.source_type,
+            sourceId: row.source_id,
+            notes: row.notes,
+            awardedBy: 'system'
+          }], { sessionId: row.session_id });
+        } catch(e) { console.warn('[f32NoResponseSweep] awardPointsImmediate failed', e); }
+      }
+    }
+  } catch(e) {
+    console.error('[f32NoResponseSweep] failed', e);
+  }
 }
 
 async function confirmClockIn(requestId, applicationId) {
@@ -6369,8 +6568,12 @@ async function confirmClockOut(requestId) {
   renderRoom();
 }
 
-function removeRequest(requestId) {
+async function removeRequest(requestId) {
   if(!confirm('Remove this request? This cannot be undone.')) return;
+  // Capture context before mutating state for the no-response sweep.
+  const reqCtx = liveSessionOps.requests.find(x => x.id === requestId);
+  const barId = reqCtx?.bar_id;
+  const postedAt = reqCtx?.posted_at || reqCtx?.request_time;
   // Update status to cancelled in DB
   sbPatch('shift_requests', '?id=eq.'+requestId, { status: 'cancelled' });
   // Remove from active requests
@@ -6378,6 +6581,11 @@ function removeRequest(requestId) {
   if(selectedRequestId === requestId) selectedRequestId = null;
   renderRequestCards();
   renderRoom();
+
+  // F-32: no-response sweep on cancel close.
+  if(barId && postedAt) {
+    f32NoResponseSweep(requestId, barId, postedAt);
+  }
 }
 
 function openAddNotes(requestId) {
@@ -6582,6 +6790,9 @@ function renderRequestCards() {
           r.status = 'expired';
           sbPatch('shift_requests', '?id=eq.'+r.id, { status: 'expired' });
           renderRequestCards();
+          // F-32: no-response sweep on auto-expire close. All eligible workers
+          // who didn't respond get the penalty (the full window has elapsed).
+          f32NoResponseSweep(r.id, r.bar_id, r.posted_at || r.request_time);
         }
       }
 
@@ -9732,24 +9943,24 @@ async function saveNewSubscription() {
 // event, never mutations.
 // ============================================================================
 
+// F-32: friendly labels for the post-F-32 reason vocabulary (14 reasons).
+// Tripwire: this map must stay in sync with the portal REASON_LABELS map AND
+// with the points_ledger CHECK constraint. All three must agree.
 const POINTS_REASON_LABELS = {
   genesis:                          'Joined Glasi',
   joined_session:                   'Joined session',
   selected_for_shift:               'Selected for shift',
   responded_available:              'Responded available',
-  responded_available_under_30s:    'Responded available (under 30s)',
+  responded_available_quick:        'Quick response',
   responded_pass:                   "I'll pass",
   completed_shift:                  'Completed shift',
   arrived_early:                    'Arrived early',
   arrived_on_time:                  'Arrived on time',
   no_response:                      'No response',
   no_show:                          'No-show',
-  manual_adjustment:                'Manual adjustment',
   manual_correction:                'Manual correction',
   tier_promoted:                    'Tier promotion',
-  follow_instagram:                 'Followed @glasi_official',
-  post_tag_instagram:               'Tagged @glasi_official',
-  instagram_post_bonus:             'Instagram post bonus'
+  daily_login_claim:                'Daily login'
 };
 
 function f31ReasonLabel(reason) {
