@@ -229,6 +229,68 @@
     }
     .dispatch-pair-worker { flex: 1 1 0; min-width: 0; background: var(--navy-mid); border: 1px solid rgba(74,222,128,0.3); border-left: none; border-radius: 0 12px 12px 0; padding: 16px; }
 
+    /* F-33: ghost variant of dispatch-pair for pending requests with an
+       active engine recommendation. Same flex structure as confirmed dispatch
+       (so the DOM transitions cleanly to dispatched on click). Borders
+       desaturated to ice at 20% alpha; connector at 30% opacity. Empty
+       variant for pending requests with no eligible candidate. */
+    .dispatch-pair.recommend-ghost > .dispatch-pair-request,
+    .dispatch-pair.recommend-empty > .dispatch-pair-request {
+      border-color: rgba(168,216,234,0.2);
+    }
+    .dispatch-pair.recommend-ghost > .dispatch-pair-worker.recommend-ghost-worker,
+    .dispatch-pair.recommend-empty > .dispatch-pair-worker.recommend-empty-worker {
+      border-color: rgba(168,216,234,0.2);
+    }
+    .dispatch-pair-connector.recommend-ghost-connector,
+    .dispatch-pair-connector.recommend-empty-connector {
+      border-top-color: rgba(168,216,234,0.2);
+      border-bottom-color: rgba(168,216,234,0.2);
+      opacity: 0.4;
+    }
+    .recommend-empty-worker {
+      display: flex; align-items: center; justify-content: center;
+    }
+    .re-empty-state {
+      font-size: 12px; color: var(--grey); text-align: center; line-height: 1.5;
+    }
+
+    .recommend-ghost-worker {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .rg-name { font-size: 16px; font-weight: 700; color: var(--white); }
+    .rg-meta { font-size: 11px; color: var(--grey); }
+    .rg-pill {
+      display: inline-block; align-self: flex-start;
+      font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 10px; font-weight: 700;
+      white-space: nowrap;
+    }
+    .rg-pill-waiting { background: rgba(168,216,234,0.12); color: var(--ice); }
+    .rg-pill-available { background: var(--green-dim); color: var(--green); }
+    .rg-stats { display: flex; gap: 14px; font-size: 11px; color: var(--white); flex-wrap: wrap; }
+    .rg-stats .rg-deficit { font-family: 'JetBrains Mono', monospace; color: var(--ice); }
+    .rg-distance { font-size: 11px; color: var(--grey); }
+    .rg-narrative { font-size: 12px; color: var(--ice); line-height: 1.5; font-style: italic; }
+    .rg-dispatch-btn {
+      margin-top: 6px; align-self: stretch;
+      background: var(--ice); color: var(--navy); border: none;
+      border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif; letter-spacing: 1px;
+    }
+    .rg-dispatch-btn:hover { opacity: 0.9; }
+
+    /* F-33: swap fade animation when the engine flips its top pick.
+       Total swap budget 300ms (150ms in + hold). Single keyframe pass. */
+    .recommend-ghost-worker.f33-swapped {
+      animation: f33SwapFade 300ms ease-out;
+    }
+    @keyframes f33SwapFade {
+      0%   { opacity: 0; transform: translateY(4px); }
+      50%  { opacity: 1; transform: translateY(0); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
     /* Round 5 FIX 1: widen the live-tab parent .history-screen so the live
        console matches the full-width top nav. Toggled by switchSessionsTab.
        Schedule and Sessions sub-tabs keep the default 1100px max-width. */
@@ -3983,6 +4045,10 @@ const liveSessionOps = {
     // Legacy responseWindow timers retired in CORE v6 F-03; the no-op shim's
     // Map is harmless to skip clearing. Just clear the response cache.
     if(typeof liveSessionResponses !== 'undefined') liveSessionResponses.clear();
+    // F-33: clear recommendation engine state on session stop (mirrors
+    // liveSessionResponses cleanup pattern).
+    if(typeof liveSessionRecommendations !== 'undefined') liveSessionRecommendations.clear();
+    if(typeof f33DeficitCache !== 'undefined') f33DeficitCache.clear();
     this.workers.length = 0;
     this.requests.length = 0;
     this.invites.length = 0; // round 4: clear invites cache on session end
@@ -4116,15 +4182,49 @@ function setupLiveViewListeners() {
     if(isLiveViewActive()) { renderRoom(); renderRequestCards(); }
     else liveSessionOps.markDirty('live');
   };
-  liveSessionOps.on('worker:joined', renderOrDirty);
-  liveSessionOps.on('worker:left', renderOrDirty);
-  liveSessionOps.on('worker:updated', renderOrDirty);
-  liveSessionOps.on('request:new', renderOrDirty);
-  liveSessionOps.on('request:updated', renderOrDirty);
-  liveSessionOps.on('response:new', renderOrDirty);
-  liveSessionOps.on('state:resynced', renderOrDirty);
-  liveSessionOps.on('session:started', renderOrDirty);
-  liveSessionOps.on('session:resumed', renderOrDirty);
+  // F-33: recompute recommendations before re-rendering. Async fire-and-forget;
+  // the render below picks up whatever is in liveSessionRecommendations at the
+  // moment it runs. On the next event tick (e.g. realtime delivery a moment
+  // later) the recompute will have settled and the next render will reflect.
+  const recomputeAndRender = (record) => {
+    if(typeof f33RecomputeAllPending === 'function') {
+      f33RecomputeAllPending().then(() => {
+        if(isLiveViewActive()) { renderRoom(); renderRequestCards(); }
+      });
+    } else {
+      renderOrDirty(record);
+    }
+  };
+  // F-33: per-worker deficit cache invalidation. Targeted fetch keeps the
+  // cache fresh without a full bootstrap on every event.
+  const onResponse = async (record) => {
+    if(typeof f33RefreshDeficitForWorker === 'function' && record?.application_id) {
+      await f33RefreshDeficitForWorker(record.application_id);
+    }
+    recomputeAndRender(record);
+  };
+  const onWorkerUpdated = async (record) => {
+    if(record?.status === 'dispatched' && typeof f33RefreshDeficitForWorker === 'function' && record?.application_id) {
+      await f33RefreshDeficitForWorker(record.application_id);
+    }
+    recomputeAndRender(record);
+  };
+  // F-33: cleanup recommendations Map when a request transitions out of pending.
+  const onRequestUpdated = (record) => {
+    if(record?.status && record.status !== 'pending' && typeof liveSessionRecommendations !== 'undefined') {
+      liveSessionRecommendations.delete(record.id);
+    }
+    recomputeAndRender(record);
+  };
+  liveSessionOps.on('worker:joined', recomputeAndRender);
+  liveSessionOps.on('worker:left', recomputeAndRender);
+  liveSessionOps.on('worker:updated', onWorkerUpdated);
+  liveSessionOps.on('request:new', recomputeAndRender);
+  liveSessionOps.on('request:updated', onRequestUpdated);
+  liveSessionOps.on('response:new', onResponse);
+  liveSessionOps.on('state:resynced', recomputeAndRender);
+  liveSessionOps.on('session:started', recomputeAndRender);
+  liveSessionOps.on('session:resumed', recomputeAndRender);
 
   // Round 4: invites cache events update session-card stats and the modal
   // when open. Cache mutations already happened in the realtime handler
@@ -6358,6 +6458,15 @@ async function dispatchWorker(applicationId, requestId) {
   renderRequestCards();
   renderRoom();
 
+  // F-33: dispatch_decisions audit write. Best-effort; failure logged but
+  // does not block dispatch. Reads liveSessionRecommendations for the
+  // request's snapshot at click time. The Map is cleaned up shortly after
+  // when request:updated arrives via realtime; this call captures the state
+  // before that cleanup runs.
+  if(typeof f33WriteAuditAtDispatch === 'function') {
+    f33WriteAuditAtDispatch(requestId, worker.applicationId);
+  }
+
   // F-32: no-response sweep. Fires after dispatch closes the request. Penalises
   // in-session workers eligible for this request (within 30min) who never
   // took a final action AND had at least 75% of their personal window OR a
@@ -6755,24 +6864,39 @@ function renderRequestCards() {
         +'</div>';
     }
 
-    // F-29: pending branch uses the same innerBody. Round 5 elapsed timer is
-    // already inside innerBody at .rc-status-row. Round 5 FIX 3 single
-    // up-counter from posted_at and 30-min auto-expire backstop are preserved
-    // by the per-second tick below.
+    // F-33: pending branch wraps the F-29 inner body in a .dispatch-pair
+    // structure. Either .recommend-ghost (engine has a recommendation) or
+    // .recommend-empty (no eligible candidate). The previous flat .request-card
+    // markup is superseded for pending requests; the F-29 inner body still
+    // lives inside the .dispatch-pair-request slot. Dispatched-state markup
+    // (the isDispatched branch above) is unchanged.
+    if(r.status === 'pending') {
+      const rec = liveSessionRecommendations.get(r.id);
+      const requestSelectedClass = isSelected ? 'selected' : '';
+      if(rec && rec.recommendedAppId) {
+        return f33RenderGhostPair(r, rec, innerBody, requestSelectedClass, showNotes);
+      }
+      return f33RenderEmptyPair(r, innerBody, requestSelectedClass, showNotes);
+    }
+
+    // F-29: non-dispatched, non-pending fallback (expired / cancelled — kept
+    // visible briefly before they leave the list). Existing flat card.
     return '<div class="'+cardClass+'" onclick="selectRequest('+r.id+')" id="rcard-'+r.id+'">'
       + innerBody
-      + (r.status === 'pending'
-          ? '<div class="rc-actions">'
-            + '<button onclick="event.stopPropagation();openAddNotes('+r.id+')" class="rc-action-btn">'+(showNotes?'Edit Notes':'+ Add Notes')+'</button>'
-            + '<button onclick="event.stopPropagation();removeRequest('+r.id+')" class="rc-action-btn rc-action-btn-danger">Remove</button>'
-            + '</div>'
-          : '')
       + '</div>';
   }).join('');
 
   // update timer every second without full re-render
   if(requestTimerInterval) clearInterval(requestTimerInterval);
   requestTimerInterval = setInterval(() => {
+    // F-33: per-second time-decay recompute. Pure in-memory pass (no DB)
+    // because deficit cache is event-maintained. If any pending request's
+    // top pick swaps due to time-decay, re-render so the ghost UI updates.
+    if(typeof f33RecomputeAllPending === 'function') {
+      f33RecomputeAllPending().then(anyChanged => {
+        if(anyChanged && isLiveViewActive()) renderRequestCards();
+      });
+    }
     liveSessionOps.requests.forEach(r => {
       // Round 5 FIX 3: single elapsed up-counter. Display is "Xm Ys" elapsed
       // since posted_at. Urgency: grey 0-5min, amber 5-25min, red 25-30min.
@@ -10216,6 +10340,381 @@ async function submitPointsCorrection() {
     await openPairedUnit(shiftId);
   } else if(source === 'session_detail' && sessionId) {
     await loadSessionDetail(sessionId);
+  }
+}
+
+// ============================================================================
+// F-33: Recommend engine. Per-pending-request live recommendation, computed
+// from in-session workers via lexicographic-with-banding score plus time-decay
+// cliff. Recommendation is in-memory primary (Map<requestId, state>); only
+// dispatch_decisions audit row writes to DB at dispatch click.
+// ============================================================================
+
+const F33_BAND_STEP = 5;             // 5% reliability bands
+const F33_NEW_WORKER_BAND = 70;      // null reliability default per CORE Phase 3 "presumption of fairness"
+const F33_DECAY_MID = 0.5;           // remainingPct above this: full band
+const F33_DECAY_LOW = 0.25;          // remainingPct above this: 0.5-step demotion; below: 1.0-step
+const F33_REASON_BAND_DOMINANT = F33_BAND_STEP;  // band beats next-best by >= this many percentage points
+const F33_REASON_DEFICIT_THRESHOLD = 8;          // deficit "dominant" within band
+const F33_REASON_DISTANCE_DOMINANT = 3;          // closest by >= this many minutes
+
+const liveSessionRecommendations = new Map(); // requestId -> { recommendedAppId, breakdown, computedAt, swappedFrom }
+const f33DeficitCache = new Map();            // applicationId -> { quickResponseCount, dispatchCount }
+
+// Lazy bootstrap. Called on first recompute that needs it; refreshed on
+// session start. Reads shift_responses + worker_bar_distances + session_workers
+// once for all in-session workers. Per-recompute cycles read the cache only.
+async function f33LoadDeficitCache() {
+  const inSessionAppIds = liveSessionOps.workers
+    .filter(w => w.status === 'in_session')
+    .map(w => Number(w.applicationId))
+    .filter(Boolean);
+  if(!inSessionAppIds.length) return;
+
+  let respRows = [];
+  let distRows = [];
+  let swRows = [];
+  try {
+    [respRows, distRows, swRows] = await Promise.all([
+      sbGet('shift_responses',
+        '?application_id=in.('+inSessionAppIds.join(',')+')&response=eq.available'
+        + '&select=application_id,response_seconds,shift_request_id,shift_requests(bar_id)'),
+      sbGet('worker_bar_distances',
+        '?application_id=in.('+inSessionAppIds.join(',')+')&select=application_id,bar_id,walking_minutes'),
+      sbGet('session_workers',
+        '?application_id=in.('+inSessionAppIds.join(',')+')&status=in.(dispatched,onshift,completed)&select=application_id')
+    ]);
+  } catch(e) {
+    console.error('[f33LoadDeficitCache] fetch failed, falling back to zero counts', e);
+  }
+
+  const distByPair = new Map();
+  for(const d of distRows || []) {
+    distByPair.set(Number(d.application_id) + ':' + Number(d.bar_id), parseFloat(d.walking_minutes));
+  }
+
+  const quickByApp = new Map();
+  for(const r of respRows || []) {
+    const appId = Number(r.application_id);
+    const barId = r.shift_requests?.bar_id;
+    const respSecs = parseFloat(r.response_seconds);
+    if(!Number.isFinite(respSecs) || barId == null) continue;
+    const walkMins = distByPair.get(appId + ':' + Number(barId));
+    if(!Number.isFinite(walkMins) || walkMins >= 30) continue;
+    const windowSecs = (30 - walkMins) * 60;
+    if(windowSecs <= 0) continue;
+    if(respSecs / windowSecs < 0.25) {
+      quickByApp.set(appId, (quickByApp.get(appId) || 0) + 1);
+    }
+  }
+
+  const dispatchByApp = new Map();
+  for(const sw of swRows || []) {
+    const appId = Number(sw.application_id);
+    dispatchByApp.set(appId, (dispatchByApp.get(appId) || 0) + 1);
+  }
+
+  for(const appId of inSessionAppIds) {
+    f33DeficitCache.set(appId, {
+      quickResponseCount: quickByApp.get(appId) || 0,
+      dispatchCount: dispatchByApp.get(appId) || 0
+    });
+  }
+}
+
+// Per-worker invalidation. Called on response:new or worker:updated when the
+// affected worker's count may have changed. Refetches just that worker.
+async function f33RefreshDeficitForWorker(applicationId) {
+  const appId = Number(applicationId);
+  if(!appId) return;
+  try {
+    const [respRows, distRows, swRows] = await Promise.all([
+      sbGet('shift_responses', '?application_id=eq.'+appId+'&response=eq.available&select=response_seconds,shift_request_id,shift_requests(bar_id)'),
+      sbGet('worker_bar_distances', '?application_id=eq.'+appId+'&select=bar_id,walking_minutes'),
+      sbGet('session_workers', '?application_id=eq.'+appId+'&status=in.(dispatched,onshift,completed)&select=id')
+    ]);
+    const distByBar = new Map((distRows||[]).map(d => [Number(d.bar_id), parseFloat(d.walking_minutes)]));
+    let quick = 0;
+    for(const r of respRows || []) {
+      const barId = r.shift_requests?.bar_id;
+      const respSecs = parseFloat(r.response_seconds);
+      if(!Number.isFinite(respSecs) || barId == null) continue;
+      const walkMins = distByBar.get(Number(barId));
+      if(!Number.isFinite(walkMins) || walkMins >= 30) continue;
+      const windowSecs = (30 - walkMins) * 60;
+      if(windowSecs > 0 && respSecs / windowSecs < 0.25) quick++;
+    }
+    f33DeficitCache.set(appId, {
+      quickResponseCount: quick,
+      dispatchCount: (swRows || []).length
+    });
+  } catch(e) { /* best-effort */ }
+}
+
+function f33Band(reliabilityScore) {
+  if(reliabilityScore == null) return { band: F33_NEW_WORKER_BAND, isNew: true };
+  const n = Math.round(parseFloat(reliabilityScore) / F33_BAND_STEP) * F33_BAND_STEP;
+  return { band: n, isNew: false };
+}
+
+function f33WindowSecsForRequest(worker, request) {
+  if(typeof workerBarDistances === 'undefined') return 0;
+  const distData = workerBarDistances.find(d =>
+    Number(d.application_id) === Number(worker.applicationId) &&
+    Number(d.bar_id) === Number(request.bar_id));
+  if(!distData) return 0;
+  const walkMins = parseFloat(distData.walking_minutes);
+  if(!Number.isFinite(walkMins) || walkMins >= 30) return 0;
+  return (30 - walkMins) * 60;
+}
+
+function f33ComputeStaticScore(worker, request) {
+  const { band, isNew } = f33Band(worker.reliability_score);
+  const cached = f33DeficitCache.get(Number(worker.applicationId)) || { quickResponseCount: 0, dispatchCount: 0 };
+  const deficit = (cached.quickResponseCount || 0) - (cached.dispatchCount || 0);
+  const distData = (typeof workerBarDistances !== 'undefined') ? workerBarDistances.find(d =>
+    Number(d.application_id) === Number(worker.applicationId) &&
+    Number(d.bar_id) === Number(request.bar_id)) : null;
+  const distance = distData ? parseFloat(distData.walking_minutes) : 999;
+  const tier = parseInt(worker.tier) || 1;
+  return {
+    band, isNew, deficit, distance, tier,
+    quickResponseCount: cached.quickResponseCount || 0,
+    dispatchCount: cached.dispatchCount || 0
+  };
+}
+
+// Time-decay band-demotion. Available-responders keep full static band (no
+// decay once committed). Pass / no_response → null (excluded). Non-responders
+// get cliff demotion: >50% remaining → 0 step, 25-50% → 0.5 step, <25% → 1.0
+// step. Translation: effectiveBand = band - F33_BAND_STEP * decayStep.
+function f33EffectiveBand(staticBand, response, postedAtMs, windowSecs) {
+  if(response === 'pass' || response === 'no_response') return null;
+  if(response === 'available') return staticBand;
+  const elapsed = (Date.now() - postedAtMs) / 1000;
+  const safeWindow = Math.max(1, windowSecs);
+  const remainingPct = 1 - (elapsed / safeWindow);
+  let decayStep;
+  if(remainingPct > F33_DECAY_MID) decayStep = 0;
+  else if(remainingPct > F33_DECAY_LOW) decayStep = 0.5;
+  else decayStep = 1.0;
+  return staticBand - F33_BAND_STEP * decayStep;
+}
+
+// Lex compare. Returns negative if a wins (sorts first).
+function f33Compare(a, b) {
+  if(a.effectiveBand !== b.effectiveBand) return b.effectiveBand - a.effectiveBand;
+  if(a.deficit !== b.deficit) return b.deficit - a.deficit;
+  if(a.distance !== b.distance) return a.distance - b.distance;
+  return b.tier - a.tier;
+}
+
+// Five-rule narrative reason. Priority order; first match wins.
+function f33GenerateReason(top, candidates) {
+  const others = candidates.filter(c => c !== top);
+  const distMins = Math.round(top.distance);
+  if(top.isNew) {
+    return 'New worker, ' + (top.dispatchCount || 0) + ' dispatch' + (top.dispatchCount === 1 ? '' : 'es') + ', ' + distMins + 'min from bar';
+  }
+  const nextBestBand = others.length ? Math.max(...others.map(c => c.band)) : 0;
+  const isBandDominant = (top.band - nextBestBand) >= F33_REASON_BAND_DOMINANT;
+  const sameBandOthers = others.filter(c => c.band === top.band);
+  const isDeficitDominant = sameBandOthers.length > 0 && top.deficit >= F33_REASON_DEFICIT_THRESHOLD;
+  const nextClosestDist = others.length ? Math.min(...others.map(c => c.distance)) : Infinity;
+  const isDistanceDominant = (nextClosestDist - top.distance) >= F33_REASON_DISTANCE_DOMINANT;
+
+  if(isBandDominant && top.deficit >= 5) return 'Strong reliability, under-dispatched recently';
+  if(isBandDominant) return 'Strong reliability, ' + distMins + 'min from bar';
+  if(isDeficitDominant) return 'Under-dispatched relative to engagement, ' + distMins + 'min from bar';
+  if(isDistanceDominant) return 'Closest available worker, ' + distMins + 'min from bar';
+  return 'Tier ' + top.tier + ', ' + distMins + 'min from bar';
+}
+
+// Per-request recompute. Returns true if the top pick changed (caller may
+// trigger swap animation), false otherwise.
+async function f33RecomputeRecommendation(requestId) {
+  const request = liveSessionOps.requests.find(r => r.id === requestId);
+  if(!request || request.status !== 'pending') {
+    const had = liveSessionRecommendations.has(requestId);
+    liveSessionRecommendations.delete(requestId);
+    return had;
+  }
+  const inSession = liveSessionOps.workers.filter(w => w.status === 'in_session');
+  // Eligibility: walking_minutes < 30
+  const eligible = inSession.filter(w => f33WindowSecsForRequest(w, request) > 0);
+  const prev = liveSessionRecommendations.get(requestId);
+  if(!eligible.length) {
+    if(prev !== null) liveSessionRecommendations.set(requestId, null);
+    return prev?.recommendedAppId != null;
+  }
+  // Lazy bootstrap deficit cache if any eligible worker is missing.
+  const needLoad = eligible.some(w => !f33DeficitCache.has(Number(w.applicationId)));
+  if(needLoad) await f33LoadDeficitCache();
+
+  const responses = (typeof liveSessionResponses !== 'undefined') ? (liveSessionResponses.get(requestId) || []) : [];
+  const responseByApp = new Map(responses.map(r => [Number(r.application_id), r.response]));
+  const postedAtMs = new Date(request.posted_at || request.request_time || request.created_at).getTime();
+
+  const candidates = [];
+  for(const worker of eligible) {
+    const myResp = responseByApp.get(Number(worker.applicationId)) || null;
+    if(myResp === 'pass' || myResp === 'no_response') continue;
+    const stat = f33ComputeStaticScore(worker, request);
+    const windowSecs = f33WindowSecsForRequest(worker, request);
+    const effectiveBand = f33EffectiveBand(stat.band, myResp, postedAtMs, windowSecs);
+    if(effectiveBand === null) continue;
+    candidates.push({
+      worker,
+      band: stat.band,
+      isNew: stat.isNew,
+      effectiveBand,
+      deficit: stat.deficit,
+      distance: stat.distance,
+      tier: stat.tier,
+      quickResponseCount: stat.quickResponseCount,
+      dispatchCount: stat.dispatchCount,
+      response: myResp,
+      windowSecs
+    });
+  }
+  if(!candidates.length) {
+    if(prev?.recommendedAppId != null) liveSessionRecommendations.set(requestId, null);
+    return prev?.recommendedAppId != null;
+  }
+  candidates.sort(f33Compare);
+  const top = candidates[0];
+  const newAppId = Number(top.worker.applicationId);
+  const swapped = prev?.recommendedAppId && Number(prev.recommendedAppId) !== newAppId;
+
+  liveSessionRecommendations.set(requestId, {
+    recommendedAppId: newAppId,
+    breakdown: {
+      band: top.band,
+      isNew: top.isNew,
+      effectiveBand: top.effectiveBand,
+      deficit: top.deficit,
+      distance: top.distance,
+      tier: top.tier,
+      quickResponseCount: top.quickResponseCount,
+      dispatchCount: top.dispatchCount,
+      response: top.response,
+      windowSecs: top.windowSecs,
+      narrative: f33GenerateReason(top, candidates)
+    },
+    swappedFrom: swapped ? prev.recommendedAppId : null,
+    computedAt: Date.now()
+  });
+  return !!swapped || !prev || prev?.recommendedAppId == null;
+}
+
+async function f33RecomputeAllPending() {
+  const pendings = liveSessionOps.requests.filter(r => r.status === 'pending');
+  let anyChanged = false;
+  for(const r of pendings) {
+    const changed = await f33RecomputeRecommendation(r.id);
+    if(changed) anyChanged = true;
+  }
+  return anyChanged;
+}
+
+// Ghost UI render. Returns full dispatch-pair HTML for a pending request with
+// a recommendation. Called from renderRequestCards' pending branch.
+function f33RenderGhostPair(request, recommendation, innerBody, requestSelectedClass, showNotes) {
+  const rec = recommendation;
+  const worker = liveSessionOps.workers.find(w => Number(w.applicationId) === Number(rec.recommendedAppId));
+  if(!worker) {
+    return f33RenderEmptyPair(request, innerBody, requestSelectedClass, showNotes);
+  }
+  const b = rec.breakdown;
+  const tierLabel = 'Tier ' + (b.tier || 1);
+  const postcode = worker.postcode_full || '';
+  const reliabilityLabel = b.isNew ? 'New worker' : ('Reliability ' + Math.round(parseFloat(worker.reliability_score) || 0) + '%');
+  const distMins = Math.round(b.distance);
+  const windowMins = Math.round((b.windowSecs || 0) / 60);
+  const isAvailable = b.response === 'available';
+  const pillVariant = isAvailable ? 'available' : 'waiting';
+  const pillLabel = isAvailable ? 'Recommended &middot; Available' : 'Recommended &middot; Not responded yet';
+  const swappedClass = rec.swappedFrom ? ' f33-swapped' : '';
+
+  const requestSide = '<div class="dispatch-pair-request' + (requestSelectedClass ? ' ' + requestSelectedClass : '') + '" onclick="selectRequest(' + request.id + ')">'
+    + innerBody
+    + '<div class="rc-actions">'
+    +   '<button onclick="event.stopPropagation();openAddNotes(' + request.id + ')" class="rc-action-btn">' + (showNotes ? 'Edit Notes' : '+ Add Notes') + '</button>'
+    +   '<button onclick="event.stopPropagation();removeRequest(' + request.id + ')" class="rc-action-btn rc-action-btn-danger">Remove</button>'
+    + '</div>'
+    + '</div>';
+
+  const ghostSide = '<div class="dispatch-pair-worker recommend-ghost-worker' + swappedClass + '" data-rec-app-id="' + worker.applicationId + '">'
+    + '<div class="rg-name">' + (worker.name || 'Worker') + '</div>'
+    + '<div class="rg-meta">' + tierLabel + (postcode ? ' &middot; ' + postcode : '') + '</div>'
+    + '<div class="rg-pill rg-pill-' + pillVariant + '">' + pillLabel + '</div>'
+    + '<div class="rg-stats">'
+    +   '<span>' + reliabilityLabel + '</span>'
+    +   '<span class="rg-deficit">' + (b.quickResponseCount || 0) + 'Q / ' + (b.dispatchCount || 0) + 'D</span>'
+    + '</div>'
+    + '<div class="rg-distance">' + distMins + 'min from bar &middot; ' + windowMins + 'min window</div>'
+    + '<div class="rg-narrative">' + b.narrative + '</div>'
+    + (isAvailable
+        ? '<button class="rg-dispatch-btn" onclick="event.stopPropagation();dispatchRecommended(' + request.id + ')">DISPATCH</button>'
+        : '')
+    + '</div>';
+
+  return '<div class="dispatch-pair recommend-ghost" id="rcard-' + request.id + '">'
+    + requestSide
+    + '<div class="dispatch-pair-connector recommend-ghost-connector"></div>'
+    + ghostSide
+    + '</div>';
+}
+
+function f33RenderEmptyPair(request, innerBody, requestSelectedClass, showNotes) {
+  const requestSide = '<div class="dispatch-pair-request' + (requestSelectedClass ? ' ' + requestSelectedClass : '') + '" onclick="selectRequest(' + request.id + ')">'
+    + innerBody
+    + '<div class="rc-actions">'
+    +   '<button onclick="event.stopPropagation();openAddNotes(' + request.id + ')" class="rc-action-btn">' + (showNotes ? 'Edit Notes' : '+ Add Notes') + '</button>'
+    +   '<button onclick="event.stopPropagation();removeRequest(' + request.id + ')" class="rc-action-btn rc-action-btn-danger">Remove</button>'
+    + '</div>'
+    + '</div>';
+
+  const emptySide = '<div class="dispatch-pair-worker recommend-empty-worker">'
+    + '<div class="re-empty-state">No eligible candidate yet</div>'
+    + '</div>';
+
+  return '<div class="dispatch-pair recommend-empty" id="rcard-' + request.id + '">'
+    + requestSide
+    + '<div class="dispatch-pair-connector recommend-empty-connector"></div>'
+    + emptySide
+    + '</div>';
+}
+
+// Click handler on the ghost DISPATCH button. Routes to the existing
+// dispatchWorker(applicationId, requestId) flow.
+async function dispatchRecommended(requestId) {
+  const rec = liveSessionRecommendations.get(requestId);
+  if(!rec || !rec.recommendedAppId) {
+    alert('No recommendation available.');
+    return;
+  }
+  if(rec.breakdown?.response !== 'available') {
+    alert("Worker hasn't confirmed availability yet.");
+    return;
+  }
+  await dispatchWorker(rec.recommendedAppId, requestId);
+}
+
+// Best-effort audit write at dispatch. Failure logged, doesn't block dispatch.
+async function f33WriteAuditAtDispatch(requestId, dispatchedAppId) {
+  try {
+    const rec = liveSessionRecommendations.get(requestId) || null;
+    const recAppId = rec?.recommendedAppId || null;
+    await sbPost('dispatch_decisions', {
+      request_id: requestId,
+      dispatched_application_id: dispatchedAppId,
+      recommended_application_id: recAppId,
+      was_recommended_match: recAppId !== null && Number(recAppId) === Number(dispatchedAppId),
+      recommendation_breakdown: rec?.breakdown || null
+    });
+  } catch(e) {
+    console.error('[f33WriteAuditAtDispatch] failed (best-effort)', e);
   }
 }
 
