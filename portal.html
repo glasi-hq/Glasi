@@ -2815,11 +2815,19 @@
       if(!upResp.ok) throw new Error('claim slot lock failed');
       currentWorker.last_login_claim_at = claimAt;
 
+      // F-32 follow-up: spawn the +X float NOW, while the button is still
+      // visible. If we passed originEl through to awardPointsImmediate, its
+      // setTimeout would fire after the awaits below resolved, by which time
+      // f32RenderClaimButton has hidden the button (display:none) and
+      // getBoundingClientRect would return 0,0,0,0. Floating from the screen
+      // corner is invisible to the user.
+      f32SpawnFloat(btnEl, '+5');
+
       await awardPointsImmediate(currentWorker.id, [{
         amount: 5,
         reason: 'daily_login_claim',
         notes: 'Daily login claim'
-      }], { originEl: btnEl });
+      }], { /* no originEl: float already spawned above */ });
 
       // Refresh ring overlay state
       f32RenderTierRing();
@@ -5154,10 +5162,38 @@
     const valid = awards.filter(a => a && a.amount !== 0);
     if(!valid.length) return null;
 
-    // Per-reason idempotency: don't double-write if dashboard already awarded.
-    const existing = await fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + applicationId + '&session_id=eq.' + (opts?.sessionId || '') + '&select=reason', { headers: H }).then(r => r.json()).catch(() => []);
-    const existingReasons = new Set((existing || []).map(r => r.reason));
-    const filtered = valid.filter(a => !existingReasons.has(a.reason));
+    // F-32 follow-up: per-reason idempotency check is per-session belt-and-
+    // braces for session-scoped reasons. Day-scoped reasons (daily_login_claim)
+    // skip this check; their gating lives on applications.last_login_claim_at
+    // (column-side gate, canonical day-scope mechanism). Without this skip,
+    // the idempotency filter trips on yesterday's daily_login_claim row (whose
+    // session_id IS NULL, matching the empty session_id filter) and silently
+    // drops today's award.
+    //
+    // Additional hardening: even for session-scoped reasons, the fetch is
+    // skipped if opts.sessionId is missing/null/empty. Without a real session
+    // id to filter on, the URL becomes `session_id=eq.` which PostgREST
+    // rejects with 400, and the JSON error response then crashes the .map
+    // call. Skipping the fetch trades the idempotency guard for not breaking;
+    // the write still happens. Caller-side bug (missing sessionId on a
+    // session-scoped writer) surfaces as a console warning.
+    const DAY_SCOPED_REASONS = new Set(['daily_login_claim']);
+    const dayScoped = valid.filter(a => DAY_SCOPED_REASONS.has(a.reason));
+    const sessionScoped = valid.filter(a => !DAY_SCOPED_REASONS.has(a.reason));
+    const sessionIdRaw = opts?.sessionId;
+    const hasValidSessionId = sessionIdRaw !== undefined && sessionIdRaw !== null && sessionIdRaw !== '';
+
+    let filtered = [...dayScoped]; // day-scoped awards bypass idempotency
+    if(sessionScoped.length) {
+      if(!hasValidSessionId) {
+        console.warn('[awardPointsImmediate] session-scoped award fired without opts.sessionId; skipping idempotency check. Reasons:', sessionScoped.map(a => a.reason));
+        filtered = filtered.concat(sessionScoped);
+      } else {
+        const existing = await fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + applicationId + '&session_id=eq.' + encodeURIComponent(sessionIdRaw) + '&select=reason', { headers: H }).then(r => r.json()).catch(() => []);
+        const existingReasons = new Set((Array.isArray(existing) ? existing : []).map(r => r.reason));
+        filtered = filtered.concat(sessionScoped.filter(a => !existingReasons.has(a.reason)));
+      }
+    }
     if(!filtered.length) {
       const appRows = await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + applicationId + '&select=total_points,tier', { headers: H }).then(r => r.json());
       const app = appRows[0] || {};
