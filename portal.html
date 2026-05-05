@@ -1666,6 +1666,205 @@
     .history-date { font-size: 13px; color: var(--white); }
     .history-zone { font-size: 11px; color: var(--grey); margin-top: 2px; }
     .history-pts { font-size: 13px; color: var(--ice); font-weight: 600; }
+
+    /* ===========================================================================
+       F-32: Tier ring header (compact + expanded) + float animation
+       =========================================================================== */
+    #f32-ring-header {
+      display: none; /* hidden until authenticated; loadPortal flips it on */
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--navy-mid);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+    }
+    #f32-ring-header.active { display: flex; }
+    .f32-rh-name {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      font-family: 'Inter', sans-serif;
+      flex: 1 1 0;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .f32-rh-tier-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      font-family: 'Inter', sans-serif;
+      flex: 1 1 0;
+      min-width: 0;
+      text-align: right;
+    }
+    .f32-rh-ring-wrap {
+      flex: 0 0 auto;
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+    .f32-rh-ring-points {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ice);
+      pointer-events: none;
+    }
+
+    /* Expanded overlay: full-screen modal with the large ring centred */
+    #f32-ring-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 31, 61, 0.82);
+      backdrop-filter: blur(6px);
+      z-index: 10000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 18px;
+      overflow-y: auto;
+    }
+    #f32-ring-overlay.open { display: flex; }
+    .f32-ro-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--white);
+      font-size: 28px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 10px;
+    }
+    .f32-ro-ring-wrap {
+      position: relative;
+      width: 240px;
+      height: 240px;
+      margin: 28px auto 22px;
+    }
+    .f32-ro-ring-stack {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .f32-ro-name {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--ice);
+      text-transform: uppercase;
+      font-family: 'Inter', sans-serif;
+      margin-bottom: 6px;
+    }
+    .f32-ro-tier-num {
+      font-size: 86px;
+      font-weight: 200;
+      color: var(--ice);
+      line-height: 1;
+      font-family: 'Inter', sans-serif;
+    }
+    .f32-ro-points {
+      font-size: 12px;
+      color: var(--ice);
+      margin-top: 10px;
+      font-family: 'Inter', sans-serif;
+    }
+    .f32-ro-today {
+      font-size: 12px;
+      color: var(--grey);
+      text-align: center;
+      margin-bottom: 18px;
+      font-family: 'Inter', sans-serif;
+    }
+    .f32-ro-today strong { color: var(--ice); font-weight: 600; }
+    .f32-ro-claim {
+      background: var(--ice);
+      color: var(--navy);
+      border: none;
+      border-radius: 999px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      margin-bottom: 22px;
+      letter-spacing: 0.5px;
+    }
+    .f32-ro-claim:disabled { opacity: 0.4; cursor: default; }
+    .f32-ro-history {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .f32-ro-history-title {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .f32-ro-history-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 4px;
+      border-bottom: 1px solid rgba(168,216,234,0.08);
+    }
+    .f32-ro-history-row:last-child { border-bottom: none; }
+    .f32-ro-row-left { font-size: 13px; color: var(--white); flex: 1 1 0; min-width: 0; }
+    .f32-ro-row-when { font-size: 10px; color: var(--grey); margin-top: 3px; }
+    .f32-ro-row-pts {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ice);
+      font-family: 'JetBrains Mono', monospace;
+      flex: 0 0 auto;
+      margin-left: 12px;
+    }
+    .f32-ro-row-pts.negative { color: var(--red); }
+
+    /* +X float animation */
+    .f32-float {
+      position: fixed;
+      z-index: 11000;
+      pointer-events: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ice);
+      transition: transform 800ms cubic-bezier(0.2, 0.8, 0.4, 1), opacity 800ms cubic-bezier(0.2, 0.8, 0.4, 1);
+      will-change: transform, opacity;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .f32-float.thanks { font-size: 14px; }
+
+    /* Ring SVG arc animation when points land */
+    .f32-arc-pulse {
+      animation: f32arcPulse 600ms ease-out;
+    }
+    @keyframes f32arcPulse {
+      0% { stroke-width: 4; opacity: 1; }
+      50% { stroke-width: 7; opacity: 1; }
+      100% { stroke-width: 4; opacity: 1; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1715,6 +1914,24 @@
     <span class="portal-wordmark">GLASI</span>
     <button class="sign-out-btn" onclick="handleSignOut()">Sign out</button>
   </div>
+
+  <!-- F-32: Tier ring header (compact). Persistent across tabs once authenticated.
+       Tap anywhere on this strip to open the expanded overlay below. -->
+  <div id="f32-ring-header" onclick="f32OpenRingOverlay()">
+    <div class="f32-rh-name" id="f32-rh-name">&mdash;</div>
+    <div class="f32-rh-ring-wrap">
+      <svg viewBox="0 0 100 100" width="64" height="64" style="display:block;">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="var(--navy)" stroke-width="2"></circle>
+        <circle id="f32-rh-arc" cx="50" cy="50" r="44" fill="none" stroke="var(--ice)" stroke-width="6"
+                stroke-linecap="round"
+                stroke-dasharray="0 276"
+                transform="rotate(90 50 50)"></circle>
+      </svg>
+      <div class="f32-rh-ring-points" id="f32-rh-points">0</div>
+    </div>
+    <div class="f32-rh-tier-label" id="f32-rh-tier">TIER 1</div>
+  </div>
+
   <div class="portal-nav-strip">
     <button class="portal-nav-btn active" id="nav-profile" onclick="showTab('profile')">Profile</button>
     <button class="portal-nav-btn" id="nav-tiers" onclick="showTab('tiers')">Tiers</button>
@@ -1797,11 +2014,15 @@
     <!-- TIERS TAB -->
     <div id="tab-tiers" style="display:none;">
 
-      <!-- Current tier hero -->
+      <!-- F-32: simplified tier page. The persistent tier ring header above
+           shows current state. This page focuses on the ladder + the actual
+           earning surface. -->
+
+      <!-- Current tier compact summary -->
       <div class="tiers-current-card">
         <div class="tiers-current-label" id="tiers-current-label">Tier 1 of 5</div>
         <div class="tiers-current-name" id="tiers-current-name">New</div>
-        <div class="tiers-current-rate" id="tiers-current-rate">£12.71/hr</div>
+        <div class="tiers-current-rate" id="tiers-current-rate">&pound;12.71/hr</div>
         <div class="tiers-progress-track">
           <div id="tiers-progress-fill" class="tiers-progress-fill"></div>
         </div>
@@ -1817,52 +2038,35 @@
         <div id="tier-ladder-rows"></div>
       </div>
 
-      <!-- How points work — locked spec -->
+      <!-- How you earn points -->
       <div class="how-points-card">
-        <div class="how-points-title">How points work</div>
+        <div class="how-points-title">How you earn points</div>
 
         <div class="how-points-section">
           <div class="how-points-section-title">Per session</div>
-          <div class="how-points-row"><span>Join a session</span><span class="pts">+5</span></div>
-          <div class="how-points-row"><span>I'm available</span><span class="pts">+15 / +30 under 30s</span></div>
-          <div class="how-points-row"><span>I'll pass</span><span class="pts">+1 / +5 under 30s</span></div>
+          <div class="how-points-row"><span>Joined a session</span><span class="pts">+5</span></div>
+          <div class="how-points-row"><span>I'll pass</span><span class="pts">+1</span></div>
+          <div class="how-points-row"><span>I'm available</span><span class="pts">+15</span></div>
+          <div class="how-points-row"><span>Quick response (within first 25% of your window)</span><span class="pts">+15 bonus</span></div>
           <div class="how-points-row"><span>Selected for a shift</span><span class="pts">+20</span></div>
-          <div class="how-points-row highlight"><span>Complete a shift</span><span class="pts">+60</span></div>
-          <div class="how-points-row highlight"><span>Arrive on time</span><span class="pts">+25</span></div>
-          <div class="how-points-row highlight"><span>Arrive early</span><span class="pts">+40</span></div>
+          <div class="how-points-row highlight"><span>Completed a shift</span><span class="pts">+60</span></div>
+          <div class="how-points-row highlight"><span>Arrived on time</span><span class="pts">+25</span></div>
+          <div class="how-points-row highlight"><span>Arrived early</span><span class="pts">+40</span></div>
         </div>
 
         <div class="how-points-section">
-          <div class="how-points-section-title">Instagram</div>
-          <div class="how-points-row"><span>Follow @glasi_official</span><span class="pts">+50 once</span></div>
-          <div class="how-points-row"><span>Post and tag @glasi_official</span><span class="pts">+15 per day</span></div>
+          <div class="how-points-section-title">Other</div>
+          <div class="how-points-row"><span>Daily login claim (claim once per day on your tier ring)</span><span class="pts">+5</span></div>
         </div>
 
         <div class="how-points-section">
-          <div class="how-points-section-title">Daily login</div>
-          <div class="how-points-row"><span>Open the app</span><span class="pts">+5 per day</span></div>
-          <div class="how-points-row"><span>3-day streak</span><span class="pts">+10</span></div>
-          <div class="how-points-row"><span>7-day streak</span><span class="pts">+25</span></div>
-          <div class="how-points-row"><span>14-day streak</span><span class="pts">+75</span></div>
-          <div class="how-points-row"><span>30-day streak</span><span class="pts">+200</span></div>
-        </div>
-
-        <div class="how-points-section">
-          <div class="how-points-section-title">Shift streaks (85%+ reliability)</div>
-          <div class="how-points-row"><span>5 completed shifts</span><span class="pts">+50</span></div>
-          <div class="how-points-row"><span>10 completed shifts</span><span class="pts">+100</span></div>
-          <div class="how-points-row"><span>20 completed shifts</span><span class="pts">+250</span></div>
-          <div class="how-points-row"><span>50 completed shifts</span><span class="pts">+500</span></div>
-        </div>
-
-        <div class="how-points-section">
-          <div class="how-points-section-title">Negatives</div>
-          <div class="how-points-row negative"><span>No response to a shift</span><span class="pts">−5</span></div>
-          <div class="how-points-row negative"><span>Selected but no-show</span><span class="pts">−100, flagged</span></div>
+          <div class="how-points-section-title">How you lose points</div>
+          <div class="how-points-row negative"><span>Did not respond when you had time</span><span class="pts">&minus;5</span></div>
+          <div class="how-points-row negative"><span>No-show after dispatch</span><span class="pts">&minus;100, flagged</span></div>
         </div>
 
         <div class="how-points-footnote">
-          Reliability is your attendance percentage on shifts you were selected for. Once it drops below 85%, shift streaks stop accruing until you rebuild it. Show up consistently.
+          Reliability is your behavioural reliability across the platform. Show up consistently and respond when shifts come in.
         </div>
       </div>
 
@@ -1897,12 +2101,14 @@
         </div>
       </div>
 
-      <!-- Recent activity feed: 5 high-level event types merged. -->
+      <!-- F-32: Recent activity feed retired here. Points history is now in
+           the tier ring expanded overlay (tap the ring at the top of the
+           portal). The Activity tab remains as the future-facing surface for
+           upcoming sessions and announcements. -->
       <div class="activity-feed-card">
-        <div class="activity-feed-title">Recent activity</div>
-        <div id="activity-hs-counter" class="activity-hs-counter" style="display:none;"></div>
-        <div id="activity-feed-list">
-          <div style="font-size:13px;color:var(--grey);padding:12px 0;">Loading…</div>
+        <div class="activity-feed-title">Points history</div>
+        <div style="font-size:13px;color:var(--grey);padding:12px 0;line-height:1.6;">
+          Tap your tier ring at the top of the portal to see your recent points history and claim your daily +5.
         </div>
       </div>
 
@@ -2016,7 +2222,7 @@
         <p>We pick based on a mix of:</p>
         <p><strong style="color:var(--white);">Tier.</strong> Higher-tier workers get a small edge. Tier reflects your track record.</p>
         <p><strong style="color:var(--white);">Reliability.</strong> Your attendance percentage on shifts you were selected for. Show up consistently and this stays high.</p>
-        <p><strong style="color:var(--white);">Response speed.</strong> Replied in under 30 seconds? That counts.</p>
+        <p><strong style="color:var(--white);">Response speed.</strong> Replied within the first 25% of your personal window? That earns the quick-response bonus.</p>
         <p><strong style="color:var(--white);">Distance.</strong> Closer to the venue means you'll arrive faster. We prefer workers within walking distance.</p>
         <p><strong style="color:var(--white);">Transport.</strong> Workers with a bike, e-bike, or e-scooter cover ground faster. Mention it in your profile if you have one.</p>
         <p><strong style="color:var(--white);">Fairness.</strong> If you've been responding all night and not getting picked, your odds tick up to balance things out.</p>
@@ -2414,7 +2620,7 @@
     // Auth succeeded. Verify the worker is onboarded before letting them
     // into the portal. A valid Supabase Auth session is not enough on its
     // own, the applications row still gates access.
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,postcode_full', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,postcode_full,last_login_claim_at', { headers: H }).then(r => r.json());
     if(!rows || !rows.length) {
       await sbAuth.auth.signOut();
       H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
@@ -2445,6 +2651,8 @@
     if(inviteWatchWs) { try { inviteWatchWs.close(); } catch(e) {} inviteWatchWs = null; }
     pendingInvite = null;
     resetSessionStates();
+    // F-32: hide tier ring header on sign-out.
+    if(typeof f32HideRingHeader === 'function') f32HideRingHeader();
     currentWorker = null;
     currentSessionInvite = null;
     // Clear login form
@@ -2463,7 +2671,7 @@
     if(!data?.session) return;
     H.Authorization = 'Bearer ' + data.session.access_token;
     const email = data.session.user.email;
-    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,postcode_full', { headers: H }).then(r => r.json());
+    const rows = await fetch(SUPABASE_URL + '/rest/v1/applications?email=eq.' + encodeURIComponent(email) + '&worker_status=eq.onboarded&select=id,name,tier,hourly_rate,total_points,reliability_score,postcode_full,last_login_claim_at', { headers: H }).then(r => r.json());
     if(!rows || !rows.length) {
       await sbAuth.auth.signOut();
       H.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
@@ -2478,11 +2686,243 @@
     startInviteWatch();
   });
 
+  // ============================================================================
+  // F-32: Tier ring (compact + expanded), float animation, daily login claim,
+  // points history feed (relocated from the old Activity tab).
+  // ============================================================================
+
+  const F32_TIER_RATES = [12.71, 13.71, 14.71, 15.71, 16.71];
+  const F32_TIER_THRESHOLDS = [0, 250, 650, 1500, 3500];
+  const F32_RING_CIRC = 2 * Math.PI * 44; // ~276.46 for r=44
+
+  function f32RenderTierRing() {
+    const w = currentWorker;
+    if(!w) return;
+    const header = document.getElementById('f32-ring-header');
+    if(!header) return;
+    header.classList.add('active');
+
+    const pts = parseInt(w.total_points) || 0;
+    const tier = parseInt(w.tier) || 1;
+    const tierIdx = tier - 1;
+    const tierStart = F32_TIER_THRESHOLDS[tierIdx] || 0;
+    const isTopTier = tier >= 5;
+    const tierEnd = isTopTier ? tierStart : F32_TIER_THRESHOLDS[tierIdx + 1];
+    const range = isTopTier ? 1 : Math.max(1, tierEnd - tierStart);
+    const into = isTopTier ? range : Math.max(0, pts - tierStart);
+    const pct = Math.min(1, into / range);
+    const dashLen = pct * F32_RING_CIRC;
+
+    // Compact header
+    document.getElementById('f32-rh-name').textContent = (w.name || 'Worker').toUpperCase();
+    document.getElementById('f32-rh-tier').textContent = 'TIER ' + tier;
+    document.getElementById('f32-rh-points').textContent = pts.toLocaleString();
+    const arc = document.getElementById('f32-rh-arc');
+    if(arc) arc.setAttribute('stroke-dasharray', dashLen.toFixed(2) + ' ' + (F32_RING_CIRC - dashLen).toFixed(2));
+
+    // Expanded overlay (kept in sync so opening it shows fresh values)
+    const roName = document.getElementById('f32-ro-name');
+    const roTier = document.getElementById('f32-ro-tier-num');
+    const roPts = document.getElementById('f32-ro-points');
+    const roArc = document.getElementById('f32-ro-arc');
+    if(roName) roName.textContent = (w.name || 'Worker').toUpperCase();
+    if(roTier) roTier.textContent = String(tier);
+    if(roPts) roPts.textContent = 'total points ' + pts.toLocaleString();
+    if(roArc) roArc.setAttribute('stroke-dasharray', dashLen.toFixed(2) + ' ' + (F32_RING_CIRC - dashLen).toFixed(2));
+  }
+
+  function f32HideRingHeader() {
+    const header = document.getElementById('f32-ring-header');
+    if(header) header.classList.remove('active');
+    f32CloseRingOverlay();
+  }
+
+  // Daily-login claim: gated by Europe/London-day boundary. Worker eligible
+  // if last_login_claim_at is null OR before today's UK 00:00.
+  function f32IsDailyClaimEligible() {
+    const w = currentWorker;
+    if(!w) return false;
+    const last = w.last_login_claim_at;
+    if(!last) return true;
+    // Convert "now" and "last" to UK dates and compare YMD.
+    const fmt = d => new Date(d).toLocaleDateString('en-GB', { timeZone: 'Europe/London', year:'numeric', month:'2-digit', day:'2-digit' });
+    return fmt(new Date()) !== fmt(last);
+  }
+
+  async function f32OpenRingOverlay() {
+    const ov = document.getElementById('f32-ring-overlay');
+    if(!ov) return;
+    ov.classList.add('open');
+    f32RenderTierRing();
+    await f32RenderTodaySummary();
+    f32RenderClaimButton();
+    await f32RenderHistory();
+  }
+
+  function f32CloseRingOverlay() {
+    const ov = document.getElementById('f32-ring-overlay');
+    if(ov) ov.classList.remove('open');
+  }
+
+  async function f32RenderTodaySummary() {
+    const w = currentWorker;
+    if(!w) return;
+    const todayEl = document.getElementById('f32-ro-today');
+    if(!todayEl) return;
+    // UK day boundary
+    const ukNow = new Date();
+    const ukYmd = ukNow.toLocaleDateString('en-GB', { timeZone:'Europe/London', year:'numeric', month:'2-digit', day:'2-digit' });
+    const [d, m, y] = ukYmd.split('/');
+    // Day start in UK time, expressed as UTC ISO (close enough for filter)
+    const ukDayStart = new Date(`${y}-${m}-${d}T00:00:00`).toISOString();
+    try {
+      const rows = await fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + w.id + '&awarded_at=gte.' + encodeURIComponent(ukDayStart) + '&select=amount', { headers: H }).then(r => r.json());
+      if(!Array.isArray(rows)) { todayEl.innerHTML = 'Earned today: <strong>+0</strong>'; return; }
+      const total = rows.reduce((s, r) => s + (parseInt(r.amount) || 0), 0);
+      const sign = total >= 0 ? '+' : '';
+      todayEl.innerHTML = 'Earned today: <strong>' + sign + total + '</strong> &middot; ' + rows.length + ' event' + (rows.length === 1 ? '' : 's');
+    } catch(e) {
+      todayEl.innerHTML = 'Earned today: <strong>+0</strong>';
+    }
+  }
+
+  function f32RenderClaimButton() {
+    const btn = document.getElementById('f32-ro-claim');
+    if(!btn) return;
+    if(f32IsDailyClaimEligible()) {
+      btn.style.display = 'inline-block';
+      btn.disabled = false;
+      btn.textContent = "Claim today's +5";
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+
+  async function f32ClaimDailyLogin(btnEl) {
+    if(!currentWorker || !f32IsDailyClaimEligible()) return;
+    btnEl.disabled = true;
+    btnEl.textContent = 'Claiming...';
+    try {
+      // Update last_login_claim_at first to lock the slot. Server-side gating
+      // is the proper long-term solution; portal-side check is acceptable for
+      // current scale (tripwire logged in BUILD_STATE).
+      const claimAt = new Date().toISOString();
+      const upResp = await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
+        method: 'PATCH',
+        headers: { ...H, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ last_login_claim_at: claimAt })
+      });
+      if(!upResp.ok) throw new Error('claim slot lock failed');
+      currentWorker.last_login_claim_at = claimAt;
+
+      await awardPointsImmediate(currentWorker.id, [{
+        amount: 5,
+        reason: 'daily_login_claim',
+        notes: 'Daily login claim'
+      }], { originEl: btnEl });
+
+      // Refresh ring overlay state
+      f32RenderTierRing();
+      await f32RenderTodaySummary();
+      f32RenderClaimButton();
+      await f32RenderHistory();
+    } catch(e) {
+      console.error('[f32ClaimDailyLogin] failed', e);
+      btnEl.disabled = false;
+      btnEl.textContent = "Claim today's +5";
+    }
+  }
+
+  function f32RelTime(iso) {
+    if(!iso) return '';
+    const ms = Date.now() - new Date(iso).getTime();
+    if(ms < 60000) return 'just now';
+    const mins = Math.floor(ms / 60000);
+    if(mins < 60) return mins + 'min ago';
+    const hours = Math.floor(mins / 60);
+    if(hours < 24) {
+      const ukNow = new Date().toLocaleDateString('en-GB', { timeZone:'Europe/London' });
+      const ukRow = new Date(iso).toLocaleDateString('en-GB', { timeZone:'Europe/London' });
+      return ukNow === ukRow ? hours + 'h ago' : 'yesterday';
+    }
+    const days = Math.floor(hours / 24);
+    if(days < 7) return days + 'd ago';
+    return new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short', timeZone:'Europe/London' });
+  }
+
+  async function f32RenderHistory() {
+    const w = currentWorker;
+    const listEl = document.getElementById('f32-ro-history-list');
+    if(!w || !listEl) return;
+    try {
+      const rows = await fetch(SUPABASE_URL + '/rest/v1/points_ledger?application_id=eq.' + w.id + '&order=awarded_at.desc&limit=30&select=id,amount,reason,awarded_at,notes', { headers: H }).then(r => r.json());
+      if(!Array.isArray(rows) || !rows.length) {
+        listEl.innerHTML = '<div style="text-align:center;color:var(--grey);font-size:12px;padding:18px;">No activity yet.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(r => {
+        const amt = parseInt(r.amount) || 0;
+        const sign = amt >= 0 ? '+' : '';
+        const cls = amt >= 0 ? '' : ' negative';
+        const label = (typeof reasonLabels === 'object' && reasonLabels[r.reason]) || r.reason || 'Points';
+        return '<div class="f32-ro-history-row">'
+          + '<div class="f32-ro-row-left">'
+          +   '<div>' + label + '</div>'
+          +   '<div class="f32-ro-row-when">' + f32RelTime(r.awarded_at) + '</div>'
+          + '</div>'
+          + '<div class="f32-ro-row-pts' + cls + '">' + sign + amt + '</div>'
+          + '</div>';
+      }).join('');
+    } catch(e) {
+      console.error('[f32RenderHistory] failed', e);
+      listEl.innerHTML = '<div style="text-align:center;color:var(--grey);font-size:12px;padding:18px;">Could not load activity.</div>';
+    }
+  }
+
+  // F-32 +X float animation utility. Originates at originEl screen position,
+  // animates upward toward the tier ring centre with alpha-fade.
+  function f32SpawnFloat(originEl, label) {
+    if(!originEl || typeof originEl.getBoundingClientRect !== 'function') return;
+    const ringWrap = document.querySelector('#f32-ring-overlay.open .f32-ro-ring-wrap')
+                  || document.querySelector('#f32-ring-header.active .f32-rh-ring-wrap');
+    if(!ringWrap) return;
+    const oRect = originEl.getBoundingClientRect();
+    const rRect = ringWrap.getBoundingClientRect();
+    const startX = oRect.left + oRect.width / 2;
+    const startY = oRect.top + oRect.height / 2;
+    const endX = rRect.left + rRect.width / 2;
+    const endY = rRect.top + rRect.height / 2;
+    const float = document.createElement('div');
+    float.className = 'f32-float' + (String(label).toLowerCase().includes('thanks') ? ' thanks' : '');
+    float.textContent = label;
+    float.style.left = startX + 'px';
+    float.style.top = startY + 'px';
+    float.style.transform = 'translate(-50%, -50%)';
+    float.style.opacity = '1';
+    document.body.appendChild(float);
+    // Force reflow then animate
+    void float.offsetWidth;
+    float.style.transform = 'translate(-50%, -50%) translate(' + (endX - startX) + 'px, ' + (endY - startY) + 'px) scale(0.7)';
+    float.style.opacity = '0';
+    setTimeout(() => {
+      if(float.parentNode) float.parentNode.removeChild(float);
+      // Pulse the arc
+      const arc = ringWrap.querySelector('circle[id$="arc"]');
+      if(arc) {
+        arc.classList.add('f32-arc-pulse');
+        setTimeout(() => arc.classList.remove('f32-arc-pulse'), 700);
+      }
+    }, 850);
+  }
+
   function loadPortal() {
     if(!currentWorker) return;
     const w = currentWorker;
 
     const TIER_RATES = [12.71, 13.71, 14.71, 15.71, 16.71];
+
+    // F-32: render persistent tier ring header now that we have a worker.
+    f32RenderTierRing();
 
     const pts = parseInt(w.total_points) || 0;
     const tier = w.tier || 1;
@@ -2838,36 +3278,28 @@
   let activityLoadedAt = 0;
   const ACTIVITY_CACHE_MS = 60 * 1000;
 
-  // points_ledger.reason → friendly label. Falls back to the raw reason if
-  // unmapped (catches manual_adjustment + any future reasons).
+  // F-32: points_ledger.reason → friendly label. Mirrors the dashboard
+  // POINTS_REASON_LABELS map. Vocabulary aligned with the post-F-32 CHECK
+  // constraint (14 reasons). Tripwire: keep this map and the dashboard map
+  // in sync with each other and with the CHECK constraint.
   const REASON_LABELS = {
-    joined_session: 'Joined a session',
-    responded_available: "Responded I'm available",
-    responded_available_under_30s: 'Responded under 30 seconds',
-    responded_pass: "Responded I'll pass",
-    responded_pass_under_30s: "Responded I'll pass under 30 seconds",
-    selected_for_shift: 'Selected for a shift',
-    completed_shift: 'Completed a shift',
-    arrived_early: 'Arrived early',
-    arrived_on_time: 'Arrived on time',
-    no_response: 'No response to a shift post',
-    no_show: 'Selected but did not attend',
-    instagram_follow: 'Followed @glasi_official',
-    instagram_post: 'Posted and tagged @glasi_official',
-    daily_login: 'Daily login',
-    login_streak_3: '3-day login streak',
-    login_streak_7: '7-day login streak',
-    login_streak_14: '14-day login streak',
-    login_streak_30: '30-day login streak',
-    shift_streak_5: '5 shifts completed',
-    shift_streak_10: '10 shifts completed',
-    shift_streak_20: '20 shifts completed',
-    shift_streak_50: '50 shifts completed',
-    tier_promoted: 'Promoted to a new tier',
-    cancellation_compensation: 'Dispatch cancelled by Glasi',
-    manual_adjustment: 'Manual adjustment',
-    genesis: 'Starting balance'
+    genesis:                          'Starting balance',
+    joined_session:                   'Joined a session',
+    selected_for_shift:               'Selected for a shift',
+    responded_available:              "Responded I'm available",
+    responded_available_quick:        'Quick response',
+    responded_pass:                   "Responded I'll pass",
+    completed_shift:                  'Completed a shift',
+    arrived_early:                    'Arrived early',
+    arrived_on_time:                  'Arrived on time',
+    no_response:                      'No response when you had time',
+    no_show:                          'Selected but did not attend',
+    manual_correction:                'Manual correction',
+    tier_promoted:                    'Promoted to a new tier',
+    daily_login_claim:                'Daily login'
   };
+  // F-32: alias used by the new ring overlay history feed.
+  const reasonLabels = REASON_LABELS;
 
   function reasonToLabel(reason) {
     if(!reason) return 'Activity';
@@ -3867,20 +4299,28 @@
       return;
     }
 
-    // Award +5 points for joining session. Logged on failure but not fatal,
-    // the join itself has already landed by this point.
-    if(currentWorker) {
-      const newPoints = (currentWorker.total_points || 0) + 5;
-      const ptsResp = await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
-        method: 'PATCH',
-        headers: { ...H, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ total_points: newPoints })
-      });
-      if(ptsResp.ok) currentWorker.total_points = newPoints;
-      else console.warn('[handleJoinSession] points PATCH failed', ptsResp.status);
-    }
+    // F-32: Award joined_session +5 via the points_ledger helper. Originates
+    // a +5 float from the live waiting room view header once the live screen
+    // is visible.
     document.getElementById('sessions-prejoin').style.display = 'none';
     document.getElementById('sessions-live').style.display = 'block';
+
+    if(currentWorker && currentSessionInvite?.session_id) {
+      // Float source: the live waiting room view header. Fallback to the join
+      // button if the header isn't found.
+      const originEl = document.getElementById('live-waiting')
+                    || document.getElementById('sessions-live')
+                    || document.body;
+      try {
+        await awardPointsImmediate(currentWorker.id, [{
+          amount: 5,
+          reason: 'joined_session',
+          sessionId: currentSessionInvite.session_id
+        }], { sessionId: currentSessionInvite.session_id, originEl });
+      } catch(e) {
+        console.warn('[handleJoinSession] awardPointsImmediate failed', e);
+      }
+    }
     // Start real-time subscription (placeholder for now)
     startLiveSession();
   }
@@ -3913,6 +4353,21 @@
   let tickerIndex = 0;
 
   function startLiveSession() {
+    // F-27 Layer 2: defensive sterilisation. Sibling elements inside
+    // sessions-live (portal-shift-complete, live-dispatched, the live-*
+    // sub-states) may be left display:block from a previous shift's flow
+    // when the worker rejoins a new session in the same browser tab. Hide
+    // them and clear post-shift innerHTML so the new session's render
+    // starts clean. Closes the gap left by F-03c (which relocated
+    // portal-shift-complete out of clockin-confirmed-section but didn't
+    // add it to startLiveSession's entry sterilisation).
+    ['portal-shift-complete', 'live-dispatched', 'live-shift-post', 'live-responded', 'live-filled'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+    const completeEl = document.getElementById('portal-shift-complete');
+    if(completeEl) completeEl.innerHTML = '';
+
     document.getElementById('live-waiting').style.display = 'block';
     sessionStartTime = Date.now();
     const sessionId = currentSessionInvite.session_id;
@@ -4494,29 +4949,51 @@
     const ctx = activeRequests.get(requestId);
     if(!ctx || ctx.hasResponded) return;
     ctx.hasResponded = true;
+    const originBtn = ctx.cardEl ? ctx.cardEl.querySelector('button') : null;
     if(ctx.cardEl) {
       ctx.cardEl.querySelectorAll('button').forEach(b => b.disabled = true);
     }
-    // Stop pings + timer on response (visual indicator stops via the
-    // is-responded class which hides ::before). F-01 v6 hold-to-confirm will
-    // re-shape this into a two-step commitment; today it's still single-tap.
     stopCardPings(ctx);
     if(ctx.timerHandle) { clearInterval(ctx.timerHandle); ctx.timerHandle = null; }
     await recordResponse(requestId, 'available');
     transitionCardToResponded(ctx, 'available');
 
-    // Award +10 points for responding (legacy direct-write; F-01 v6 will
-    // re-shape the points award alongside hold-to-confirm).
-    if(currentWorker) {
-      const newPoints = (currentWorker.total_points || 0) + 10;
+    // F-32: real-time points writers via awardPointsImmediate.
+    // Base +15 for I'm Available, plus conditional +15 quick-response bonus
+    // when responded within first 25% of the worker's personal window.
+    if(currentWorker && ctx && ctx.record) {
+      const sessionId = ctx.record.session_id || null;
+      const barId = ctx.record.bar_id || null;
+      const awards = [{
+        amount: 15,
+        reason: 'responded_available',
+        sessionId,
+        sourceType: 'shift_request',
+        sourceId: requestId
+      }];
+      // Quick-response bonus eligibility uses ctx.windowSeconds (already
+      // computed at card creation as (30 - walking_minutes) * 60). Quick =
+      // elapsed/window < 0.25. ctx.postedAtMs gives the start.
+      const windowSecs = parseFloat(ctx.windowSeconds);
+      if(Number.isFinite(windowSecs) && windowSecs > 0 && ctx.postedAtMs) {
+        const elapsed = (Date.now() - ctx.postedAtMs) / 1000;
+        if(elapsed / windowSecs < 0.25) {
+          awards.push({
+            amount: 15,
+            reason: 'responded_available_quick',
+            sessionId,
+            sourceType: 'shift_request',
+            sourceId: requestId
+          });
+        }
+      }
+
       try {
-        await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + currentWorker.id, {
-          method: 'PATCH',
-          headers: { ...H, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ total_points: newPoints })
+        await awardPointsImmediate(currentWorker.id, awards, {
+          sessionId,
+          originEl: originBtn || ctx.cardEl
         });
-        currentWorker.total_points = newPoints;
-      } catch(e) {}
+      } catch(e) { console.warn('[handleAvailable] awardPointsImmediate failed', e); }
     }
   }
 
@@ -4524,6 +5001,7 @@
     const ctx = activeRequests.get(requestId);
     if(!ctx || ctx.hasResponded) return;
     ctx.hasResponded = true;
+    const originBtn = ctx.cardEl ? ctx.cardEl.querySelector('button') : null;
     if(ctx.cardEl) {
       ctx.cardEl.querySelectorAll('button').forEach(b => b.disabled = true);
     }
@@ -4531,6 +5009,24 @@
     if(ctx.timerHandle) { clearInterval(ctx.timerHandle); ctx.timerHandle = null; }
     await recordResponse(requestId, 'pass');
     transitionCardToResponded(ctx, 'pass');
+
+    // F-32: responded_pass +1. No quick-bonus variant (engagement-with-work
+    // earns the speed bonus, not declining-with-speed).
+    if(currentWorker && ctx && ctx.record) {
+      const sessionId = ctx.record.session_id || null;
+      try {
+        await awardPointsImmediate(currentWorker.id, [{
+          amount: 1,
+          reason: 'responded_pass',
+          sessionId,
+          sourceType: 'shift_request',
+          sourceId: requestId
+        }], {
+          sessionId,
+          originEl: originBtn || ctx.cardEl
+        });
+      } catch(e) { console.warn('[handlePass] awardPointsImmediate failed', e); }
+    }
   }
 
   // Drives the per-card transition when a shift_request UPDATE arrives.
@@ -4649,7 +5145,11 @@
     return 1;
   }
 
-  async function portalAwardPoints(applicationId, awards, opts) {
+  // F-32: portalAwardPoints renamed awardPointsImmediate. Now applies the
+  // hourly_rate atomic update on tier promotion (mirror of dashboard awardPoints
+  // F-31 follow-up fix). Also fires the +X UI float on each award via
+  // f32SpawnFloat when an originEl is provided in opts.
+  async function awardPointsImmediate(applicationId, awards, opts) {
     if(!Array.isArray(awards)) awards = [awards];
     const valid = awards.filter(a => a && a.amount !== 0);
     if(!valid.length) return null;
@@ -4693,7 +5193,13 @@
     const newTier = pointsToTier(newTotal);
 
     const updates = { total_points: newTotal };
-    if(newTier !== oldTier) updates.tier = newTier;
+    if(newTier !== oldTier) {
+      updates.tier = newTier;
+      // F-32 / F-31 follow-up parity: keep applications.hourly_rate in lockstep
+      // with tier on promotion. CORE Phase 5 "Worker tier and rates" requires
+      // atomic tier + hourly_rate update.
+      updates.hourly_rate = [12.71, 13.71, 14.71, 15.71, 16.71][newTier - 1];
+    }
     await fetch(SUPABASE_URL + '/rest/v1/applications?id=eq.' + applicationId, {
       method: 'PATCH',
       headers: { ...H, 'Prefer': 'return=minimal' },
@@ -4715,8 +5221,31 @@
         })
       });
     }
+
+    // F-32: keep currentWorker in sync so the ring reflects the new state.
+    if(currentWorker && Number(currentWorker.id) === Number(applicationId)) {
+      currentWorker.total_points = newTotal;
+      if(newTier !== oldTier) {
+        currentWorker.tier = newTier;
+        currentWorker.hourly_rate = [12.71, 13.71, 14.71, 15.71, 16.71][newTier - 1];
+      }
+    }
+
+    // F-32: spawn UI floats for each award (only if originEl provided in opts).
+    // Animation is decoration; if it fails to render, points still apply.
+    if(opts?.originEl && typeof f32SpawnFloat === 'function') {
+      filtered.forEach((a, i) => {
+        const label = a.floatLabel || ((a.amount >= 0 ? '+' : '') + a.amount);
+        setTimeout(() => f32SpawnFloat(opts.originEl, label), i * 200);
+      });
+    }
+    if(typeof f32RenderTierRing === 'function') f32RenderTierRing();
+
     return { newTotal, newTier, promoted: newTier > oldTier, oldTier };
   }
+  // F-32: legacy alias for any caller still using portalAwardPoints. Kept as
+  // a thin wrapper for one batch; remove once all sites are updated.
+  const portalAwardPoints = awardPointsImmediate;
 
   async function showPostShiftScreen(sw, opts) {
     if(!sw || !sw.id) { console.warn('[showPostShiftScreen] missing sw or sw.id', sw); return; }
@@ -4946,6 +5475,17 @@
         empty.innerHTML = '<div class="sessions-empty-icon">👋</div>'
           + '<div class="sessions-empty-title">Thanks for tonight</div>'
           + '<div class="sessions-empty-sub">Your shift is logged. We\'ll see you at the next session.</div>';
+      }
+      // F-27 Layer 1: hide and clear portal-shift-complete so the Thanks-for-
+      // feedback card doesn't leak into the next session if the worker stays
+      // logged in and rejoins. Without this, on session rejoin the card
+      // remains display:block (its parent flip hides it visually but the
+      // element state persists), and showShiftPost's defensive early-return
+      // at line 4315-4318 silently blocks all new shift_request renders.
+      const cleanupCompleteEl = document.getElementById('portal-shift-complete');
+      if(cleanupCompleteEl) {
+        cleanupCompleteEl.style.display = 'none';
+        cleanupCompleteEl.innerHTML = '';
       }
       currentSessionInvite = null;
       currentSessionWorkerId = null;
@@ -5604,6 +6144,35 @@
     <div style="display:flex;gap:10px;">
       <button onclick="closeLeaveSession()" style="flex:1;background:none;border:1px solid var(--border);color:var(--grey);border-radius:10px;padding:12px;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;">Stay in Session</button>
       <button onclick="confirmLeaveSession()" style="flex:2;background:var(--ice);color:var(--navy);border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;">Leave</button>
+    </div>
+  </div>
+</div>
+
+<!-- F-32: Tier ring expanded overlay. Full-screen, dimmed backdrop, large
+     ring with name+tier+points stack, today summary, daily-claim button,
+     points history feed (last 30 rows). -->
+<div id="f32-ring-overlay" onclick="if(event.target===this) f32CloseRingOverlay()">
+  <button class="f32-ro-close" onclick="f32CloseRingOverlay()" aria-label="Close">&times;</button>
+  <div class="f32-ro-ring-wrap">
+    <svg viewBox="0 0 100 100" width="240" height="240" style="display:block;">
+      <circle cx="50" cy="50" r="44" fill="none" stroke="var(--navy)" stroke-width="1.5"></circle>
+      <circle id="f32-ro-arc" cx="50" cy="50" r="44" fill="none" stroke="var(--ice)" stroke-width="3.5"
+              stroke-linecap="round"
+              stroke-dasharray="0 276"
+              transform="rotate(90 50 50)"></circle>
+    </svg>
+    <div class="f32-ro-ring-stack">
+      <div class="f32-ro-name" id="f32-ro-name">&mdash;</div>
+      <div class="f32-ro-tier-num" id="f32-ro-tier-num">1</div>
+      <div class="f32-ro-points" id="f32-ro-points">total points 0</div>
+    </div>
+  </div>
+  <div class="f32-ro-today" id="f32-ro-today">Earned today: <strong>+0</strong></div>
+  <button class="f32-ro-claim" id="f32-ro-claim" style="display:none;" onclick="f32ClaimDailyLogin(this)">Claim today's +5</button>
+  <div class="f32-ro-history">
+    <div class="f32-ro-history-title">Recent activity</div>
+    <div id="f32-ro-history-list">
+      <div style="text-align:center;color:var(--grey);font-size:12px;padding:18px;">Loading...</div>
     </div>
   </div>
 </div>
